@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>maNTapps</title>
+<title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.png">
 <link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.png">
@@ -1483,7 +1483,9 @@ body{background:var(--bg);transition:background .35s;}
 // ============================================================
 let lang='id', darkMode=false;
 let selCat='',selCatIco='',selCatColor='',selCatStroke='';
-let balance=12450.80, exRate=15800;
+// SISTEM BARU: Semua nilai internal disimpan dalam RUPIAH
+// exRate = kurs 1 USD → IDR (untuk konversi tampilan USD saja)
+let balance=196842640, exRate=15800; // contoh: ~Rp 196jt (setara $12.450)
 let curAv='default', editAvData='default';
 let photoDataUrl=null, editPhotoDataUrl=null;
 let pinBuf='',pinStp=0,newPinSaved='';
@@ -1541,9 +1543,9 @@ function renderNI(n){return`<div class="nc-item${n.unread?' unread':''}"><div cl
 // GOALS
 // ============================================================
 let goals=[
-  {id:1,name:'New Car',desc:'TESLA MODEL 3 FUND',current:12000,target:35000,color:'#1A56C4'},
-  {id:2,name:'Emergency Fund',desc:'6 MONTHS RUNWAY',current:8500,target:10000,color:'#0B7A63'},
-  {id:3,name:'Vacation',desc:'BALI SUMMER 2024',current:4000,target:5000,color:'#F59E0B'},
+  {id:1,name:'New Car',desc:'TESLA MODEL 3 FUND',current:189600000,target:553000000,color:'#1A56C4'},
+  {id:2,name:'Emergency Fund',desc:'6 MONTHS RUNWAY',current:134300000,target:158000000,color:'#0B7A63'},
+  {id:3,name:'Vacation',desc:'BALI SUMMER 2024',current:63200000,target:79000000,color:'#F59E0B'},
 ];
 let goalIdCtr=4;
 const goalIcons={
@@ -1577,12 +1579,12 @@ function quickAdd(id){
   closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;
   const amt=prompt(`Add funds to "${g.name}":\nEnter amount:`,'');
   if(!amt||isNaN(parseFloat(amt)))return;
-  const usd=isModeRp()?parseFloat(amt)/exRate:parseFloat(amt);
-  g.current=Math.min(g.target,g.current+usd);
+  const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);
+  g.current=Math.min(g.target,g.current+rp);
   const pct=Math.round((g.current/g.target)*100);
-  addNotif('goal','Funds Added',`${fmt(usd)} added to "${g.name}" · ${pct}% complete`);
-  addHistoryItem(g.name,usd,true);
-  toast(`✅ ${fmt(usd)} → ${g.name}`)
+  addNotif('goal','Funds Added',`${fmt(rp)} added to "${g.name}" · ${pct}% complete`);
+  addHistoryItem(g.name,rp,true);
+  toast(`✅ ${fmt(rp)} → ${g.name}`)
   renderGoals();updateSavingsTotal();
   fbAutoSave();
 }
@@ -1595,17 +1597,17 @@ function saveGoal(){
   if(!name){toast('⚠️ Goal name required');return;}
   const tgt=parseFloat(document.getElementById('goalTarget').value)||0;
   const cur=parseFloat(document.getElementById('goalCurrent').value)||0;
-  const usdT=isModeRp()?tgt/exRate:tgt;
-  const usdC=isModeRp()?cur/exRate:cur;
-  goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(usdC,usdT||100),target:usdT||100,color:goalColor});
+  const rpT=isModeRp()?tgt:Math.round(tgt*exRate);
+  const rpC=isModeRp()?cur:Math.round(cur*exRate);
+  goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor});
   closeGoalModal();renderGoals();updateSavingsTotal();
   addNotif('goal','New Goal Created!',`"${name}" has been added to your savings`);
   toast(`🎯 Goal "${name}" created!`);
   fbAutoSave();
 }
-function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target*exRate):g.target;document.getElementById('egAdd').value='';document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';document.getElementById('editGoalModal').classList.add('on');}
+function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';document.getElementById('editGoalModal').classList.add('on');}
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||g.target*(isModeRp()?exRate:1);g.target=isModeRp()?rawT/exRate:rawT;const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const u=isModeRp()?rawA/exRate:rawA;g.current=Math.min(g.target,g.current+u);addHistoryItem(g.name,u,true);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);addHistoryItem(g.name,rp,true);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
 function updateSavingsTotal(){
   // Goals total
@@ -1700,7 +1702,7 @@ function renderWallets(){
   ab.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Add Card</span>';
   c.appendChild(ab);renderWalletSummary();
 }
-function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const usd=isModeRp()?parseFloat(amt)/exRate:parseFloat(amt);w.balance+=usd;addNotif('wallet',T('notif-topup'),`${fmt(usd)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,usd,true);toast(`✅ ${fmt(usd)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
+function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);w.balance+=rp;addNotif('wallet',T('notif-topup'),`${fmt(rp)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,rp,true);toast(`✅ ${fmt(rp)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
 function renderWalletSummary(){const t=wallets.reduce((s,w)=>s+w.balance,0);const e=document.getElementById('walletSummary');if(!e)return;e.innerHTML=`<div style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${wallets.length} cards</div></div>${wallets.map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,${w.color.split(',')[0]},${w.color.split(',')[1]});"></div><span style="font-size:13px;color:var(--t2);">${w.bank} ••••${w.num}</span></div><span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${fmt(w.balance)}</span></div>`).join('')}</div>`;}
 function openWalletModal(){document.getElementById('walletBank').value='';document.getElementById('walletNum').value='';document.getElementById('walletBal').value='';walletColorSel='#1A56C4,#2A6FD6';walletTypeSel='Debit';updateWCP();updateWtypeBtns();document.getElementById('walletModal').classList.add('on');}
 function closeWalletModal(){document.getElementById('walletModal').classList.remove('on');}
@@ -1713,9 +1715,10 @@ function saveWallet(){
   if(!bank){toast('⚠️ Bank name required');return;}
   const num=document.getElementById('walletNum').value.trim()||'0000';
   const bal=parseFloat(document.getElementById('walletBal').value)||0;
-  const usd=isModeRp()?bal/exRate:bal;
+  // Jika mode USD, konversi ke Rupiah; jika sudah Rp, langsung pakai
+  const rp=isModeRp()?bal:Math.round(bal*exRate);
   const newId = walletIdCtr++;
-  wallets.push({id:newId, bank, num:num.slice(-4), balance:usd, color:walletColorSel, type:walletTypeSel});
+  wallets.push({id:newId, bank, num:num.slice(-4), balance:rp, color:walletColorSel, type:walletTypeSel});
   closeWalletModal();
   renderWallets();
   buildSourceGrid();
@@ -1733,7 +1736,7 @@ function openEditWallet(id){
   document.getElementById('ewModalTitle').textContent = (lang==='id'?'Edit ':'Edit ')+w.bank;
   document.getElementById('ewBank').value = w.bank;
   document.getElementById('ewNum').value = w.num;
-  document.getElementById('ewBal').value = isModeRp() ? Math.round(w.balance*exRate) : w.balance;
+  document.getElementById('ewBal').value = isModeRp() ? Math.round(w.balance) : (w.balance / exRate).toFixed(2);
   document.getElementById('ewCurr').textContent = isModeRp() ? 'Rp' : '$';
   document.getElementById('editWalletModal').classList.add('on');
 }
@@ -1748,7 +1751,7 @@ function updateWallet(){
   w.bank=document.getElementById('ewBank').value.trim()||w.bank;
   w.num=document.getElementById('ewNum').value.trim()||w.num;
   const raw=parseFloat(document.getElementById('ewBal').value)||0;
-  w.balance=isModeRp()?raw/exRate:raw;
+  w.balance=isModeRp()?raw:Math.round(raw*exRate);
   closeEditWalletModal();
   renderWallets();
   buildSourceGrid();
@@ -1775,9 +1778,9 @@ function deleteWallet(){
 // HISTORY
 // ============================================================
 let historyItems=[
-  {name:'Transfer to Emergency Fund',time:'Today, 2:45 PM',amt:500,pos:true},
-  {name:'Auto-Save: Vacation',time:'Yesterday',amt:150,pos:true},
-  {name:'Round-up: New Car',time:'Oct 24, 2023',amt:12.45,pos:true},
+  {name:'Transfer to Emergency Fund',time:'Today, 2:45 PM',amt:7900000,pos:true},
+  {name:'Auto-Save: Vacation',time:'Yesterday',amt:2370000,pos:true},
+  {name:'Round-up: New Car',time:'Oct 24, 2023',amt:196710,pos:true},
 ];
 function addHistoryItem(name,usd,pos,extra={}){
   const now=new Date();
@@ -1815,9 +1818,25 @@ function switchSvTab(t){document.querySelectorAll('.sv-tab').forEach(x=>x.classL
 // CURRENCY
 // ============================================================
 const isModeRp=()=>lang==='id';
-function fmt(usd){if(isModeRp()){const r=Math.round(usd*exRate);return'Rp '+r.toLocaleString('id-ID');}return'$'+usd.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function fmtAlt(usd){if(isModeRp())return'≈ $'+usd.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});return'≈ Rp '+Math.round(usd*exRate).toLocaleString('id-ID');}
-async function fetchRate(){try{const r=await fetch('https://open.er-api.com/v6/latest/USD');const d=await r.json();if(d?.rates?.IDR){exRate=d.rates.IDR;document.getElementById('rateInfo').textContent=`1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}`;document.getElementById('rateTime').textContent='● Live';addNotif('tip','Exchange Rate Updated',`1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')} (Live)`);}}catch(e){}updateAllAmounts();}
+// SISTEM BARU: nilai internal selalu Rupiah
+// fmt(rp)    → tampilkan nominal (Rp jika mode ID, $ jika mode EN)
+// fmtAlt(rp) → tampilkan konversi alternatif ($ jika mode ID, Rp jika mode EN)
+function fmt(rp){
+  if(isModeRp()){
+    return 'Rp '+Math.round(rp).toLocaleString('id-ID');
+  }
+  // mode USD: bagi dengan exRate untuk tampilan $
+  const usd = rp / exRate;
+  return '$'+usd.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtAlt(rp){
+  if(isModeRp()){
+    const usd = rp / exRate;
+    return '≈ $'+usd.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  return '≈ Rp '+Math.round(rp).toLocaleString('id-ID');
+}
+async function fetchRate(){try{const r=await fetch('https://open.er-api.com/v6/latest/USD');const d=await r.json();if(d?.rates?.IDR){exRate=d.rates.IDR;document.getElementById('rateInfo').textContent=`1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}`;document.getElementById('rateTime').textContent='● Live';addNotif('tip','Exchange Rate Updated',`1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')} (Live)`);}}catch(e){}updateAllAmounts();} // exRate hanya untuk konversi tampilan USD
 function updateAllAmounts(){
   const rp=isModeRp();
   document.getElementById('rateBanner').style.display=rp?'flex':'none';
@@ -2016,17 +2035,17 @@ let selDest   = 'main';   // destination for income/transfer
 let rawAmountNum = 0;
 
 // Format number input with thousand separators
+// rawAmountNum sekarang dalam RUPIAH (bukan USD)
 function formatAmountInput(el) {
-  // strip non-digits except last decimal
+  // strip non-digits
   let raw = el.value.replace(/[^0-9]/g, '');
-  rawAmountNum = parseInt(raw) || 0;
+  rawAmountNum = parseInt(raw) || 0; // nilai dalam RUPIAH
   // format with thousands separator
   if (raw === '') { el.value = ''; document.getElementById('amountPreview').textContent = ''; updateTxSummary(); return; }
   // display formatted
   el.value = rawAmountNum.toLocaleString(lang === 'id' ? 'id-ID' : 'en-US');
-  // Show alt currency preview
-  const usd = isModeRp() ? rawAmountNum / exRate : rawAmountNum;
-  document.getElementById('amountPreview').textContent = fmtAlt(usd);
+  // Show alt currency preview (USD = Rp / exRate)
+  document.getElementById('amountPreview').textContent = fmtAlt(rawAmountNum);
   updateTxSummary();
 }
 
@@ -2184,7 +2203,8 @@ function getDestLabel() {
 function updateTxSummary() {
   const preview = document.getElementById('txSummaryPreview');
   if (!preview || !rawAmountNum) { if(preview) preview.style.display = 'none'; return; }
-  const usd = isModeRp() ? rawAmountNum / exRate : rawAmountNum;
+  // rawAmountNum sudah Rupiah; jika mode USD, konversi ke Rp
+  const rp = isModeRp() ? rawAmountNum : Math.round(rawAmountNum * exRate);
   const lbl = document.getElementById('tsp-label');
   const amt = document.getElementById('tsp-amount');
   const src = document.getElementById('tsp-source');
@@ -2192,18 +2212,18 @@ function updateTxSummary() {
   const destLbl = getDestLabel();
   if (txType === 'income') {
     lbl.textContent = lang==='id' ? `Pemasukan dari → ${destLbl}` : `Income → ${destLbl}`;
-    amt.textContent = '+' + fmt(usd);
+    amt.textContent = '+' + fmt(rp);
     amt.className = 'tx-amt pos';
     src.textContent = srcLbl;
   } else if (txType === 'transfer') {
     lbl.textContent = lang==='id' ? `Transfer → ${destLbl}` : `Transfer → ${destLbl}`;
-    amt.textContent = fmt(usd);
+    amt.textContent = fmt(rp);
     amt.className = 'tx-amt';
     amt.style.color = 'var(--blue2)';
     src.textContent = srcLbl;
   } else {
     lbl.textContent = lang==='id' ? 'Pengeluaran dari' : 'Expense from';
-    amt.textContent = '-' + fmt(usd);
+    amt.textContent = '-' + fmt(rp);
     amt.className = 'tx-amt neg';
     src.textContent = srcLbl;
   }
@@ -2249,7 +2269,9 @@ function completeTx(){
   }
 
   const note       = document.getElementById('noteInput').value || T('cat-'+selCat);
-  const usd        = isModeRp() ? rawAmountNum / exRate : rawAmountNum;
+  // SISTEM BARU: rawAmountNum sudah dalam RUPIAH
+  // Jika mode USD, user ketik dalam USD → konversi ke Rupiah dulu
+  const rp         = isModeRp() ? rawAmountNum : Math.round(rawAmountNum * exRate);
   const srcWallet  = getSourceWallet();
   const destWallet = getDestWallet();
   const srcLabel   = getSourceLabel();
@@ -2271,29 +2293,26 @@ function completeTx(){
         lang==='id'?`Saldo ${availLbl} tidak mencukupi (${fmt(availBal)})`:`Insufficient balance on ${availLbl} (${fmt(availBal)})`);
       return;
     }
-    if (availBal < usd) {
+    if (availBal < rp) {
       toast(`❌ ${T('tx-insufficient')}: ${fmt(availBal)}`);
       addNotif('neg', lang==='id'?'❌ Saldo Tidak Cukup':'❌ Insufficient Balance',
-        lang==='id'?`Butuh ${fmt(usd)}, tersedia ${fmt(availBal)} di ${availLbl}`:`Need ${fmt(usd)}, only ${fmt(availBal)} available in ${availLbl}`);
+        lang==='id'?`Butuh ${fmt(rp)}, tersedia ${fmt(availBal)} di ${availLbl}`:`Need ${fmt(rp)}, only ${fmt(availBal)} available in ${availLbl}`);
       return;
     }
   }
 
-  // ══ UPDATE SALDO ══
+  // ══ UPDATE SALDO (semua dalam Rupiah) ══
   if (isIncome) {
-    // Income → masuk ke destWallet atau main balance
-    if (destWallet) { destWallet.balance += usd; }
-    else            { balance += usd; }
+    if (destWallet) { destWallet.balance += rp; }
+    else            { balance += rp; }
   } else if (isTransfer) {
-    // Transfer: kurangi source, tambah dest
-    if (srcWallet)  { srcWallet.balance  -= usd; }
-    else            { balance -= usd; }
-    if (destWallet) { destWallet.balance += usd; }
-    else            { balance += usd; }
+    if (srcWallet)  { srcWallet.balance  -= rp; }
+    else            { balance -= rp; }
+    if (destWallet) { destWallet.balance += rp; }
+    else            { balance += rp; }
   } else {
-    // Expense: kurangi dari source
-    if (srcWallet) { srcWallet.balance -= usd; }
-    else           { balance -= usd; }
+    if (srcWallet) { srcWallet.balance -= rp; }
+    else           { balance -= rp; }
   }
 
   // ── Recalculate total balance dari semua wallet ──────────
@@ -2301,11 +2320,11 @@ function completeTx(){
   updateAllAmounts();
   renderWallets();
 
-  // ── Add to historyItems (realtime) ──────────────────────
+  // ── Add to historyItems — amt dalam RUPIAH ──────────────────────
   const hItem = {
     name:   note,
     time:   `${dateStr}, ${timeStr}`,
-    amt:    isIncome ? usd : -usd,
+    amt:    isIncome ? rp : -rp,
     pos:    isIncome,
     cat:    selCat,
     catColor: selCatColor,
@@ -2323,17 +2342,17 @@ function completeTx(){
   const notifType  = isIncome ? 'tx' : 'neg';
   const notifTitle = isIncome?'💰 '+T('tx-income-done'):isTransfer?'🔄 '+T('tx-transfer-done'):'💳 '+T('tx-done');
   const notifMsg   = isIncome
-    ? `+${fmt(usd)} ${lang==='id'?'→':'→'} ${destLabel}`
+    ? `+${fmt(rp)} ${lang==='id'?'→':'→'} ${destLabel}`
     : isTransfer
-    ? `${fmt(usd)} ${srcLabel} → ${destLabel}`
-    : `-${fmt(usd)} ${lang==='id'?'dari':'from'} ${srcLabel}`;
+    ? `${fmt(rp)} ${srcLabel} → ${destLabel}`
+    : `-${fmt(rp)} ${lang==='id'?'dari':'from'} ${srcLabel}`;
   addNotif(notifType, notifTitle, notifMsg);
 
   // ── Analytics: refresh realtime ─────────────────────────
   refreshAnalytics()
 
   closeAddModal(); switchTab('home');
-  toast(isIncome ? `✅ +${fmt(usd)} ${T('tx-recorded')}` : isTransfer ? `✅ ${T('tx-transfer')} ${fmt(usd)}` : `✅ -${fmt(usd)} ${T('tx-recorded')}`);
+  toast(isIncome ? `✅ +${fmt(rp)} ${T('tx-recorded')}` : isTransfer ? `✅ ${T('tx-transfer')} ${fmt(rp)}` : `✅ -${fmt(rp)} ${T('tx-recorded')}`);
   fbAutoSave();
 }
 
@@ -3324,6 +3343,7 @@ function fmtCalc(v){
 function updCalcFmt(){
   const n=parseFloat(calcVal.replace(/,/g,'').replace(/\./g,'')||'0');
   if(!n){document.getElementById('calcFmt').textContent='';return;}
+  // Kalkulator: input dalam Rupiah, preview USD
   document.getElementById('calcFmt').textContent = isModeRp()
     ? `≈ $${(n/exRate).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`
     : `≈ Rp ${Math.round(n*exRate).toLocaleString('id-ID')}`;
@@ -3335,9 +3355,10 @@ function useCalcResult(){
   document.getElementById('calcOvr').classList.remove('on');
   openAddModal();
   setTimeout(()=>{
+    // Kalkulator: nilai n sudah dalam Rupiah (input user)
     rawAmountNum=Math.round(Math.abs(n));
     const inp=document.getElementById('amountRaw');
-    if(inp){ inp.value=rawAmountNum.toLocaleString(lang==='id'?'id-ID':'en-US'); document.getElementById('amountPreview').textContent=fmtAlt(isModeRp()?rawAmountNum/exRate:rawAmountNum); updateTxSummary(); }
+    if(inp){ inp.value=rawAmountNum.toLocaleString(lang==='id'?'id-ID':'en-US'); document.getElementById('amountPreview').textContent=fmtAlt(rawAmountNum); updateTxSummary(); }
   },350);
 }
 

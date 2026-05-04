@@ -576,42 +576,18 @@ body{background:var(--bg);transition:background .35s;}
 .h-a.pos{color:var(--green);}
 .h-a.neg{color:var(--red);}
 
-/* HISTORY NAVBAR */
-.hist-navbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px 8px;background:var(--card);border-bottom:1px solid var(--border);}
-.hist-nav-pill{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg);font-family:var(--f);font-size:12px;font-weight:600;color:var(--navy);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:all .18s;}
-.hist-nav-pill:active{transform:scale(.95);}
-.hist-nav-pill.accent{background:var(--navy);border-color:var(--navy);color:#fff;}
-/* Month picker bottom sheet */
-.mp-overlay{position:fixed;inset:0;z-index:1099;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s;}
-.mp-overlay.on{opacity:1;pointer-events:auto;}
-.mp-sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -4px 32px rgba(0,0,0,.18);padding:0 0 36px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1,.4,1);}
-.mp-sheet.on{transform:translateY(0);}
-.mp-handle{width:38px;height:4px;border-radius:2px;background:var(--border);margin:12px auto 0;}
-.mp-title{font-family:var(--f);font-size:12px;font-weight:700;color:var(--t3);letter-spacing:.08em;padding:14px 20px 8px;}
-.mp-list{max-height:55vh;overflow-y:auto;padding:0 12px 4px;}
-.mp-year-lbl{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.1em;padding:10px 10px 4px;}
-.mp-row{display:flex;align-items:center;justify-content:space-between;padding:13px 12px;border-radius:12px;font-family:var(--f);font-size:15px;font-weight:500;color:var(--navy);cursor:pointer;transition:background .15s;}
-.mp-row:active{background:var(--bg);}
-.mp-row.active{background:var(--navy);color:#fff;font-weight:700;}
-/* E-Statement fullscreen */
-.est-panel{position:fixed;inset:0;z-index:1200;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .32s cubic-bezier(.32,1,.4,1);}
-.est-panel.on{transform:translateX(0);}
-.est-hdr{background:var(--navy);padding:16px 16px 0;flex-shrink:0;}
-.est-hdr-row{display:flex;align-items:center;gap:12px;padding-bottom:14px;}
-.est-back{width:36px;height:36px;background:rgba(255,255,255,.12);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
-.est-tabs{display:flex;border-bottom:2px solid rgba(255,255,255,.15);}
-.est-tab{flex:1;padding:10px 0;font-family:var(--f);font-size:13px;font-weight:600;color:rgba(255,255,255,.5);background:none;border:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
-.est-tab.on{color:#fff;border-bottom-color:#fff;}
-.est-body{flex:1;overflow-y:auto;}
-.est-year{font-size:12px;font-weight:700;color:var(--t3);letter-spacing:.09em;padding:18px 16px 8px;}
-.est-month-card{display:flex;align-items:center;background:var(--card);border-radius:14px;margin:0 16px 10px;padding:14px 16px;box-shadow:0 1px 5px rgba(0,0,0,.06);}
-.est-month-nm{font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);flex:1;}
-.est-dl{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;border:1.5px solid #1A56C4;background:none;color:#1A56C4;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;margin-left:8px;transition:all .15s;}
-.est-dl:active{background:#1A56C4;color:#fff;}
-.est-sum{background:linear-gradient(135deg,var(--navy),#2563eb);border-radius:16px;margin:16px;padding:20px;color:#fff;}
-.est-tx-grp{margin:0 16px 14px;}
-.est-tx-dlbl{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.08em;padding:10px 0 6px;}
-.est-tx-row{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:12px;padding:11px 14px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+/* E-STATEMENT */
+.estat-year-lbl{font-size:12px;font-weight:700;color:var(--t3);letter-spacing:.6px;margin:14px 0 8px;}
+.estat-month-row{display:flex;align-items:center;background:var(--surface);border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--sh2);}
+.estat-month-name{font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);flex:1;}
+.estat-dl-btn{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:10px;border:1.5px solid var(--border);background:transparent;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;color:var(--blue);margin-left:8px;}
+.estat-dl-btn:active{opacity:.7;}
+.estat-dl-btn svg{width:14px;height:14px;fill:none;stroke:var(--blue);stroke-width:2;}
+/* Bulan picker list item */
+.bulan-item{display:flex;align-items:center;padding:13px 12px;border-radius:12px;cursor:pointer;margin-bottom:4px;}
+.bulan-item:hover,.bulan-item.on{background:var(--surface2);}
+.bulan-item-lbl{font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);flex:1;}
+.bulan-item-count{font-size:11px;color:var(--t3);}
 
 /* SETTINGS */
 .prof-card{background:var(--surface);border-radius:18px;padding:20px;margin:0 16px 18px;text-align:center;box-shadow:var(--sh2);}
@@ -1104,50 +1080,32 @@ body{background:var(--bg);transition:background .35s;}
       </div>
       <!-- History -->
       <div id="sv-history-content" style="display:none;">
-        <!-- NAVBAR: Bulan | E-Statement -->
-        <div class="hist-navbar">
-          <div class="hist-nav-pill" id="histMonthBtn" onclick="openMonthSheet()">
-            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span id="histMonthLabel">Mei 2026</span>
-            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
-          </div>
-          <div class="hist-nav-pill accent" onclick="openEStatement()">
-            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <!-- NAVBAR: Bulan (kiri) | E-Statement (kanan) -->
+        <div id="hist-navbar" style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 12px;margin-bottom:2px;">
+          <!-- Bulan pill kiri -->
+          <button id="hist-bulan-btn" onclick="openBulanPicker()" style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:none;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="hist-bulan-label">Mei 2026</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+          <!-- E-Statement kanan -->
+          <button onclick="openEStatement()" style="display:flex;align-items:center;gap:6px;background:var(--blue);border:none;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;color:white;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
             E-Statement
+          </button>
+        </div>
+        <!-- Bulan month dropdown (hidden by default) -->
+        <div id="bulan-picker" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.45);" onclick="closeBulanPicker()">
+          <div onclick="event.stopPropagation()" style="position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;padding:18px 16px 32px;max-height:60vh;overflow-y:auto;">
+            <div style="width:40px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 16px;"></div>
+            <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);margin-bottom:14px;" id="bulan-picker-title">Pilih Bulan</div>
+            <div id="bulan-picker-list"></div>
           </div>
         </div>
-        <!-- History List -->
+        <!-- History list filtered by selected month -->
         <div class="sv-hist" id="historyContainer"></div>
       </div>
       <div style="height:12px;"></div>
-    </div>
-
-    <!-- ══ MONTH PICKER BOTTOM SHEET ══ -->
-    <div class="mp-overlay" id="mpOverlay" onclick="closeMonthSheet()"></div>
-    <div class="mp-sheet" id="mpSheet">
-      <div class="mp-handle"></div>
-      <div class="mp-title">PILIH BULAN</div>
-      <div class="mp-list" id="mpList"></div>
-    </div>
-
-    <!-- ══ E-STATEMENT PANEL ══ -->
-    <div class="est-panel" id="estPanel">
-      <div class="est-hdr">
-        <div class="est-hdr-row">
-          <button class="est-back" onclick="closeEStatement()">
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" fill="none" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
-          </button>
-          <div>
-            <div style="font-family:var(--f);font-size:17px;font-weight:800;color:#fff;letter-spacing:.01em;">e-Statement</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:1px;">Laporan Keuangan</div>
-          </div>
-        </div>
-        <div class="est-tabs">
-          <button class="est-tab on" id="estTabRek" onclick="switchEstTab('rekening')">Rekening Ini</button>
-          <button class="est-tab" id="estTabGab" onclick="switchEstTab('gabungan')">Gabungan</button>
-        </div>
-      </div>
-      <div class="est-body" id="estBody"></div>
     </div>
 
     <!-- SETTINGS TAB -->
@@ -1860,6 +1818,76 @@ let historyItems=[
   {name:'Auto-Save: Vacation',time:'Yesterday',amt:2370000,pos:true},
   {name:'Round-up: New Car',time:'Oct 24, 2023',amt:196710,pos:true},
 ];
+// ============================================================
+// HISTORY — Bulan Filter + E-Statement
+// ============================================================
+
+const MONTH_NAMES_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// Bulan yang sedang dipilih (default: bulan saat ini)
+let histFilterYear  = new Date().getFullYear();
+let histFilterMonth = new Date().getMonth(); // 0-based
+
+function monthName(m){ return lang==='id' ? MONTH_NAMES_ID[m] : MONTH_NAMES_EN[m]; }
+
+function updateHistNavbarLabel(){
+  const el = document.getElementById('hist-bulan-label');
+  if(el) el.textContent = `${monthName(histFilterMonth)} ${histFilterYear}`;
+}
+
+// Kumpulkan semua (year,month) yang punya transaksi, plus bulan saat ini
+function getAvailableMonths(){
+  const now = new Date();
+  const map = {};
+  // Tambahkan bulan saat ini selalu ada
+  const ky = `${now.getFullYear()}-${now.getMonth()}`;
+  map[ky] = { year: now.getFullYear(), month: now.getMonth(), count: 0 };
+  historyItems.forEach(h => {
+    const d = new Date(h.ts || Date.now());
+    const k = `${d.getFullYear()}-${d.getMonth()}`;
+    if(!map[k]) map[k] = { year: d.getFullYear(), month: d.getMonth(), count: 0 };
+    map[k].count++;
+  });
+  return Object.values(map).sort((a,b) => b.year !== a.year ? b.year-a.year : b.month-a.month);
+}
+
+function openBulanPicker(){
+  const months = getAvailableMonths();
+  const list   = document.getElementById('bulan-picker-list');
+  const title  = document.getElementById('bulan-picker-title');
+  if(title) title.textContent = lang==='id' ? 'Pilih Bulan' : 'Select Month';
+  if(!list) return;
+  let curYear = null;
+  list.innerHTML = months.map(m => {
+    let yearHdr = '';
+    if(m.year !== curYear){
+      curYear = m.year;
+      yearHdr = `<div class="estat-year-lbl">${m.year}</div>`;
+    }
+    const isOn = m.year===histFilterYear && m.month===histFilterMonth;
+    const countTxt = m.count > 0 ? `${m.count} transaksi` : (lang==='id'?'Belum ada transaksi':'No transactions');
+    return `${yearHdr}<div class="bulan-item${isOn?' on':''}" onclick="selectBulan(${m.year},${m.month})">
+      <span class="bulan-item-lbl">${monthName(m.month)} ${m.year}</span>
+      <span class="bulan-item-count">${countTxt}</span>
+      ${isOn?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5" style="margin-left:8px"><polyline points="20,6 9,17 4,12"/></svg>':''}
+    </div>`;
+  }).join('');
+  document.getElementById('bulan-picker').style.display = 'block';
+}
+
+function closeBulanPicker(){
+  document.getElementById('bulan-picker').style.display = 'none';
+}
+
+function selectBulan(year, month){
+  histFilterYear  = year;
+  histFilterMonth = month;
+  updateHistNavbarLabel();
+  closeBulanPicker();
+  renderHistory();
+}
+
 function addHistoryItem(name,usd,pos,extra={}){
   const now=new Date();
   const t=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -1869,90 +1897,35 @@ function addHistoryItem(name,usd,pos,extra={}){
     catIco:extra.catIco||selCatIco, src:extra.src||'', dest:extra.dest||'',
     type:extra.type||txType, ...extra
   });
+  // Jika bulan saat ini berbeda dengan filter, reset filter ke bulan sekarang
+  const n = new Date();
+  if(histFilterYear!==n.getFullYear()||histFilterMonth!==n.getMonth()){
+    histFilterYear=n.getFullYear(); histFilterMonth=n.getMonth();
+  }
+  updateHistNavbarLabel();
   renderHistory();
   fbAutoSave();
-}
-// ============================================================
-// HISTORY — Filter State
-// ============================================================
-let histFilterMonth = null; // "YYYY-MM", null = bulan ini
-
-function getMonthYM(date){ return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0'); }
-
-function monthLabelFromYM(ym){
-  const [y,m]=ym.split('-');
-  const id=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const en=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  return (lang==='id'?id:en)[parseInt(m)-1]+' '+y;
-}
-
-function initHistMonth(){
-  // Auto-update: jika bulan berubah (user buka di bulan berbeda), reset ke bulan ini
-  const currentYM = getMonthYM(new Date());
-  if(!histFilterMonth || histFilterMonth !== currentYM){
-    // Cek apakah sudah pernah set manual; jika belum, pakai bulan saat ini
-    if(!histFilterMonth) histFilterMonth = currentYM;
-  }
-  document.getElementById('histMonthLabel').textContent = monthLabelFromYM(histFilterMonth);
-}
-
-function getAvailMonths(){
-  const set = new Set();
-  set.add(getMonthYM(new Date())); // bulan ini selalu ada
-  historyItems.forEach(h=>{ if(h.ts) set.add(getMonthYM(new Date(h.ts))); });
-  return [...set].sort((a,b)=>b.localeCompare(a));
-}
-
-// ── Month Picker Sheet ──
-function openMonthSheet(){
-  const months = getAvailMonths();
-  const list   = document.getElementById('mpList');
-  // Group by year
-  const years  = {};
-  months.forEach(ym=>{ const y=ym.split('-')[0]; if(!years[y]) years[y]=[]; years[y].push(ym); });
-  list.innerHTML = Object.keys(years).sort((a,b)=>b-a).map(y=>`
-    <div class="mp-year-lbl">${y}</div>
-    ${years[y].map(ym=>`
-      <div class="mp-row ${ym===histFilterMonth?'active':''}" onclick="selectHistMonth('${ym}')">
-        <span>${monthLabelFromYM(ym).split(' ')[0]}</span>
-        ${ym===histFilterMonth?'<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>':''}
-      </div>`).join('')}`).join('');
-  document.getElementById('mpOverlay').classList.add('on');
-  document.getElementById('mpSheet').classList.add('on');
-}
-function closeMonthSheet(){
-  document.getElementById('mpOverlay').classList.remove('on');
-  document.getElementById('mpSheet').classList.remove('on');
-}
-function selectHistMonth(ym){
-  histFilterMonth = ym;
-  document.getElementById('histMonthLabel').textContent = monthLabelFromYM(ym);
-  closeMonthSheet();
-  renderHistory();
-}
-
-// ── Filtered history ──
-function getHistFiltered(){
-  if(!histFilterMonth) return historyItems;
-  return historyItems.filter(h=>{
-    if(!h.ts) return false;
-    return getMonthYM(new Date(h.ts)) === histFilterMonth;
-  });
 }
 
 function renderHistory(){
   const c = document.getElementById('historyContainer');
   if(!c) return;
-  const items = getHistFiltered();
-  if(!items.length){
-    c.innerHTML=`<div style="text-align:center;padding:40px 20px;">
-      <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--border)" fill="none" stroke-width="1.5" style="display:block;margin:0 auto 10px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-      <div style="font-family:var(--f);font-size:14px;font-weight:600;color:var(--t3);">${lang==='id'?'Tidak ada transaksi':'No transactions'}</div>
-      <div style="font-size:12px;color:var(--t3);margin-top:4px;">${histFilterMonth?monthLabelFromYM(histFilterMonth):''}</div>
+
+  // Filter berdasarkan bulan yang dipilih
+  const filtered = historyItems.filter(h => {
+    const d = new Date(h.ts || 0);
+    return d.getFullYear()===histFilterYear && d.getMonth()===histFilterMonth;
+  });
+
+  if(!filtered.length){
+    c.innerHTML = `<div style="text-align:center;padding:30px 16px;color:var(--t3);font-size:13px;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px"><path d="M21 4H3M16 9H3M21 14H3M16 19H3"/></svg>
+      ${lang==='id'?`Tidak ada transaksi di ${monthName(histFilterMonth)} ${histFilterYear}`:`No transactions in ${monthName(histFilterMonth)} ${histFilterYear}`}
     </div>`;
     return;
   }
-  c.innerHTML = items.map(h=>{
+
+  c.innerHTML = filtered.map(h => {
     const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
     const icon = h.pos
       ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
@@ -1978,219 +1951,267 @@ function switchSvTab(t){
   document.getElementById('sv-wallets-content').style.display=t==='wallets'?'block':'none';
   document.getElementById('sv-history-content').style.display=t==='history'?'block':'none';
   if(t==='wallets') renderWallets();
-  if(t==='history'){ initHistMonth(); renderHistory(); }
+  if(t==='history'){ updateHistNavbarLabel(); renderHistory(); }
 }
 
 // ============================================================
 // E-STATEMENT
 // ============================================================
-let estTab = 'rekening'; // 'rekening' | 'gabungan'
-let estDetailMonth = null; // null = list, "YYYY-MM" = detail bulan
+let eStatTab = 'rekening'; // 'rekening' | 'gabungan'
 
 function openEStatement(){
-  estTab = 'rekening';
-  estDetailMonth = null;
-  document.getElementById('estPanel').classList.add('on');
-  document.getElementById('estTabRek').classList.add('on');
-  document.getElementById('estTabGab').classList.remove('on');
-  renderEstBody();
+  const ov = document.getElementById('estat-overlay');
+  if(!ov) return;
+  ov.style.display = 'flex';
+  eStatTab = 'rekening';
+  switchEStatTab('rekening');
 }
+
 function closeEStatement(){
-  document.getElementById('estPanel').classList.remove('on');
-  estDetailMonth = null;
-}
-function switchEstTab(tab){
-  estTab = tab;
-  estDetailMonth = null;
-  document.getElementById('estTabRek').classList.toggle('on', tab==='rekening');
-  document.getElementById('estTabGab').classList.toggle('on', tab==='gabungan');
-  renderEstBody();
+  document.getElementById('estat-overlay').style.display = 'none';
 }
 
-function getEstMonthItems(ym){
-  const byMonth = h => h.ts && getMonthYM(new Date(h.ts)) === ym;
-  if(estTab === 'gabungan'){
-    // Semua transaksi dari semua rekening
-    return historyItems.filter(byMonth);
-  }
-  // "Rekening Ini" = transaksi yang tidak terkait wallet spesifik (main balance)
-  // atau semua jika belum ada wallet
-  if(!wallets || wallets.length === 0){
-    return historyItems.filter(byMonth);
-  }
-  const walletTags = wallets.map(w => `${w.bank} \u2022\u2022${w.num}`);
-  return historyItems.filter(h => byMonth(h) && !walletTags.includes(h.src) && !walletTags.includes(h.dest));
+function switchEStatTab(tab){
+  eStatTab = tab;
+  const btnR = document.getElementById('estat-tab-rekening');
+  const btnG = document.getElementById('estat-tab-gabungan');
+  [btnR,btnG].forEach(b=>{ if(b){ b.style.color='var(--t3)'; b.style.borderBottomColor='transparent'; b.style.fontWeight='600'; }});
+  const active = document.getElementById(`estat-tab-${tab}`);
+  if(active){ active.style.color='var(--blue)'; active.style.borderBottomColor='var(--blue)'; active.style.fontWeight='700'; }
+  renderEStatContent();
 }
 
-function getEstAllMonths(){
-  const set = new Set();
-  historyItems.forEach(h=>{ if(h.ts) set.add(getMonthYM(new Date(h.ts))); });
-  // Tambah bulan aktif sekarang
-  set.add(getMonthYM(new Date()));
-  return [...set].sort((a,b)=>b.localeCompare(a));
-}
-
-function renderEstBody(){
-  const body = document.getElementById('estBody');
-  if(estDetailMonth){ renderEstDetail(estDetailMonth); return; }
-  // ── LIST: daftar bulan per tahun seperti desain ──
-  const months = getEstAllMonths();
-  const years  = {};
-  months.forEach(ym=>{ const y=ym.split('-')[0]; if(!years[y]) years[y]=[]; years[y].push(ym); });
-
-  body.innerHTML = '<div style="padding-bottom:32px;">'+
-    Object.keys(years).sort((a,b)=>b-a).map(y=>`
-      <div class="est-year">${y}</div>
-      ${years[y].map(ym=>{
-        const [,m]=ym.split('-');
-        const id=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-        const en=['January','February','March','April','May','June','July','August','September','October','November','December'];
-        const nm = (lang==='id'?id:en)[parseInt(m)-1];
-        return `<div class="est-month-card">
-          <div class="est-month-nm" onclick="openEstDetail('${ym}')">${nm}</div>
-          <button class="est-dl" onclick="dlStatement('${ym}','excel')" title="Excel">
-            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>Excel
-          </button>
-          <button class="est-dl" onclick="dlStatement('${ym}','pdf')" title="PDF">
-            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>PDF
-          </button>
-        </div>`;
-      }).join('')}`).join('')+'</div>';
-}
-
-function openEstDetail(ym){
-  estDetailMonth = ym;
-  renderEstDetail(ym);
-}
-
-function renderEstDetail(ym){
-  const body  = document.getElementById('estBody');
-  const items = getEstMonthItems(ym).sort((a,b)=>b.ts-a.ts);
-  const [,m] = ym.split('-');
-  const id=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const en=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const mName = (lang==='id'?id:en)[parseInt(m)-1];
-  const totalIn  = items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
-  const totalOut = items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
-  const net = totalIn - totalOut;
-
-  // Group by date
-  const groups = {};
-  items.forEach(h=>{
-    const key = h.ts ? new Date(h.ts).toLocaleDateString(lang==='id'?'id-ID':'en-US',{weekday:'short',day:'numeric',month:'short'}) : '-';
-    if(!groups[key]) groups[key]=[];
-    groups[key].push(h);
+// Kelompokkan historyItems per (year, month)
+function groupByMonth(){
+  const map = {};
+  historyItems.forEach(h => {
+    const d = new Date(h.ts || 0);
+    const yr = d.getFullYear(), mo = d.getMonth();
+    const k = `${yr}-${String(mo).padStart(2,'0')}`;
+    if(!map[k]) map[k] = { year:yr, month:mo, items:[] };
+    map[k].items.push(h);
   });
-
-  body.innerHTML = `
-    <!-- Back button -->
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px 0;">
-      <button onclick="estDetailMonth=null;renderEstBody();" style="background:var(--bg);border:1.5px solid var(--border);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--navy)" fill="none" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
-      </button>
-      <span style="font-family:var(--f);font-size:16px;font-weight:800;color:var(--navy);">${mName}</span>
-      <div style="margin-left:auto;display:flex;gap:6px;">
-        <button class="est-dl" onclick="dlStatement('${ym}','excel')">
-          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>Excel
-        </button>
-        <button class="est-dl" onclick="dlStatement('${ym}','pdf')">
-          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>PDF
-        </button>
-      </div>
-    </div>
-    <!-- Summary card -->
-    <div class="est-sum">
-      <div style="font-size:11px;opacity:.7;letter-spacing:.1em;font-weight:700;margin-bottom:8px;">RINGKASAN ${mName.toUpperCase()}</div>
-      <div style="display:flex;gap:16px;margin-bottom:14px;">
-        <div style="flex:1;"><div style="font-size:11px;opacity:.7;">Pemasukan</div><div style="font-size:17px;font-weight:800;color:#4ade80;">+${fmt(totalIn)}</div></div>
-        <div style="flex:1;"><div style="font-size:11px;opacity:.7;">Pengeluaran</div><div style="font-size:17px;font-weight:800;color:#f87171;">-${fmt(totalOut)}</div></div>
-      </div>
-      <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:12px;opacity:.7;">Saldo Bersih</span>
-        <span style="font-size:19px;font-weight:800;color:${net>=0?'#4ade80':'#f87171'}">${net>=0?'+':''}${fmt(net)}</span>
-      </div>
-    </div>
-    <!-- Transactions -->
-    <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);padding:4px 16px 8px;">${items.length} Transaksi</div>
-    ${Object.keys(groups).length===0
-      ? `<div style="text-align:center;padding:30px;color:var(--t3);font-size:13px;">Belum ada transaksi</div>`
-      : Object.entries(groups).map(([date,txs])=>`
-        <div class="est-tx-grp">
-          <div class="est-tx-dlbl">${date}</div>
-          ${txs.map(h=>{
-            const nm = h.langKey?(T(h.langKey)||h.name):h.name;
-            return `<div class="est-tx-row">
-              <div style="width:34px;height:34px;border-radius:10px;background:${h.pos?'#f0fdf4':'#fff1f2'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="${h.pos?'var(--green)':'var(--red)'}" fill="none" stroke-width="2.5">${h.pos?'<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/>':'<line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/>'}</svg>
-              </div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nm}</div>
-                <div style="font-size:11px;color:var(--t3);margin-top:1px;">${h.cat?T('cat-'+h.cat)||h.cat:''} ${h.src?'· '+h.src:''}</div>
-              </div>
-              <div style="font-family:var(--f);font-size:13px;font-weight:700;color:${h.pos?'var(--green)':'var(--red)'};white-space:nowrap;">${h.pos?'+':'-'}${fmt(Math.abs(h.amt))}</div>
-            </div>`;}).join('')}
-        </div>`).join('')}
-    <div style="height:32px;"></div>`;
+  return Object.values(map).sort((a,b)=>b.year!==a.year?b.year-a.year:b.month-a.month);
 }
 
-// ── Download Statement ──
-function dlStatement(ym, type){
-  const items = getEstMonthItems(ym).sort((a,b)=>b.ts-a.ts);
-  const [,m] = ym.split('-');
-  const id=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const mName = id[parseInt(m)-1];
-  const appName = 'MyMoney';
+// Kelompokkan per tahun (gabungan)
+function groupByYear(){
+  const map = {};
+  historyItems.forEach(h => {
+    const d = new Date(h.ts||0);
+    const yr = d.getFullYear();
+    if(!map[yr]) map[yr] = { year:yr, items:[] };
+    map[yr].items.push(h);
+  });
+  return Object.values(map).sort((a,b)=>b.year-a.year);
+}
 
-  if(type==='excel'){
-    const header = ['Tanggal','Jam','Nama','Kategori','Asal','Tujuan','Tipe','Jumlah (Rp)'];
-    const rows = items.map(h=>{
-      const d  = h.ts ? new Date(h.ts) : new Date();
-      const tgl = d.toLocaleDateString('id-ID');
-      const jam = d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
-      const amt = h.pos ? Math.abs(h.amt) : -Math.abs(h.amt);
-      return [tgl, jam, '"'+(h.name||'')+'"', h.cat||'-', h.src||'-', h.dest||'-', h.type||'-', amt].join(',');
+function renderEStatContent(){
+  const c = document.getElementById('estat-content');
+  if(!c) return;
+
+  if(eStatTab === 'rekening'){
+    const groups = groupByMonth();
+    if(!groups.length){
+      c.innerHTML=`<div style="text-align:center;padding:40px;color:var(--t3);font-size:13px;">${lang==='id'?'Belum ada transaksi':'No transactions yet'}</div>`;
+      return;
+    }
+    let curYear=null, html='';
+    groups.forEach(g=>{
+      if(g.year!==curYear){
+        curYear=g.year;
+        html+=`<div class="estat-year-lbl">${g.year}</div>`;
+      }
+      const mn = monthName(g.month);
+      html+=`<div class="estat-month-row">
+        <span class="estat-month-name">${mn}</span>
+        <button class="estat-dl-btn" onclick="downloadEStatXLSX(${g.year},${g.month})">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="8,15 12,19 16,15"/></svg>
+          Excel
+        </button>
+        <button class="estat-dl-btn" onclick="downloadEStatPDF(${g.year},${g.month})">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="15" y2="18"/><line x1="9" y1="12" x2="11" y2="12"/></svg>
+          PDF
+        </button>
+      </div>`;
     });
-    const csv = [header.join(','), ...rows].join('\n');
-    const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${appName}_${mName}_${ym}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast('✅ Excel/CSV didownload!');
+    c.innerHTML = html;
+
+  } else {
+    // Gabungan — per tahun
+    const groups = groupByYear();
+    if(!groups.length){
+      c.innerHTML=`<div style="text-align:center;padding:40px;color:var(--t3);font-size:13px;">${lang==='id'?'Belum ada transaksi':'No transactions yet'}</div>`;
+      return;
+    }
+    let html='';
+    groups.forEach(g=>{
+      html+=`<div class="estat-year-lbl">${g.year}</div>
+      <div class="estat-month-row">
+        <span class="estat-month-name">${lang==='id'?'Gabungan':'Annual'} ${g.year} <span style="font-size:11px;font-weight:500;color:var(--t3);">(${g.items.length} transaksi)</span></span>
+        <button class="estat-dl-btn" onclick="downloadEStatXLSXYear(${g.year})">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="8,15 12,19 16,15"/></svg>
+          Excel
+        </button>
+        <button class="estat-dl-btn" onclick="downloadEStatPDFYear(${g.year})">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="15" y2="18"/><line x1="9" y1="12" x2="11" y2="12"/></svg>
+          PDF
+        </button>
+      </div>`;
+    });
+    c.innerHTML = html;
+  }
+}
+
+// ── DOWNLOAD XLSX per bulan ──────────────────────────────────
+function downloadEStatXLSX(year, month){
+  const items = historyItems.filter(h=>{
+    const d=new Date(h.ts||0);
+    return d.getFullYear()===year && d.getMonth()===month;
+  });
+  const mn   = monthName(month);
+  const uname= user?.name || 'User';
+  const rows = [
+    [`maNTapps — e-Statement ${mn} ${year}`,'','','',''],
+    [`Nama: ${uname}`,'','','',''],
+    [''],
+    ['Tanggal','Nama Transaksi','Kategori','Tipe','Jumlah'],
+    ...items.map(h=>{
+      const d=new Date(h.ts||0);
+      return [
+        d.toLocaleDateString('id-ID'),
+        (h.langKey ? (T(h.langKey)||h.name) : h.name),
+        T('cat-'+h.cat)||h.cat||'',
+        h.pos?'Pemasukan':'Pengeluaran',
+        (h.pos?1:-1)*Math.abs(h.amt)
+      ];
+    }),
+    [''],
+    ['Total Pemasukan','',fmt(items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
+    ['Total Pengeluaran','',fmt(items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
+  ];
+  _xlsxDownload(rows, `eStatement_${mn}_${year}`);
+}
+
+// ── DOWNLOAD XLSX per tahun (gabungan) ──────────────────────
+function downloadEStatXLSXYear(year){
+  const items = historyItems.filter(h=>new Date(h.ts||0).getFullYear()===year);
+  const uname = user?.name||'User';
+  const rows = [
+    [`maNTapps — e-Statement Gabungan ${year}`,'','','','',''],
+    [`Nama: ${uname}`,'','','','',''],
+    [''],
+    ['Tanggal','Bulan','Nama Transaksi','Kategori','Tipe','Jumlah'],
+    ...items.map(h=>{
+      const d=new Date(h.ts||0);
+      return [
+        d.toLocaleDateString('id-ID'),
+        monthName(d.getMonth()),
+        (h.langKey?(T(h.langKey)||h.name):h.name),
+        T('cat-'+h.cat)||h.cat||'',
+        h.pos?'Pemasukan':'Pengeluaran',
+        (h.pos?1:-1)*Math.abs(h.amt)
+      ];
+    }),
+    [''],
+    ['Total Pemasukan','','',fmt(items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
+    ['Total Pengeluaran','','',fmt(items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
+  ];
+  _xlsxDownload(rows, `eStatement_Gabungan_${year}`);
+}
+
+function _xlsxDownload(rows, filename){
+  if(typeof XLSX==='undefined'){
+    toast(lang==='id'?'⚠️ Library XLSX belum dimuat':'⚠️ XLSX library not loaded','');
     return;
   }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:16},{wch:12},{wch:28},{wch:16},{wch:14},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws, 'e-Statement');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+  toast('✅ Excel downloaded!');
+}
 
-  // PDF
+// ── DOWNLOAD PDF per bulan ───────────────────────────────────
+function downloadEStatPDF(year, month){
+  const items = historyItems.filter(h=>{
+    const d=new Date(h.ts||0);
+    return d.getFullYear()===year && d.getMonth()===month;
+  });
+  _pdfDownload(items, `${monthName(month)} ${year}`, `eStatement_${monthName(month)}_${year}`);
+}
+
+function downloadEStatPDFYear(year){
+  const items = historyItems.filter(h=>new Date(h.ts||0).getFullYear()===year);
+  _pdfDownload(items, `Gabungan ${year}`, `eStatement_Gabungan_${year}`);
+}
+
+function _pdfDownload(items, periodLabel, filename){
+  // Buat HTML lalu print-to-PDF via jsPDF atau fallback ke window.print
+  const uname  = user?.name||'User';
   const totalIn  = items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
   const totalOut = items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
   const net = totalIn - totalOut;
   const rows = items.map(h=>{
-    const d = h.ts ? new Date(h.ts).toLocaleDateString('id-ID') : '-';
-    const amt = (h.pos?'+':'-')+fmt(Math.abs(h.amt));
-    return `<tr><td>${d}</td><td>${h.name||''}</td><td>${h.cat?T('cat-'+h.cat)||h.cat:'-'}</td><td>${h.src||'-'}</td><td style="text-align:right;font-weight:700;color:${h.pos?'#16a34a':'#dc2626'}">${amt}</td></tr>`;
+    const d=new Date(h.ts||0);
+    const nm=(h.langKey?(T(h.langKey)||h.name):h.name);
+    const cat=T('cat-'+h.cat)||h.cat||'';
+    const amt=(h.pos?'+':'-')+fmt(Math.abs(h.amt));
+    const color=h.pos?'#0B7A63':'#EF4444';
+    return `<tr>
+      <td>${d.toLocaleDateString('id-ID')}</td>
+      <td>${nm}</td>
+      <td>${cat}</td>
+      <td>${h.pos?(lang==='id'?'Masuk':'Income'):(lang==='id'?'Keluar':'Expense')}</td>
+      <td style="text-align:right;color:${color};font-weight:600">${amt}</td>
+    </tr>`;
   }).join('');
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${appName} e-Statement ${mName}</title>
-  <style>body{font-family:'Segoe UI',sans-serif;padding:28px;color:#1e293b;max-width:720px;margin:0 auto;}h1{font-size:20px;font-weight:800;color:#1A56C4;margin:0;}
-  .sub{font-size:12px;color:#64748b;margin-top:3px;}.sum{display:flex;gap:16px;background:#1A56C4;color:#fff;border-radius:12px;padding:16px 20px;margin:16px 0;}
-  .si{flex:1;}.sl{font-size:10px;opacity:.75;}.sv{font-size:18px;font-weight:800;}
-  table{width:100%;border-collapse:collapse;margin-top:8px;}th{background:#f1f5f9;color:#64748b;font-size:10px;text-transform:uppercase;padding:9px;text-align:left;letter-spacing:.05em;}
-  td{padding:9px;border-bottom:1px solid #e2e8f0;font-size:12px;}tr:last-child td{border:none;}
-  .ft{margin-top:24px;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;}
-  @media print{body{padding:10px;}}</style></head><body>
-  <h1>${appName}</h1><div class="sub">e-Statement · ${mName} ${ym.split('-')[0]}</div>
-  <div class="sum">
-    <div class="si"><div class="sl">Pemasukan</div><div class="sv" style="color:#4ade80;">+${fmt(totalIn)}</div></div>
-    <div class="si"><div class="sl">Pengeluaran</div><div class="sv" style="color:#f87171;">-${fmt(totalOut)}</div></div>
-    <div class="si"><div class="sl">Saldo Bersih</div><div class="sv" style="color:${net>=0?'#4ade80':'#f87171'}">${net>=0?'+':''}${fmt(net)}</div></div>
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>e-Statement ${periodLabel}</title>
+  <style>
+    body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:24px;color:#111;font-size:12px;}
+    .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #1A56C4;}
+    .logo{font-size:20px;font-weight:800;color:#0F1C35;}.logo span{color:#1A56C4;}
+    .meta{font-size:11px;color:#666;line-height:1.6;}
+    h2{font-size:14px;font-weight:700;color:#0F1C35;margin:0 0 4px;}
+    table{width:100%;border-collapse:collapse;margin-top:14px;}
+    th{background:#F4F6FC;font-size:10px;font-weight:700;letter-spacing:.5px;color:#666;text-transform:uppercase;padding:8px 10px;text-align:left;}
+    td{padding:9px 10px;border-bottom:1px solid #F0F0F0;font-size:11px;color:#222;}
+    tr:last-child td{border-bottom:none;}
+    .summary{margin-top:18px;background:#F8FAFF;border-radius:10px;padding:14px 16px;display:flex;gap:24px;}
+    .sum-item{flex:1;}.sum-lbl{font-size:10px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+    .sum-val{font-size:14px;font-weight:700;}
+    .in{color:#0B7A63;}.out{color:#EF4444;}.net{color:#1A56C4;}
+    .footer{margin-top:20px;font-size:10px;color:#aaa;text-align:center;}
+    @media print{body{padding:12px;}button{display:none!important;}}
+  </style></head><body>
+  <div class="header">
+    <div><div class="logo">maNTapp<span>s</span></div>
+    <div class="meta">e-Statement · ${periodLabel}<br>Nama: ${uname}<br>Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</div></div>
+    <div style="text-align:right"><h2>${periodLabel}</h2><div class="meta">${items.length} transaksi</div></div>
   </div>
-  <table><thead><tr><th>Tanggal</th><th>Nama</th><th>Kategori</th><th>Asal</th><th style="text-align:right;">Jumlah</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="ft">Digenerate oleh ${appName} · ${new Date().toLocaleString('id-ID')}</div>
-  <script>window.onload=()=>window.print();<\/script></body></html>`;
-  const w = window.open('','_blank');
+  <table>
+    <thead><tr><th>Tanggal</th><th>Transaksi</th><th>Kategori</th><th>Tipe</th><th style="text-align:right">Jumlah</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="summary">
+    <div class="sum-item"><div class="sum-lbl">${lang==='id'?'Total Masuk':'Total In'}</div><div class="sum-val in">+${fmt(totalIn)}</div></div>
+    <div class="sum-item"><div class="sum-lbl">${lang==='id'?'Total Keluar':'Total Out'}</div><div class="sum-val out">-${fmt(totalOut)}</div></div>
+    <div class="sum-item"><div class="sum-lbl">Net</div><div class="sum-val net">${net>=0?'+':''}${fmt(net)}</div></div>
+  </div>
+  <div class="footer">maNTapps Financial App · Dokumen ini digenerate secara otomatis</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=700,height=900');
   if(w){ w.document.write(html); w.document.close(); }
-  toast('✅ Membuka PDF...');
+  else toast(lang==='id'?'⚠️ Izinkan popup untuk download PDF':'⚠️ Allow popup to download PDF');
 }
+
+// Init label saat app pertama dibuka
+(function(){ updateHistNavbarLabel(); })();
 
 // ============================================================
 // CURRENCY
@@ -3475,7 +3496,6 @@ async function doLogout(){
   user=null;
   notifications=[]; historyItems=[]; goals=[]; wallets=[];
   balance=0; savedPin=''; lockPinBuf='';
-  histFilterMonth=null; estTab='rekening'; estDetailMonth=null;
 
   updateNotifBadge();
   hidePinLock();
@@ -3768,5 +3788,25 @@ window.addNotif = function(type, title, msg){
   }
 };
 </script>
+<!-- ══════════════════════════════════════════
+     E-STATEMENT OVERLAY
+══════════════════════════════════════════ -->
+<div id="estat-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">
+    <button onclick="closeEStatement()" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <div style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);flex:1;">e-Statement</div>
+  </div>
+  <!-- Tabs: Rekening Ini | Gabungan -->
+  <div style="display:flex;border-bottom:2px solid var(--border);margin:14px 0 0;flex-shrink:0;">
+    <button id="estat-tab-rekening" onclick="switchEStatTab('rekening')" style="flex:1;padding:10px;border:none;background:transparent;font-family:var(--f);font-size:14px;font-weight:700;color:var(--blue);border-bottom:3px solid var(--blue);margin-bottom:-2px;cursor:pointer;">Rekening Ini</button>
+    <button id="estat-tab-gabungan" onclick="switchEStatTab('gabungan')" style="flex:1;padding:10px;border:none;background:transparent;font-family:var(--f);font-size:14px;font-weight:600;color:var(--t3);border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;">Gabungan</button>
+  </div>
+  <!-- Content -->
+  <div id="estat-content" style="flex:1;overflow-y:auto;padding:16px;"></div>
+</div>
+
 </body>
 </html>

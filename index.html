@@ -2078,12 +2078,11 @@ function downloadEStatXLSX(year, month){
     ['Tanggal','Nama Transaksi','Kategori','Asal Uang','Jumlah'],
     ...items.map(h=>{
       const d=new Date(h.ts||0);
-      const asalUang = h.src || (h.pos ? (lang==='id'?'Pemasukan':'Income') : (lang==='id'?'Pengeluaran':'Expense'));
       return [
         d.toLocaleDateString('id-ID'),
         (h.langKey ? (T(h.langKey)||h.name) : h.name),
         T('cat-'+h.cat)||h.cat||'',
-        asalUang,
+        h.src || (h.pos?'Pemasukan':'Pengeluaran'),
         (h.pos?1:-1)*Math.abs(h.amt)
       ];
     }),
@@ -2105,13 +2104,12 @@ function downloadEStatXLSXYear(year){
     ['Tanggal','Bulan','Nama Transaksi','Kategori','Asal Uang','Jumlah'],
     ...items.map(h=>{
       const d=new Date(h.ts||0);
-      const asalUang = h.src || (h.pos ? (lang==='id'?'Pemasukan':'Income') : (lang==='id'?'Pengeluaran':'Expense'));
       return [
         d.toLocaleDateString('id-ID'),
         monthName(d.getMonth()),
         (h.langKey?(T(h.langKey)||h.name):h.name),
         T('cat-'+h.cat)||h.cat||'',
-        asalUang,
+        h.src || (h.pos?'Pemasukan':'Pengeluaran'),
         (h.pos?1:-1)*Math.abs(h.amt)
       ];
     }),
@@ -2161,12 +2159,11 @@ function _pdfDownload(items, periodLabel, filename){
     const cat=T('cat-'+h.cat)||h.cat||'';
     const amt=(h.pos?'+':'-')+fmt(Math.abs(h.amt));
     const color=h.pos?'#0B7A63':'#EF4444';
-    const asalUang = h.src || (h.pos ? (lang==='id'?'Pemasukan':'Income') : (lang==='id'?'Pengeluaran':'Expense'));
     return `<tr>
       <td>${d.toLocaleDateString('id-ID')}</td>
       <td>${nm}</td>
       <td>${cat}</td>
-      <td>${asalUang}</td>
+      <td>${h.src || (h.pos?(lang==='id'?'Masuk':'Income'):(lang==='id'?'Keluar':'Expense'))}</td>
       <td style="text-align:right;color:${color};font-weight:600">${amt}</td>
     </tr>`;
   }).join('');
@@ -2211,37 +2208,6 @@ function _pdfDownload(items, periodLabel, filename){
   const w = window.open('','_blank','width=700,height=900');
   if(w){ w.document.write(html); w.document.close(); }
   else toast(lang==='id'?'⚠️ Izinkan popup untuk download PDF':'⚠️ Allow popup to download PDF');
-}
-
-// ── MODAL KONFIRMASI DOWNLOAD ────────────────────────────────
-let _dlConfirmCb = null;
-
-function showDownloadConfirm(type, label, cb){
-  _dlConfirmCb = cb;
-  const modal = document.getElementById('dlConfirmModal');
-  const title = document.getElementById('dlConfirmTitle');
-  const desc  = document.getElementById('dlConfirmDesc');
-  const icon  = document.getElementById('dlConfirmIcon');
-  const iconXl= document.getElementById('dlConfirmIconXl');
-  const iconPd= document.getElementById('dlConfirmIconPdf');
-  if(type==='xlsx'){
-    iconXl.style.display='flex'; iconPd.style.display='none';
-    title.textContent = lang==='id'?'Download Excel':'Download Excel';
-    desc.textContent  = (lang==='id'?'Download e-Statement ':'Download e-Statement ') + label + ' (.xlsx)?';
-  } else {
-    iconPd.style.display='flex'; iconXl.style.display='none';
-    title.textContent = lang==='id'?'Download PDF':'Download PDF';
-    desc.textContent  = (lang==='id'?'Download e-Statement ':'Download e-Statement ') + label + ' (.pdf)?';
-  }
-  modal.style.display='flex';
-}
-
-function closeDlConfirm(){ document.getElementById('dlConfirmModal').style.display='none'; _dlConfirmCb=null; }
-
-function confirmDownload(){
-  document.getElementById('dlConfirmModal').style.display='none';
-  if(typeof _dlConfirmCb==='function') _dlConfirmCb();
-  _dlConfirmCb=null;
 }
 
 // Init label saat app pertama dibuka
@@ -3823,8 +3789,96 @@ window.addNotif = function(type, title, msg){
 };
 </script>
 <!-- ══════════════════════════════════════════
-     E-STATEMENT OVERLAY
+     MODAL KONFIRMASI DOWNLOAD
 ══════════════════════════════════════════ -->
+<div id="dlConfirmModal" style="display:none;position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center;">
+  <div style="background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px calc(var(--safe-bot)+24px);width:100%;max-width:640px;box-shadow:0 -8px 40px rgba(0,0,0,.18);animation:slideUp .25s ease;">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>
+    <div id="dlConfirmIcon" style="width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"></div>
+    <div id="dlConfirmTitle" style="font-family:var(--f);font-size:18px;font-weight:800;color:var(--navy);text-align:center;margin-bottom:6px;"></div>
+    <div id="dlConfirmDesc" style="font-size:13px;color:var(--t2);text-align:center;margin-bottom:22px;line-height:1.55;"></div>
+    <button id="dlConfirmBtn" onclick="executePendingDownload()" style="width:100%;padding:15px;border:none;border-radius:14px;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;"></button>
+    <button onclick="closeDlConfirm()" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:14px;background:transparent;font-family:var(--f);font-size:14px;font-weight:600;color:var(--t2);cursor:pointer;">Batal</button>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+</style>
+
+<script>
+// ── DOWNLOAD CONFIRM MODAL ──────────────────────────────────
+let _pendingDownload = null;
+
+function showDlConfirm(type, label, fn){
+  _pendingDownload = fn;
+  const isExcel = type === 'excel';
+  const icon = document.getElementById('dlConfirmIcon');
+  const title = document.getElementById('dlConfirmTitle');
+  const desc = document.getElementById('dlConfirmDesc');
+  const btn = document.getElementById('dlConfirmBtn');
+
+  if(isExcel){
+    icon.style.background = '#EBFEF3';
+    icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0B7A63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="8,15 12,19 16,15"/></svg>';
+    title.textContent = 'Download Excel';
+    desc.textContent = `e-Statement "${label}" akan didownload sebagai file .xlsx. File akan tersimpan di folder Downloads kamu.`;
+    btn.style.background = 'linear-gradient(135deg,#0B7A63,#0FA884)';
+    btn.style.color = 'white';
+    btn.textContent = '⬇️ Download Excel';
+  } else {
+    icon.style.background = '#FEEBEB';
+    icon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="15" y2="18"/><line x1="9" y1="12" x2="11" y2="12"/></svg>';
+    title.textContent = 'Download PDF';
+    desc.textContent = `e-Statement "${label}" akan dibuka untuk dicetak/disimpan sebagai PDF. Pastikan popup diizinkan di browser kamu.`;
+    btn.style.background = 'linear-gradient(135deg,#EF4444,#f87171)';
+    btn.style.color = 'white';
+    btn.textContent = '⬇️ Download PDF';
+  }
+
+  const modal = document.getElementById('dlConfirmModal');
+  modal.style.display = 'flex';
+}
+
+function closeDlConfirm(){
+  document.getElementById('dlConfirmModal').style.display = 'none';
+  _pendingDownload = null;
+}
+
+function executePendingDownload(){
+  closeDlConfirm();
+  if(typeof _pendingDownload === 'function') _pendingDownload();
+}
+
+// Override fungsi download agar pakai modal konfirmasi
+const _origDownloadEStatXLSX = window.downloadEStatXLSX;
+window.downloadEStatXLSX = function(year, month){
+  const label = monthName(month) + ' ' + year;
+  showDlConfirm('excel', label, ()=>_origDownloadEStatXLSX(year, month));
+};
+
+const _origDownloadEStatPDF = window.downloadEStatPDF;
+window.downloadEStatPDF = function(year, month){
+  const label = monthName(month) + ' ' + year;
+  showDlConfirm('pdf', label, ()=>_origDownloadEStatPDF(year, month));
+};
+
+const _origDownloadEStatXLSXYear = window.downloadEStatXLSXYear;
+window.downloadEStatXLSXYear = function(year){
+  showDlConfirm('excel', 'Gabungan ' + year, ()=>_origDownloadEStatXLSXYear(year));
+};
+
+const _origDownloadEStatPDFYear = window.downloadEStatPDFYear;
+window.downloadEStatPDFYear = function(year){
+  showDlConfirm('pdf', 'Gabungan ' + year, ()=>_origDownloadEStatPDFYear(year));
+};
+
+// Tutup modal konfirmasi jika klik di luar
+document.getElementById('dlConfirmModal').addEventListener('click', function(e){
+  if(e.target === this) closeDlConfirm();
+});
+</script>
+
 <div id="estat-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
   <!-- Header -->
   <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">

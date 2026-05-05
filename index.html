@@ -1513,11 +1513,6 @@ body{background:var(--bg);transition:background .35s;}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<!-- SheetJS untuk download Excel -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<!-- jsPDF untuk download PDF -->
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
 // ============================================================
 // STATE
@@ -2126,162 +2121,153 @@ function downloadEStatXLSXYear(year){
 }
 
 function _xlsxDownload(rows, filename){
-  if(typeof XLSX==='undefined'){
-    toast(lang==='id'?'⚠️ Library XLSX belum dimuat':'⚠️ XLSX library not loaded','');
-    return;
-  }
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:16},{wch:12},{wch:28},{wch:16},{wch:14},{wch:18}];
-  XLSX.utils.book_append_sheet(wb, ws, 'e-Statement');
-  XLSX.writeFile(wb, `${filename}.xlsx`);
-  toast('✅ Excel downloaded!');
-}
+  // Native CSV download — kompatibel semua device tanpa library
+  const csv = rows.map(row =>
+    row.map(cell => {
+      const s = (cell === null || cell === undefined) ? '' : String(cell);
+      // Escape double quotes, wrap in quotes jika ada koma/newline/quote
+      if(s.includes(',') || s.includes('"') || s.includes('\n')){
+        return '"' + s.replace(/"/g,'""') + '"';
+      }
+      return s;
+    }).join(',')
+  ).join('\r\n');
 
-// ── DOWNLOAD PDF per bulan ───────────────────────────────────
-function downloadEStatPDF(year, month){
-  const items = historyItems.filter(h=>{
-    const d=new Date(h.ts||0);
-    return d.getFullYear()===year && d.getMonth()===month;
-  });
-  _pdfDownload(items, `${monthName(month)} ${year}`, `eStatement_${monthName(month)}_${year}`);
-}
-
-function downloadEStatPDFYear(year){
-  const items = historyItems.filter(h=>new Date(h.ts||0).getFullYear()===year);
-  _pdfDownload(items, `Gabungan ${year}`, `eStatement_Gabungan_${year}`);
+  const BOM  = '\uFEFF'; // BOM agar Excel baca UTF-8 dengan benar
+  const blob = new Blob([BOM + csv], {type:'text/csv;charset=utf-8'});
+  _triggerDownload(blob, filename + '.csv');
+  toast('✅ Excel/CSV berhasil didownload!');
 }
 
 function _pdfDownload(items, periodLabel, filename){
-  // Gunakan jsPDF + autoTable untuk generate file .pdf sungguhan
-  if(typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined'){
-    toast('⚠️ Library PDF belum dimuat, coba lagi...');
-    return;
-  }
-
   const uname    = user?.name || 'User';
   const totalIn  = items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
   const totalOut = items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
   const net      = totalIn - totalOut;
 
-  // Init jsPDF
-  const { jsPDF } = window.jspdf || { jsPDF: window.jsPDF };
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  // Build HTML yang dioptimasi untuk print-to-PDF
+  const sorted = [...items].sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const rows = sorted.map(h=>{
+    const d    = new Date(h.ts||0);
+    const nm   = h.langKey ? (T(h.langKey)||h.name) : h.name;
+    const cat  = T('cat-'+h.cat)||h.cat||'-';
+    const asal = h.src || (lang==='id'?'Saldo Utama':'Main Balance');
+    const amt  = (h.pos?'+':'-') + fmt(Math.abs(h.amt));
+    const clr  = h.pos ? '#0B7A63' : '#EF4444';
+    return `<tr>
+      <td>${d.toLocaleDateString('id-ID')}</td>
+      <td>${nm}</td>
+      <td>${cat}</td>
+      <td>${asal}</td>
+      <td style="text-align:right;color:${clr};font-weight:700">${amt}</td>
+    </tr>`;
+  }).join('');
 
-  const PW = 210, PH = 297;
-  const marginL = 14, marginR = 14, marginT = 14;
-  const navy = [15, 28, 53];   // #0F1C35
-  const blue = [26, 86, 196];  // #1A56C4
-  const green= [11,122, 99];   // #0B7A63
-  const red  = [239, 68, 68];  // #EF4444
-  const gray = [100,116,139];  // slate-500
+  const printDate = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const netClr    = net>=0 ? '#0B7A63' : '#EF4444';
+  const netStr    = (net>=0?'+':'') + fmt(net);
 
-  let y = marginT;
-
-  // ── Header stripe ──────────────────────────────────────────
-  doc.setFillColor(...blue);
-  doc.rect(0, 0, PW, 28, 'F');
-
-  // Logo text
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(18);
-  doc.setTextColor(255,255,255);
-  doc.text('maNTapps', marginL, 12);
-
-  // Subtitle
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(9);
-  doc.setTextColor(200,215,255);
-  doc.text('e-Statement · ' + periodLabel, marginL, 19);
-  doc.text('Nama: ' + uname + '   |   Tanggal: ' + new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}), marginL, 24);
-
-  y = 36;
-
-  // ── Summary boxes ──────────────────────────────────────────
-  const boxW = (PW - marginL - marginR - 8) / 3;
-  const boxes = [
-    { label: 'Total Masuk', value: '+'+fmt(totalIn), color: green },
-    { label: 'Total Keluar', value: '-'+fmt(totalOut), color: red },
-    { label: 'Net', value: (net>=0?'+':'')+fmt(net), color: net>=0?green:red },
-  ];
-  boxes.forEach((b,i)=>{
-    const bx = marginL + i*(boxW+4);
-    doc.setFillColor(248,250,255);
-    doc.roundedRect(bx, y, boxW, 18, 3, 3, 'F');
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(7);
-    doc.setTextColor(...gray);
-    doc.text(b.label.toUpperCase(), bx+4, y+6);
-    doc.setFontSize(11);
-    doc.setTextColor(...b.color);
-    doc.text(b.value, bx+4, y+14);
-  });
-
-  y += 26;
-
-  // ── Tabel transaksi ────────────────────────────────────────
-  const tableRows = items
-    .sort((a,b)=>(b.ts||0)-(a.ts||0))
-    .map(h=>{
-      const d   = new Date(h.ts||0);
-      const nm  = h.langKey ? (T(h.langKey)||h.name) : h.name;
-      const cat = T('cat-'+h.cat)||h.cat||'-';
-      const asal= h.src||(lang==='id'?'Saldo Utama':'Main Balance');
-      const amt = (h.pos?'+':'-')+fmt(Math.abs(h.amt));
-      return [d.toLocaleDateString('id-ID'), nm, cat, asal, amt, h.pos?'pos':'neg'];
-    });
-
-  doc.autoTable({
-    startY        : y,
-    margin        : { left: marginL, right: marginR },
-    head          : [['Tanggal','Transaksi','Kategori','Asal Uang','Jumlah']],
-    body          : tableRows.map(r=>r.slice(0,5)),
-    styles        : { font:'helvetica', fontSize:8, cellPadding:3, overflow:'ellipsize', textColor:[30,30,30] },
-    headStyles    : { fillColor:blue, textColor:[255,255,255], fontStyle:'bold', fontSize:8, cellPadding:4 },
-    columnStyles  : {
-      0: { cellWidth:24 },
-      1: { cellWidth:52 },
-      2: { cellWidth:28 },
-      3: { cellWidth:36 },
-      4: { cellWidth:36, halign:'right', fontStyle:'bold' },
-    },
-    alternateRowStyles: { fillColor:[248,250,255] },
-    didParseCell(data){
-      if(data.section==='body' && data.column.index===4){
-        const orig = tableRows[data.row.index];
-        data.cell.styles.textColor = orig && orig[5]==='pos' ? green : red;
-      }
-    },
-    didDrawPage(data){
-      // Footer tiap halaman
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(7);
-      doc.setTextColor(...gray);
-      doc.text('maNTapps Financial App  ·  Dokumen digenerate otomatis', marginL, PH-8);
-      doc.text('Hal ' + doc.getCurrentPageInfo().pageNumber, PW-marginR, PH-8, {align:'right'});
-    }
-  });
-
-  // ── Ringkasan bawah ────────────────────────────────────────
-  const finalY = doc.lastAutoTable.finalY + 8;
-  if(finalY < PH - 30){
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(8);
-    doc.setTextColor(...navy);
-    doc.text('Ringkasan:', marginL, finalY);
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...green);
-    doc.text('Total Masuk: +'+fmt(totalIn), marginL, finalY+6);
-    doc.setTextColor(...red);
-    doc.text('Total Keluar: -'+fmt(totalOut), marginL+60, finalY+6);
-    doc.setTextColor(...blue);
-    doc.text('Net: '+(net>=0?'+':'')+fmt(net), marginL+120, finalY+6);
+  const html = `<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="UTF-8">
+<title>e-Statement ${periodLabel} — maNTapps</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff;padding:20px 24px;}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1A56C4;padding-bottom:12px;margin-bottom:16px;}
+  .logo{font-size:22px;font-weight:900;color:#0F1C35;letter-spacing:-.5px;}
+  .logo span{color:#1A56C4;}
+  .meta{font-size:10px;color:#64748b;line-height:1.7;text-align:right;}
+  .period{font-size:14px;font-weight:800;color:#0F1C35;}
+  .summary{display:flex;gap:12px;margin-bottom:16px;}
+  .sum-box{flex:1;border-radius:10px;padding:10px 12px;background:#F8FAFF;}
+  .sum-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:4px;}
+  .sum-val{font-size:14px;font-weight:800;}
+  .in{color:#0B7A63;} .out{color:#EF4444;} .net{color:#1A56C4;}
+  table{width:100%;border-collapse:collapse;margin-top:4px;}
+  thead th{background:#1A56C4;color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;text-align:left;}
+  thead th:last-child{text-align:right;}
+  tbody tr:nth-child(even){background:#F8FAFF;}
+  tbody td{padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:10px;vertical-align:middle;}
+  tbody td:last-child{text-align:right;}
+  .footer{margin-top:16px;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px;text-align:center;}
+  @media print{
+    body{padding:10px 16px;}
+    .no-print{display:none!important;}
+    thead{display:table-header-group;}
+    tr{page-break-inside:avoid;}
   }
+</style>
+</head><body>
 
-  // ── Save sebagai .pdf ───────────────────────────────────────
-  doc.save(filename + '.pdf');
-  toast('✅ PDF berhasil didownload!');
+<div class="no-print" style="background:#1A56C4;color:#fff;padding:12px 16px;border-radius:10px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+  <span style="font-weight:700;font-size:13px;">📄 e-Statement siap dicetak sebagai PDF</span>
+  <button onclick="window.print()" style="background:#fff;color:#1A56C4;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:12px;cursor:pointer;">🖨️ Simpan sebagai PDF</button>
+</div>
+
+<div class="hdr">
+  <div>
+    <div class="logo">maNTapp<span>s</span></div>
+    <div style="font-size:10px;color:#64748b;margin-top:3px;">e-Statement</div>
+  </div>
+  <div class="meta">
+    <div class="period">${periodLabel}</div>
+    <div>Nama: ${uname}</div>
+    <div>Tanggal: ${printDate}</div>
+    <div>${items.length} transaksi</div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="sum-box">
+    <div class="sum-lbl">Total Masuk</div>
+    <div class="sum-val in">+${fmt(totalIn)}</div>
+  </div>
+  <div class="sum-box">
+    <div class="sum-lbl">Total Keluar</div>
+    <div class="sum-val out">-${fmt(totalOut)}</div>
+  </div>
+  <div class="sum-box">
+    <div class="sum-lbl">Net</div>
+    <div class="sum-val" style="color:${netClr}">${netStr}</div>
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Tanggal</th>
+    <th>Transaksi</th>
+    <th>Kategori</th>
+    <th>Asal Uang</th>
+    <th style="text-align:right">Jumlah</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="footer">maNTapps Financial App &nbsp;·&nbsp; Digenerate otomatis &nbsp;·&nbsp; ${printDate}</div>
+
+</body></html>`;
+
+  // Download sebagai .html yang bisa dibuka & Print → Save as PDF
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  _triggerDownload(blob, filename + '.html');
+  toast('✅ File PDF statement berhasil didownload! Buka file lalu pilih Print → Save as PDF');
+}
+
+// Helper: trigger download file dari blob
+function _triggerDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.style.display = 'none';
+  a.href          = url;
+  a.download      = filename;
+  document.body.appendChild(a);
+  a.click();
+  // Cleanup
+  setTimeout(()=>{
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 // ============================================================
@@ -2330,7 +2316,7 @@ function confirmDlXLSX(year, month){
   showDlConfirm({
     title   : '⬇ Download Excel',
     period  : mn + ' ' + year,
-    format  : 'Excel (.xlsx)',
+    format  : 'Excel / CSV',
     count   : items.length,
     fn      : ()=>downloadEStatXLSX(year, month)
   });
@@ -2343,7 +2329,7 @@ function confirmDlPDF(year, month){
   showDlConfirm({
     title   : '⬇ Download PDF',
     period  : mn + ' ' + year,
-    format  : 'PDF (.pdf)',
+    format  : 'PDF (print→PDF)',
     count   : items.length,
     fn      : ()=>downloadEStatPDF(year, month)
   });
@@ -2355,7 +2341,7 @@ function confirmDlXLSXYear(year){
   showDlConfirm({
     title   : '⬇ Download Excel Gabungan',
     period  : 'Seluruh ' + year,
-    format  : 'Excel (.xlsx)',
+    format  : 'Excel / CSV',
     count   : items.length,
     fn      : ()=>downloadEStatXLSXYear(year)
   });
@@ -2367,7 +2353,7 @@ function confirmDlPDFYear(year){
   showDlConfirm({
     title   : '⬇ Download PDF Gabungan',
     period  : 'Seluruh ' + year,
-    format  : 'PDF (.pdf)',
+    format  : 'PDF (print→PDF)',
     count   : items.length,
     fn      : ()=>downloadEStatPDFYear(year)
   });

@@ -2136,7 +2136,8 @@ function _xlsxDownload(rows, filename){
   const BOM  = '\uFEFF'; // BOM agar Excel baca UTF-8 dengan benar
   const blob = new Blob([BOM + csv], {type:'text/csv;charset=utf-8'});
   _triggerDownload(blob, filename + '.csv');
-  toast('✅ Excel/CSV berhasil didownload!');
+  toast('✅ File CSV berhasil didownload!', 5000);
+  addNotif('tip', '📊 Download Berhasil', 'File Excel/CSV e-Statement berhasil didownload ke perangkat Anda.');
 }
 
 function _pdfDownload(items, periodLabel, filename){
@@ -2251,23 +2252,36 @@ function _pdfDownload(items, periodLabel, filename){
   // Download sebagai .html yang bisa dibuka & Print → Save as PDF
   const blob = new Blob([html], {type:'text/html;charset=utf-8'});
   _triggerDownload(blob, filename + '.html');
-  toast('✅ File PDF statement berhasil didownload! Buka file lalu pilih Print → Save as PDF');
+  toast('✅ File statement didownload! Buka → Print → Save as PDF', 6000);
+  addNotif('tip', '📄 Download Berhasil', 'File e-Statement berhasil didownload. Buka file di browser lalu pilih Print → Save as PDF.');
 }
 
-// Helper: trigger download file dari blob
+// Helper: trigger download — multi-method untuk kompatibilitas maksimal
 function _triggerDownload(blob, filename){
-  const url = URL.createObjectURL(blob);
-  const a   = document.createElement('a');
-  a.style.display = 'none';
-  a.href          = url;
-  a.download      = filename;
-  document.body.appendChild(a);
-  a.click();
-  // Cleanup
-  setTimeout(()=>{
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 1000);
+  try {
+    // Method 1: createObjectURL (desktop Chrome/Firefox/Edge)
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.style.display = 'none';
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+  } catch(e) {
+    // Method 2: FileReader → data URI (iOS Safari / WebView fallback)
+    const reader = new FileReader();
+    reader.onload = function(){
+      const a   = document.createElement('a');
+      a.href     = reader.result;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=> document.body.removeChild(a), 2000);
+    };
+    reader.readAsDataURL(blob);
+  }
 }
 
 // ============================================================
@@ -2305,8 +2319,13 @@ function closeDlConfirm(){
 }
 
 function executeDlConfirm(){
-  closeDlConfirm();
-  if(_dlPendingFn) _dlPendingFn();
+  const fn = _dlPendingFn; // simpan referensi dulu
+  _dlPendingFn = null;
+  // tutup modal
+  document.getElementById('dl-confirm-overlay').style.display = 'none';
+  document.getElementById('dl-confirm-modal').style.display   = 'none';
+  // jalankan download setelah modal tertutup
+  if(fn) setTimeout(fn, 80);
 }
 
 // ── Wrapper tombol download Excel per bulan ──
@@ -3217,7 +3236,16 @@ function initChart(){ refreshAnalytics(); }
 // TOAST
 // ============================================================
 let toastT;
-function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.animation='fiu .3s ease';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',2800);}
+function toast(msg, duration=4500){
+  const el=document.getElementById('toast');
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+  el.style.opacity='1';
+  el.style.animation='fiu .3s ease';
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.style.display='none',300);}, duration);
+}
 
 // ============================================================
 // FIREBASE ERROR MESSAGES

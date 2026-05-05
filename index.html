@@ -2141,239 +2141,124 @@ function _xlsxDownload(rows, filename){
 }
 
 function _pdfDownload(items, periodLabel, filename){
-  // ── Pure JS PDF generator — tidak butuh library eksternal ──
-  // Menggunakan PDF spec 1.4 minimal: teks, garis, warna
-
   const uname    = (user && user.name) ? user.name : 'User';
-  const totalIn  = items.filter(function(h){return h.pos;}).reduce(function(s,h){return s+Math.abs(h.amt);},0);
-  const totalOut = items.filter(function(h){return !h.pos;}).reduce(function(s,h){return s+Math.abs(h.amt);},0);
+  const totalIn  = items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
+  const totalOut = items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
   const net      = totalIn - totalOut;
   const printDate= new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
-  const sorted   = items.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});
+  const sorted   = items.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
 
-  // Konversi Rp format ke teks aman
-  function safeText(s){ return String(s||'').replace(/[()\\]/g,'').substring(0,40); }
-  function pdfStr(s){ return '('+safeText(s)+')'; }
+  const rows = sorted.map((h,idx)=>{
+    const d    = new Date(h.ts||0);
+    const tgl  = d.toLocaleDateString('id-ID');
+    const nm   = h.langKey ? (T(h.langKey)||h.name) : h.name;
+    const cat  = T('cat-'+h.cat)||h.cat||'-';
+    const asal = _getSourceLabel(h);
+    const amt  = (h.pos?'+':'-')+fmt(Math.abs(h.amt));
+    const color= h.pos ? '#0B7A63' : '#EF4444';
+    const bg   = idx%2===1 ? '#f8faff' : '#ffffff';
+    return `<tr style="background:${bg}">
+      <td>${tgl}</td>
+      <td>${nm}</td>
+      <td>${cat}</td>
+      <td>${asal}</td>
+      <td style="text-align:right;color:${color};font-weight:700">${amt}</td>
+    </tr>`;
+  }).join('');
 
-  // mm ke pt (1mm = 2.8346pt), A4: 210x297mm = 595x842pt
-  var W=595, H=842, ml=40, mr=40, mt=40;
-  var y = mt;
-  var objs = [];
-  var xrefs = [];
-  var pageObjId, contentObjId;
-
-  function addObj(content){
-    objs.push(content);
-    return objs.length; // 1-based, tapi kita offset +3 (catalog,pages,font)
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>e-Statement ${periodLabel}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff;padding:0}
+  .header{background:#1A56C4;color:#fff;padding:16px 24px 12px;display:flex;justify-content:space-between;align-items:flex-start}
+  .logo{font-size:20px;font-weight:800;letter-spacing:-0.5px}
+  .logo span{color:#93c5fd}
+  .meta{font-size:10px;line-height:1.7;opacity:.9}
+  .period{font-size:13px;font-weight:700;text-align:right}
+  .summary{display:flex;gap:10px;padding:14px 24px;background:#f8faff;border-bottom:1px solid #e2e8f0}
+  .sum-box{flex:1;background:#fff;border-radius:8px;padding:10px 14px;border:1px solid #e2e8f0}
+  .sum-lbl{font-size:9px;font-weight:700;letter-spacing:.5px;color:#64748b;text-transform:uppercase;margin-bottom:4px}
+  .sum-val{font-size:14px;font-weight:800}
+  .in{color:#0B7A63}.out{color:#EF4444}.net{color:#1A56C4}
+  table{width:100%;border-collapse:collapse;margin:0}
+  thead tr{background:#1A56C4}
+  thead th{color:#fff;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:8px 10px;text-align:left}
+  thead th:last-child{text-align:right}
+  tbody td{padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:10px;color:#334155}
+  tbody tr:last-child td{border-bottom:none}
+  .footer{padding:12px 24px;text-align:center;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;margin-top:8px}
+  @media print{
+    html,body{width:210mm;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    .header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    thead tr{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .summary{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
+</style>
+</head><body>
+<div class="header">
+  <div>
+    <div class="logo">maNTapp<span>s</span></div>
+    <div class="meta">e-Statement &nbsp;|&nbsp; ${periodLabel}<br>Nama: ${uname}<br>Dicetak: ${printDate}</div>
+  </div>
+  <div style="text-align:right;color:#fff">
+    <div class="period">${periodLabel}</div>
+    <div style="font-size:10px;opacity:.8;margin-top:4px">${sorted.length} transaksi</div>
+  </div>
+</div>
+<div class="summary">
+  <div class="sum-box"><div class="sum-lbl">Total Masuk</div><div class="sum-val in">+${fmt(totalIn)}</div></div>
+  <div class="sum-box"><div class="sum-lbl">Total Keluar</div><div class="sum-val out">-${fmt(totalOut)}</div></div>
+  <div class="sum-box"><div class="sum-lbl">Net</div><div class="sum-val net">${net>=0?'+':''}${fmt(net)}</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th>Tanggal</th><th>Transaksi</th><th>Kategori</th><th>Asal</th><th style="text-align:right">Jumlah</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer">maNTapps Financial App &nbsp;·&nbsp; Dokumen ini digenerate secara otomatis &nbsp;·&nbsp; ${printDate}</div>
+</body></html>`;
 
-  // Bangun stream konten halaman
-  var stream = [];
-
-  function setColor(r,g,b,fill){
-    var op = fill ? 'rg' : 'RG';
-    stream.push((r/255).toFixed(3)+' '+(g/255).toFixed(3)+' '+(b/255).toFixed(3)+' '+op);
-  }
-  function rect(x,yy,w,h,fill){
-    var op = fill ? 'f' : 'S';
-    stream.push(x.toFixed(1)+' '+(H-yy-h).toFixed(1)+' '+w.toFixed(1)+' '+h.toFixed(1)+' re '+op);
-  }
-  function line(x1,y1,x2,y2){
-    stream.push(x1.toFixed(1)+' '+(H-y1).toFixed(1)+' m '+x2.toFixed(1)+' '+(H-y2).toFixed(1)+' l S');
-  }
-  function text(t,x,yy,size,bold){
-    var fn = bold ? '/F2' : '/F1';
-    stream.push('BT '+fn+' '+size+' Tf '+x.toFixed(1)+' '+(H-yy).toFixed(1)+' Td '+pdfStr(t)+' Tj ET');
-  }
-  function textR(t,x,yy,size){ // right-aligned approximate
-    var approxW = t.length * size * 0.5;
-    text(t, x - approxW, yy, size, false);
-  }
-
-  // ── HEADER STRIPE ──
-  setColor(26,86,196,true);   // navy blue fill
-  rect(0,0,W,52,true);
-  setColor(255,255,255,true);
-  text('maNTapps', ml, 22, 16, true);
-  text('e-Statement  |  '+periodLabel, ml, 38, 9, false);
-  text('Nama: '+uname+'    Tanggal: '+printDate, ml, 48, 8, false);
-
-  y = 72;
-
-  // ── SUMMARY BOXES ──
-  var boxW = (W - ml - mr - 16) / 3;
-  var boxes = [
-    {label:'TOTAL MASUK', val:('+'+fmt(totalIn)), r:11,g:122,b:99},
-    {label:'TOTAL KELUAR', val:('-'+fmt(totalOut)), r:239,g:68,b:68},
-    {label:'NET', val:((net>=0?'+':'')+fmt(net)), r:(net>=0?11:239), g:(net>=0?122:68), b:(net>=0?99:68)},
-  ];
-  boxes.forEach(function(b,i){
-    var bx = ml + i*(boxW+8);
-    setColor(248,250,255,true);
-    rect(bx, y, boxW, 36, true);
-    setColor(100,116,139,false); setColor(100,116,139,true);
-    text(b.label, bx+8, y+11, 7, true);
-    setColor(b.r,b.g,b.b,true);
-    text(b.val, bx+8, y+27, 11, true);
-  });
-
-  y += 48;
-
-  // ── TABLE HEADER ──
-  setColor(26,86,196,true);
-  rect(ml, y, W-ml-mr, 20, true);
-  setColor(255,255,255,true);
-  var cols = [ml+4, ml+70, ml+240, ml+320, W-mr-80];
-  var headers = ['Tanggal','Transaksi','Kategori','Asal Uang','Jumlah'];
-  headers.forEach(function(h,i){ text(h, cols[i], y+13, 7.5, true); });
-  y += 20;
-
-  // ── TABLE ROWS ──
-  sorted.forEach(function(h, idx){
-    if(y > H - 60){ // new page check — skip untuk simplicity
+  // Metode 1: blob URL + tab baru (paling andal di desktop)
+  try {
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank');
+    if(win){
+      win.addEventListener('load', ()=>{
+        setTimeout(()=>{ win.print(); URL.revokeObjectURL(url); }, 400);
+      });
+      toast('✅ PDF siap — pilih "Save as PDF" di dialog print');
       return;
     }
-    var rowH = 18;
-    // Alternate background
-    if(idx % 2 === 1){
-      setColor(248,250,255,true);
-      rect(ml, y, W-ml-mr, rowH, true);
-    }
-    // Border bottom
-    setColor(226,232,240,false);
-    line(ml, y+rowH, W-mr, y+rowH);
+  } catch(e){}
 
-    var d    = new Date(h.ts||0);
-    var tgl  = d.toLocaleDateString('id-ID');
-    var nm   = h.langKey ? (T(h.langKey)||h.name) : h.name;
-    var cat  = T('cat-'+h.cat)||h.cat||'-';
-    var asal = h.src||(lang==='id'?'Saldo Utama':'Main Balance');
-    var amt  = (h.pos?'+':'-')+fmt(Math.abs(h.amt));
-
-    setColor(30,41,59,true);
-    text(tgl,  cols[0], y+12, 8, false);
-    text(nm,   cols[1], y+12, 8, false);
-    text(cat,  cols[2], y+12, 8, false);
-    text(asal, cols[3], y+12, 8, false);
-    // Jumlah berwarna
-    if(h.pos){ setColor(11,122,99,true); } else { setColor(239,68,68,true); }
-    textR(amt, W-mr-4, y+12, 8);
-
-    y += rowH;
-  });
-
-  // ── FOOTER LINE ──
-  y += 10;
-  setColor(226,232,240,false);
-  line(ml, y, W-mr, y);
-  y += 10;
-  setColor(148,163,184,true);
-  text('maNTapps Financial App  |  Digenerate otomatis  |  '+printDate, ml, y, 7.5, false);
-
-  // ══════════════════════════════════════════
-  // Build PDF binary structure
-  // ══════════════════════════════════════════
-  var content = stream.join('\n');
-
-  // Encode string ke bytes
-  function strToBytes(s){
-    var arr=[];
-    for(var i=0;i<s.length;i++) arr.push(s.charCodeAt(i)&0xff);
-    return arr;
-  }
-
-  var parts = [];
-  var offsets = [];
-
-  function addPart(s){
-    offsets.push(parts.reduce(function(a,b){return a+b.length;},0));
-    parts.push(s);
-  }
-
-  // Header
-  addPart('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n');
-
-  // Obj 1: Catalog
-  addPart('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
-
-  // Obj 2: Pages
-  addPart('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
-
-  // Obj 3: Font Helvetica (regular)
-  addPart('3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n');
-
-  // Obj 4: Font Helvetica-Bold
-  addPart('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n');
-
-  // Obj 5: Content stream
-  var streamBytes = strToBytes(content);
-  var streamStr = '5 0 obj\n<< /Length '+streamBytes.length+' >>\nstream\n'+content+'\nendstream\nendobj\n';
-  addPart(streamStr);
-
-  // Obj 6: Page
-  var pageStr = '6 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] '
-    +'/Contents 5 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>\nendobj\n';
-  addPart(pageStr);
-
-  // Update Pages kids to point to page 6
-  // (sudah benar di obj 2, tapi kids harus page obj id)
-  // Kita rebuild obj 2
-  parts[2] = '2 0 obj\n<< /Type /Pages /Kids [6 0 R] /Count 1 >>\nendobj\n';
-
-  // xref table
-  var xrefOffset = parts.reduce(function(a,b){return a+b.length;},0);
-  var xref = 'xref\n0 7\n0000000000 65535 f \n';
-  var pos = parts[0].length; // setelah header
-  // Hitung offset tiap obj
-  var cumLen = parts[0].length;
-  for(var oi=1;oi<=6;oi++){
-    xref += cumLen.toString().padStart(10,'0')+' 00000 n \n';
-    cumLen += parts[oi].length;
-  }
-  xref += 'trailer\n<< /Size 7 /Root 1 0 R >>\nstartxref\n'+xrefOffset+'\n%%EOF\n';
-
-  // Combine all
-  var pdfContent = parts.join('') + xref;
-
-  // Convert to Uint8Array
-  var bytes = new Uint8Array(pdfContent.length);
-  for(var bi=0;bi<pdfContent.length;bi++){
-    bytes[bi] = pdfContent.charCodeAt(bi) & 0xff;
-  }
-
-  var blob = new Blob([bytes], {type:'application/pdf'});
-  _triggerDownload(blob, filename+'.pdf');
-  toast('✅ PDF berhasil didownload!', 5000);
-  addNotif('tip','📄 PDF Berhasil Didownload','File e-Statement '+periodLabel+' tersimpan sebagai PDF.');
-}
-
-// Helper: trigger download — multi-method untuk kompatibilitas maksimal
-function _triggerDownload(blob, filename){
+  // Metode 2: iframe tersembunyi (fallback jika popup diblokir)
   try {
-    // Method 1: createObjectURL (desktop Chrome/Firefox/Edge)
-    const url = URL.createObjectURL(blob);
-    const a   = document.createElement('a');
-    a.style.display = 'none';
-    a.href     = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
-  } catch(e) {
-    // Method 2: FileReader → data URI (iOS Safari / WebView fallback)
-    const reader = new FileReader();
-    reader.onload = function(){
-      const a   = document.createElement('a');
-      a.href     = reader.result;
-      a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(()=> document.body.removeChild(a), 2000);
-    };
-    reader.readAsDataURL(blob);
-  }
+    let iframe = document.getElementById('_pdf_iframe');
+    if(!iframe){
+      iframe = document.createElement('iframe');
+      iframe.id = '_pdf_iframe';
+      iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;opacity:0;left:-9999px;top:-9999px;';
+      document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+    setTimeout(()=>{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 600);
+    toast('✅ PDF siap — pilih "Save as PDF" di dialog print');
+    return;
+  } catch(e){}
+
+  // Metode 3: data URI fallback terakhir
+  const dataUri = 'data:text/html;charset=utf-8,'+encodeURIComponent(html);
+  window.open(dataUri, '_blank');
+  toast('✅ Buka tab baru → Print → Save as PDF');
 }
+
+
 
 // ============================================================
 // DOWNLOAD CONFIRMATION MODAL

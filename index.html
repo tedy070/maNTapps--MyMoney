@@ -1832,10 +1832,8 @@ let histFilterMonth = new Date().getMonth(); // 0-based
 function monthName(m){ return lang==='id' ? MONTH_NAMES_ID[m] : MONTH_NAMES_EN[m]; }
 
 function updateHistNavbarLabel(){
-  try{
-    const el = document.getElementById('hist-bulan-label');
-    if(el) el.textContent = monthName(histFilterMonth)+' '+histFilterYear;
-  }catch(e){}
+  const el = document.getElementById('hist-bulan-label');
+  if(el) el.textContent = `${monthName(histFilterMonth)} ${histFilterYear}`;
 }
 
 // Kumpulkan semua (year,month) yang punya transaksi, plus bulan saat ini
@@ -2065,261 +2063,189 @@ function renderEStatContent(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// DOWNLOAD CONFIRMATION MODAL
-// ═══════════════════════════════════════════════════════════
-let _dlPendingFn = null;
-
-function _showDlConfirm(title, period, format, count, fn){
-  try{
-    _dlPendingFn = fn;
-    document.getElementById('dlc-title').textContent   = title;
-    document.getElementById('dlc-period').textContent  = period;
-    document.getElementById('dlc-format').textContent  = format;
-    document.getElementById('dlc-count').textContent   = count + ' transaksi';
-    const isPDF = format.includes('PDF');
-    document.getElementById('dlc-btn').style.background = isPDF ? '#EF4444' : '#0B7A63';
-    document.getElementById('dlc-btn').textContent = isPDF ? '⬇ Download PDF' : '⬇ Download Excel';
-    document.getElementById('dlc-overlay').style.display = 'flex';
-  }catch(e){ console.warn('_showDlConfirm error:',e); if(fn) fn(); }
-}
-function _closeDlConfirm(){
-  document.getElementById('dlc-overlay').style.display = 'none';
-  _dlPendingFn = null;
-}
-function _execDlConfirm(){
-  const fn = _dlPendingFn;
-  _dlPendingFn = null;
-  document.getElementById('dlc-overlay').style.display = 'none';
-  if(fn) setTimeout(fn, 60);
-}
-
-// ── Asal uang helper ────────────────────────────────────────
-function _asalUang(h){
-  // Cek apakah transaksi terkait wallet tertentu
-  if(h.src && h.src !== '' && h.src !== 'undefined') return h.src;
-  if(h.dest && h.dest !== '' && h.dest !== 'undefined' && h.type==='income') return h.dest;
-  return lang==='id' ? 'Saldo Utama' : 'Main Balance';
-}
-
 // ── DOWNLOAD XLSX per bulan ──────────────────────────────────
 function downloadEStatXLSX(year, month){
-  const items = historyItems.filter(h=>{ const d=new Date(h.ts||0); return d.getFullYear()===year && d.getMonth()===month; });
-  const mn = monthName(month);
-  _showDlConfirm('Download Excel', `${mn} ${year}`, 'Excel (.csv)', items.length, ()=>_doXLSX(items, mn, year));
-}
-function _doXLSX(items, mn, year){
-  const uname = user?.name||'User';
+  const items = historyItems.filter(h=>{
+    const d=new Date(h.ts||0);
+    return d.getFullYear()===year && d.getMonth()===month;
+  });
+  const mn   = monthName(month);
+  const uname= user?.name || 'User';
   const rows = [
     [`maNTapps — e-Statement ${mn} ${year}`,'','','',''],
-    [`Nama: ${uname}   Tanggal: ${new Date().toLocaleDateString('id-ID')}`,'','','',''],
+    [`Nama: ${uname}`,'','','',''],
     [''],
     ['Tanggal','Nama Transaksi','Kategori','Asal Uang','Jumlah'],
-    ...items.map(h=>{ const d=new Date(h.ts||0); return [d.toLocaleDateString('id-ID'),(h.langKey?(T(h.langKey)||h.name):h.name),T('cat-'+h.cat)||h.cat||'',_asalUang(h),(h.pos?1:-1)*Math.abs(h.amt)]; }),
+    ...items.map(h=>{
+      const d=new Date(h.ts||0);
+      const asalUang = h.src || (h.pos ? (lang==='id'?'Pemasukan':'Income') : (lang==='id'?'Pengeluaran':'Expense'));
+      return [
+        d.toLocaleDateString('id-ID'),
+        (h.langKey ? (T(h.langKey)||h.name) : h.name),
+        T('cat-'+h.cat)||h.cat||'',
+        asalUang,
+        (h.pos?1:-1)*Math.abs(h.amt)
+      ];
+    }),
     [''],
-    ['Total Pemasukan','','',fmt(items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),''],
-    ['Total Pengeluaran','','',fmt(items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),''],
+    ['Total Pemasukan','',fmt(items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
+    ['Total Pengeluaran','',fmt(items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
   ];
-  _csvDownload(rows, `eStatement_${mn}_${year}`);
+  _xlsxDownload(rows, `eStatement_${mn}_${year}`);
 }
 
 // ── DOWNLOAD XLSX per tahun (gabungan) ──────────────────────
 function downloadEStatXLSXYear(year){
   const items = historyItems.filter(h=>new Date(h.ts||0).getFullYear()===year);
-  _showDlConfirm('Download Excel Gabungan', `Seluruh ${year}`, 'Excel (.csv)', items.length, ()=>_doXLSXYear(items, year));
-}
-function _doXLSXYear(items, year){
   const uname = user?.name||'User';
   const rows = [
     [`maNTapps — e-Statement Gabungan ${year}`,'','','','',''],
-    [`Nama: ${uname}   Tanggal: ${new Date().toLocaleDateString('id-ID')}`,'','','','',''],
+    [`Nama: ${uname}`,'','','','',''],
     [''],
     ['Tanggal','Bulan','Nama Transaksi','Kategori','Asal Uang','Jumlah'],
-    ...items.map(h=>{ const d=new Date(h.ts||0); return [d.toLocaleDateString('id-ID'),monthName(d.getMonth()),(h.langKey?(T(h.langKey)||h.name):h.name),T('cat-'+h.cat)||h.cat||'',_asalUang(h),(h.pos?1:-1)*Math.abs(h.amt)]; }),
+    ...items.map(h=>{
+      const d=new Date(h.ts||0);
+      const asalUang = h.src || (h.pos ? (lang==='id'?'Pemasukan':'Income') : (lang==='id'?'Pengeluaran':'Expense'));
+      return [
+        d.toLocaleDateString('id-ID'),
+        monthName(d.getMonth()),
+        (h.langKey?(T(h.langKey)||h.name):h.name),
+        T('cat-'+h.cat)||h.cat||'',
+        asalUang,
+        (h.pos?1:-1)*Math.abs(h.amt)
+      ];
+    }),
     [''],
-    ['Total Pemasukan','','','',fmt(items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),''],
-    ['Total Pengeluaran','','','',fmt(items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),''],
+    ['Total Pemasukan','','',fmt(items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
+    ['Total Pengeluaran','','',fmt(items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0)),'',''],
   ];
-  _csvDownload(rows, `eStatement_Gabungan_${year}`);
+  _xlsxDownload(rows, `eStatement_Gabungan_${year}`);
 }
 
-// ── CSV download native (tanpa library) ─────────────────────
-function _csvDownload(rows, filename){
-  const csv = rows.map(r=>r.map(cell=>{
-    const s=String(cell===null||cell===undefined?'':cell);
-    return (s.includes(',')||s.includes('"')||s.includes('
-'))?'"'+s.replace(/"/g,'""')+'"':s;
-  }).join(',')).join('
-');
-  const blob = new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
-  _triggerDownload(blob, filename+'.csv');
-  toast('✅ File Excel berhasil didownload!', 5000);
+function _xlsxDownload(rows, filename){
+  if(typeof XLSX==='undefined'){
+    toast(lang==='id'?'⚠️ Library XLSX belum dimuat':'⚠️ XLSX library not loaded','');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:16},{wch:12},{wch:28},{wch:16},{wch:14},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws, 'e-Statement');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+  toast('✅ Excel downloaded!');
 }
 
 // ── DOWNLOAD PDF per bulan ───────────────────────────────────
 function downloadEStatPDF(year, month){
-  const items = historyItems.filter(h=>{ const d=new Date(h.ts||0); return d.getFullYear()===year && d.getMonth()===month; });
-  const label = `${monthName(month)} ${year}`;
-  _showDlConfirm('Download PDF', label, 'PDF (.pdf)', items.length, ()=>_doPDF(items, label, `eStatement_${monthName(month)}_${year}`));
+  const items = historyItems.filter(h=>{
+    const d=new Date(h.ts||0);
+    return d.getFullYear()===year && d.getMonth()===month;
+  });
+  _pdfDownload(items, `${monthName(month)} ${year}`, `eStatement_${monthName(month)}_${year}`);
 }
+
 function downloadEStatPDFYear(year){
   const items = historyItems.filter(h=>new Date(h.ts||0).getFullYear()===year);
-  _showDlConfirm('Download PDF Gabungan', `Seluruh ${year}`, 'PDF (.pdf)', items.length, ()=>_doPDF(items, `Gabungan ${year}`, `eStatement_Gabungan_${year}`));
+  _pdfDownload(items, `Gabungan ${year}`, `eStatement_Gabungan_${year}`);
 }
 
-// ── Pure-JS PDF generator (tanpa library eksternal) ──────────
-function _doPDF(items, periodLabel, filename){
-  const uname    = user?.name||'User';
+function _pdfDownload(items, periodLabel, filename){
+  // Buat HTML lalu print-to-PDF via jsPDF atau fallback ke window.print
+  const uname  = user?.name||'User';
   const totalIn  = items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
   const totalOut = items.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt),0);
-  const net      = totalIn-totalOut;
-  const printDate= new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
-  const sorted   = items.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
-
-  // ── PDF binary builder ──────────────────────────────────────
-  const W=595,H=842,ml=40,mr=555; // A4 pt, margins
-  const stm=[];
-
-  const safe=s=>String(s||'').replace(/[\()]/g,c=>'\'+c).replace(/[^ -~]/g,'?').substring(0,50);
-  const T_=s=>'('+safe(s)+')';
-  const setRGB=(r,g,b,f)=>stm.push(`${(r/255).toFixed(3)} ${(g/255).toFixed(3)} ${(b/255).toFixed(3)} ${f?'rg':'RG'}`);
-  const fillRect=(x,y,w,h)=>stm.push(`${x} ${H-y-h} ${w} ${h} re f`);
-  const strokeLine=(x1,y1,x2,y2)=>stm.push(`${x1} ${H-y1} m ${x2} ${H-y2} l S`);
-  const txt=(s,x,y,sz,bold)=>stm.push(`BT ${bold?'/F2':'/F1'} ${sz} Tf ${x} ${H-y} Td ${T_(s)} Tj ET`);
-  const txtR=(s,x,y,sz)=>{const w=s.length*sz*0.48;stm.push(`BT /F1 ${sz} Tf ${x-w} ${H-y} Td ${T_(s)} Tj ET`);};
-
-  // Header stripe
-  setRGB(26,86,196,true);fillRect(0,0,595,52);
-  setRGB(255,255,255,true);
-  txt('maNTapps e-Statement',ml,20,14,true);
-  txt(periodLabel,ml,34,9,false);
-  txt('Nama: '+uname+'   Tanggal: '+printDate,ml,46,7.5,false);
-
-  let y=68;
-  // Summary boxes
-  const bw=155,bh=34,bg=[[11,122,99],[239,68,68],net>=0?[11,122,99]:[239,68,68]];
-  const bv=['+'+fmt(totalIn),'-'+fmt(totalOut),(net>=0?'+':'')+fmt(net)];
-  const bl=['TOTAL MASUK','TOTAL KELUAR','NET'];
-  [0,1,2].forEach(i=>{
-    const bx=ml+i*(bw+8);
-    setRGB(244,246,252,true);fillRect(bx,y,bw,bh);
-    setRGB(...bg[i],true);txt(bv[i],bx+6,y+22,10,true);
-    setRGB(100,116,139,true);txt(bl[i],bx+6,y+10,6.5,true);
-  });
-  y+=44;
-
-  // Table header
-  setRGB(26,86,196,true);fillRect(ml,y,mr-ml,18);
-  setRGB(255,255,255,true);
-  const cols=[ml+4,ml+72,ml+240,ml+318,mr-4];
-  const heads=['Tanggal','Transaksi','Kategori','Asal Uang','Jumlah'];
-  heads.forEach((h,i)=>{ if(i<4) txt(h,cols[i],y+12,7,true); else txtR(h,cols[i],y+12,7); });
-  y+=18;
-
-  // Table rows
-  sorted.forEach((h,idx)=>{
-    if(y>H-50) return; // overflow guard
-    const rh=16;
-    if(idx%2===0){setRGB(248,250,255,true);fillRect(ml,y,mr-ml,rh);}
-    setRGB(226,232,240,false);strokeLine(ml,y+rh,mr,y+rh);
+  const net = totalIn - totalOut;
+  const rows = items.map(h=>{
     const d=new Date(h.ts||0);
-    const nm=h.langKey?(T(h.langKey)||h.name):h.name;
-    const cat=T('cat-'+h.cat)||h.cat||'-';
-    const asal=_asalUang(h);
+    const nm=(h.langKey?(T(h.langKey)||h.name):h.name);
+    const cat=T('cat-'+h.cat)||h.cat||'';
     const amt=(h.pos?'+':'-')+fmt(Math.abs(h.amt));
-    setRGB(30,41,59,true);
-    txt(d.toLocaleDateString('id-ID'),cols[0],y+11,7.5,false);
-    txt(nm,cols[1],y+11,7.5,false);
-    txt(cat,cols[2],y+11,7.5,false);
-    txt(asal,cols[3],y+11,7.5,false);
-    h.pos?setRGB(11,122,99,true):setRGB(239,68,68,true);
-    txtR(amt,cols[4],y+11,7.5);
-    y+=rh;
-  });
+    const color=h.pos?'#0B7A63':'#EF4444';
+    const asalUang = h.src || (h.pos ? (lang==='id'?'Pemasukan':'Income') : (lang==='id'?'Pengeluaran':'Expense'));
+    return `<tr>
+      <td>${d.toLocaleDateString('id-ID')}</td>
+      <td>${nm}</td>
+      <td>${cat}</td>
+      <td>${asalUang}</td>
+      <td style="text-align:right;color:${color};font-weight:600">${amt}</td>
+    </tr>`;
+  }).join('');
 
-  // Footer
-  y+=8;setRGB(226,232,240,false);strokeLine(ml,y,mr,y);y+=10;
-  setRGB(148,163,184,true);txt('maNTapps Financial App  |  Digenerate otomatis  |  '+printDate,ml,y,7,false);
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>e-Statement ${periodLabel}</title>
+  <style>
+    body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:24px;color:#111;font-size:12px;}
+    .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #1A56C4;}
+    .logo{font-size:20px;font-weight:800;color:#0F1C35;}.logo span{color:#1A56C4;}
+    .meta{font-size:11px;color:#666;line-height:1.6;}
+    h2{font-size:14px;font-weight:700;color:#0F1C35;margin:0 0 4px;}
+    table{width:100%;border-collapse:collapse;margin-top:14px;}
+    th{background:#F4F6FC;font-size:10px;font-weight:700;letter-spacing:.5px;color:#666;text-transform:uppercase;padding:8px 10px;text-align:left;}
+    td{padding:9px 10px;border-bottom:1px solid #F0F0F0;font-size:11px;color:#222;}
+    tr:last-child td{border-bottom:none;}
+    .summary{margin-top:18px;background:#F8FAFF;border-radius:10px;padding:14px 16px;display:flex;gap:24px;}
+    .sum-item{flex:1;}.sum-lbl{font-size:10px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+    .sum-val{font-size:14px;font-weight:700;}
+    .in{color:#0B7A63;}.out{color:#EF4444;}.net{color:#1A56C4;}
+    .footer{margin-top:20px;font-size:10px;color:#aaa;text-align:center;}
+    @media print{body{padding:12px;}button{display:none!important;}}
+  </style></head><body>
+  <div class="header">
+    <div><div class="logo">maNTapp<span>s</span></div>
+    <div class="meta">e-Statement · ${periodLabel}<br>Nama: ${uname}<br>Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</div></div>
+    <div style="text-align:right"><h2>${periodLabel}</h2><div class="meta">${items.length} transaksi</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Tanggal</th><th>Transaksi</th><th>Kategori</th><th>Asal Uang</th><th style="text-align:right">Jumlah</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="summary">
+    <div class="sum-item"><div class="sum-lbl">${lang==='id'?'Total Masuk':'Total In'}</div><div class="sum-val in">+${fmt(totalIn)}</div></div>
+    <div class="sum-item"><div class="sum-lbl">${lang==='id'?'Total Keluar':'Total Out'}</div><div class="sum-val out">-${fmt(totalOut)}</div></div>
+    <div class="sum-item"><div class="sum-lbl">Net</div><div class="sum-val net">${net>=0?'+':''}${fmt(net)}</div></div>
+  </div>
+  <div class="footer">maNTapps Financial App · Dokumen ini digenerate secara otomatis</div>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`;
 
-  // Build PDF binary
-  const content=stm.join('
-');
-  const enc=s=>{const b=[];for(let i=0;i<s.length;i++)b.push(s.charCodeAt(i)&0xff);return b;};
-  const parts=[];
-  const addP=s=>parts.push(s);
-  addP('%PDF-1.4
-%âãÏÓ
-');
-  addP('1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-');
-  addP('2 0 obj
-<< /Type /Pages /Kids [6 0 R] /Count 1 >>
-endobj
-');
-  addP('3 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
-endobj
-');
-  addP('4 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
-endobj
-');
-  addP('5 0 obj
-<< /Length '+content.length+' >>
-stream
-'+content+'
-endstream
-endobj
-');
-  addP('6 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 5 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>
-endobj
-');
-  const xrefOff=parts.reduce((a,b)=>a+b.length,0);
-  let cum=0,xref='xref
-0 7
-0000000000 65535 f 
-';
-  parts.forEach(p=>{xref+=cum.toString().padStart(10,'0')+' 00000 n 
-';cum+=p.length;});
-  xref+=`trailer
-<< /Size 7 /Root 1 0 R >>
-startxref
-${xrefOff}
-%%EOF
-`;
-  const full=parts.join('')+xref;
-  const bytes=new Uint8Array(full.length);
-  for(let i=0;i<full.length;i++) bytes[i]=full.charCodeAt(i)&0xff;
-  const blob=new Blob([bytes],{type:'application/pdf'});
-  _triggerDownload(blob, filename+'.pdf');
-  toast('✅ PDF berhasil didownload!',5000);
+  const w = window.open('','_blank','width=700,height=900');
+  if(w){ w.document.write(html); w.document.close(); }
+  else toast(lang==='id'?'⚠️ Izinkan popup untuk download PDF':'⚠️ Allow popup to download PDF');
 }
 
-// ── Trigger download — multi-method ──────────────────────────
-function _triggerDownload(blob, filename){
-  try{
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.style.display='none'; a.href=url; a.download=filename;
-    document.body.appendChild(a); a.click();
-    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},2000);
-  }catch(e){
-    const reader=new FileReader();
-    reader.onload=function(){
-      const a=document.createElement('a');
-      a.href=reader.result; a.download=filename; a.style.display='none';
-      document.body.appendChild(a); a.click();
-      setTimeout(()=>document.body.removeChild(a),2000);
-    };
-    reader.readAsDataURL(blob);
+// ── MODAL KONFIRMASI DOWNLOAD ────────────────────────────────
+let _dlConfirmCb = null;
+
+function showDownloadConfirm(type, label, cb){
+  _dlConfirmCb = cb;
+  const modal = document.getElementById('dlConfirmModal');
+  const title = document.getElementById('dlConfirmTitle');
+  const desc  = document.getElementById('dlConfirmDesc');
+  const icon  = document.getElementById('dlConfirmIcon');
+  const iconXl= document.getElementById('dlConfirmIconXl');
+  const iconPd= document.getElementById('dlConfirmIconPdf');
+  if(type==='xlsx'){
+    iconXl.style.display='flex'; iconPd.style.display='none';
+    title.textContent = lang==='id'?'Download Excel':'Download Excel';
+    desc.textContent  = (lang==='id'?'Download e-Statement ':'Download e-Statement ') + label + ' (.xlsx)?';
+  } else {
+    iconPd.style.display='flex'; iconXl.style.display='none';
+    title.textContent = lang==='id'?'Download PDF':'Download PDF';
+    desc.textContent  = (lang==='id'?'Download e-Statement ':'Download e-Statement ') + label + ' (.pdf)?';
   }
+  modal.style.display='flex';
 }
 
-// Init label saat app pertama dibuka (safe - tidak block login)
-try{ updateHistNavbarLabel(); }catch(e){}
+function closeDlConfirm(){ document.getElementById('dlConfirmModal').style.display='none'; _dlConfirmCb=null; }
+
+function confirmDownload(){
+  document.getElementById('dlConfirmModal').style.display='none';
+  if(typeof _dlConfirmCb==='function') _dlConfirmCb();
+  _dlConfirmCb=null;
+}
+
+// Init label saat app pertama dibuka
+(function(){ updateHistNavbarLabel(); })();
 
 // ============================================================
 // CURRENCY
@@ -3176,7 +3102,7 @@ function initChart(){ refreshAnalytics(); }
 // TOAST
 // ============================================================
 let toastT;
-function toast(msg, duration){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.animation='fiu .3s ease';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',duration||3500);}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.animation='fiu .3s ease';clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',2800);}
 
 // ============================================================
 // FIREBASE ERROR MESSAGES
@@ -3226,10 +3152,10 @@ fbAuth.onAuthStateChanged(async (fu) => {
 // ============================================================
 // INIT
 // ============================================================
-try{ buildCatGrid(); }catch(e){ console.warn('buildCatGrid:',e); }
-try{ applyLang(); }catch(e){ console.warn('applyLang:',e); }
-try{ recalcTotalBalance(); }catch(e){ console.warn('recalcTotalBalance:',e); }
-try{ goTo('splash'); }catch(e){ console.warn('goTo splash:',e); }
+buildCatGrid();
+applyLang();
+recalcTotalBalance();
+goTo('splash');
 </script>
 
 <!-- ===== CALCULATOR OVERLAY ===== -->
@@ -3906,9 +3832,6 @@ window.addNotif = function(type, title, msg){
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
     </button>
     <div style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);flex:1;">e-Statement</div>
-    <button onclick="closeEStatement()" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="Tutup">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
   </div>
   <!-- Tabs: Rekening Ini | Gabungan -->
   <div style="display:flex;border-bottom:2px solid var(--border);margin:14px 0 0;flex-shrink:0;">
@@ -3917,33 +3840,6 @@ window.addNotif = function(type, title, msg){
   </div>
   <!-- Content -->
   <div id="estat-content" style="flex:1;overflow-y:auto;padding:16px;"></div>
-</div>
-
-<!-- ══ DOWNLOAD CONFIRM MODAL ══ -->
-<div id="dlc-overlay" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center;">
-  <div style="background:var(--card);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:20px 20px 36px;">
-    <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 18px;"></div>
-    <div style="text-align:center;margin-bottom:16px;">
-      <div id="dlc-title" style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px;"></div>
-      <div style="font-size:12px;color:var(--t3);">File akan langsung tersimpan ke perangkat</div>
-    </div>
-    <div style="background:var(--bg);border-radius:14px;padding:14px 16px;margin-bottom:18px;display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;">
-        <span style="color:var(--t3);">Periode</span>
-        <span id="dlc-period" style="font-weight:700;color:var(--navy);"></span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;">
-        <span style="color:var(--t3);">Format</span>
-        <span id="dlc-format" style="font-weight:700;color:var(--navy);"></span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;">
-        <span style="color:var(--t3);">Transaksi</span>
-        <span id="dlc-count" style="font-weight:700;color:var(--navy);"></span>
-      </div>
-    </div>
-    <button id="dlc-btn" onclick="_execDlConfirm()" style="width:100%;padding:15px;border-radius:14px;color:#fff;border:none;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;"></button>
-    <button onclick="_closeDlConfirm()" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--t3);border:1.5px solid var(--border);font-family:var(--f);font-size:14px;font-weight:600;cursor:pointer;">Batal</button>
-  </div>
 </div>
 
 </body>

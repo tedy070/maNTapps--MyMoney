@@ -1596,26 +1596,93 @@ const accounts = {};
 let user=null;
 
 // ============================================================
-// NOTIFICATIONS
+// NOTIFICATIONS — localStorage per-UID, tidak ke RTDB
 // ============================================================
 let notifications=[], notifId=0;
-function addNotif(type,title,msg){
-  notifications.unshift({id:notifId++,type,title,msg,time:new Date(),unread:true});
-  updateNotifBadge();
-  // fbAutoSave() TIDAK dipanggil di sini — notifikasi hanya disimpan lokal, tidak ke RTDB
+
+/* ── Key localStorage berdasarkan UID ── */
+function _notifKey(){ return 'notif_' + (fbUID()||'guest'); }
+
+/* ── Simpan ke localStorage ── */
+function _saveNotifLocal(){
+  try{
+    // Simpan max 100 notif, timestamp sebagai ISO string agar bisa di-parse kembali
+    const data = notifications.slice(0,100).map(n=>({
+      ...n, time: n.time instanceof Date ? n.time.toISOString() : n.time
+    }));
+    localStorage.setItem(_notifKey(), JSON.stringify(data));
+    // Simpan juga notifId agar tidak bentrok setelah reload
+    localStorage.setItem(_notifKey()+'_id', notifId);
+  } catch(e){ console.warn('notif save error:',e); }
 }
+
+/* ── Load dari localStorage (dipanggil setelah user login) ── */
+function _loadNotifLocal(){
+  try{
+    const raw = localStorage.getItem(_notifKey());
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(!Array.isArray(data)) return;
+    // Parse timestamp kembali ke Date object
+    notifications = data.map(n=>({...n, time: new Date(n.time)}));
+    // Restore notifId agar tidak overlap
+    const savedId = parseInt(localStorage.getItem(_notifKey()+'_id')||'0');
+    notifId = Math.max(notifId, savedId, notifications.length);
+    updateNotifBadge();
+  } catch(e){ console.warn('notif load error:',e); }
+}
+
+/* ── Hapus localStorage saat logout / reset ── */
+function _clearNotifLocal(){
+  try{
+    localStorage.removeItem(_notifKey());
+    localStorage.removeItem(_notifKey()+'_id');
+  } catch(e){}
+}
+
+function addNotif(type,title,msg){
+  notifications.unshift({id:notifId++, type, title, msg, time:new Date(), unread:true});
+  updateNotifBadge();
+  _saveNotifLocal();
+  // fbAutoSave() TIDAK dipanggil — notifikasi hanya lokal, tidak ke RTDB
+}
+
 function updateNotifBadge(){
   const u=notifications.filter(n=>n.unread).length;
   const b=document.getElementById('notifBadge');
   if(u>0){b.textContent=u>9?'9+':u;b.classList.remove('hidden');}
   else b.classList.add('hidden');
 }
+
 function markAllRead(){
   notifications.forEach(n=>n.unread=false);
+  _saveNotifLocal();
   updateNotifBadge();renderNotifCenter();toast('All notifications marked as read');
 }
-function openNotifCenter(){document.getElementById('notifCenter').classList.add('on');renderNotifCenter();setTimeout(()=>{notifications.forEach(n=>n.unread=false);updateNotifBadge();},1500);}
-function closeNotifCenter(){document.getElementById('notifCenter').classList.remove('on');}
+
+function openNotifCenter(){
+  document.getElementById('notifCenter').classList.add('on');
+  renderNotifCenter();
+  // Auto-refresh timeAgo setiap 30 detik selama notif center terbuka
+  if(window._notifRefreshTimer) clearInterval(window._notifRefreshTimer);
+  window._notifRefreshTimer = setInterval(()=>{
+    if(document.getElementById('notifCenter').classList.contains('on')){
+      renderNotifCenter();
+    } else {
+      clearInterval(window._notifRefreshTimer);
+    }
+  }, 30000);
+  setTimeout(()=>{
+    notifications.forEach(n=>n.unread=false);
+    _saveNotifLocal();
+    updateNotifBadge();
+  },1500);
+}
+function closeNotifCenter(){
+  document.getElementById('notifCenter').classList.remove('on');
+  if(window._notifRefreshTimer){ clearInterval(window._notifRefreshTimer); window._notifRefreshTimer=null; }
+}
+
 const nBg={tx:'#EBFEF3',neg:'#FEEBEB',goal:'#EBF3FE',wallet:'#F3EBFE',tip:'#FEF3EB',security:'#FEEBEB',welcome:'#EBFEF3'};
 const nIco={
   tx:'<svg viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
@@ -1626,18 +1693,80 @@ const nIco={
   security:'<svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
   welcome:'<svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
 };
-function timeAgo(d){const s=Math.floor((new Date()-d)/1000);if(s<60)return'Just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return d.toLocaleDateString();}
+
+/* ── timeAgo akurat — pakai timestamp asli, bukan "Just now" semua ── */
+function timeAgo(d){
+  if(!(d instanceof Date)) d = new Date(d);
+  if(isNaN(d)) return '—';
+  const now = new Date();
+  const s   = Math.floor((now - d) / 1000);
+
+  if(s < 30)   return lang==='id' ? 'Baru saja' : 'Just now';
+  if(s < 60)   return lang==='id' ? s+' detik lalu' : s+'s ago';
+  if(s < 3600){
+    const m = Math.floor(s/60);
+    return lang==='id' ? m+' menit lalu' : m+'m ago';
+  }
+  if(s < 86400){
+    const h = Math.floor(s/3600);
+    return lang==='id' ? h+' jam lalu' : h+'h ago';
+  }
+
+  // Kemarin
+  const yesterday = new Date(now); yesterday.setDate(now.getDate()-1);
+  if(d.toDateString()===yesterday.toDateString()){
+    const hhmm = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    return (lang==='id'?'Kemarin, ':'Yesterday, ')+hhmm;
+  }
+
+  // Dalam minggu ini (< 7 hari)
+  if(s < 7*86400){
+    const days = Math.floor(s/86400);
+    return lang==='id' ? days+' hari lalu' : days+'d ago';
+  }
+
+  // Dalam tahun ini
+  const sameYear = d.getFullYear() === now.getFullYear();
+  const opts = sameYear
+    ? {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}
+    : {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'};
+  return d.toLocaleString(lang==='id'?'id-ID':'en-US', opts);
+}
+
+/* ── Pengelompokan notif: Hari ini / Kemarin / Lebih lama ── */
 function renderNotifCenter(){
   const c=document.getElementById('notifContent');
-  if(!notifications.length){c.innerHTML='<div class="nc-empty"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div class="nc-empty-t">No notifications yet</div><div class="nc-empty-s">Activity will appear here</div></div>';return;}
-  const today=notifications.filter(n=>timeAgo(n.time).includes('ago')||timeAgo(n.time)==='Just now');
-  const older=notifications.filter(n=>!today.includes(n));
+  if(!notifications.length){
+    c.innerHTML='<div class="nc-empty"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div class="nc-empty-t">No notifications yet</div><div class="nc-empty-s">Activity will appear here</div></div>';
+    return;
+  }
+
+  const now = new Date();
+  const todayStr = now.toDateString();
+  const yest = new Date(now); yest.setDate(now.getDate()-1);
+  const yesterdayStr = yest.toDateString();
+
+  const todayList   = notifications.filter(n=>new Date(n.time).toDateString()===todayStr);
+  const yesterdayList = notifications.filter(n=>new Date(n.time).toDateString()===yesterdayStr);
+  const olderList   = notifications.filter(n=>{
+    const ds=new Date(n.time).toDateString();
+    return ds!==todayStr && ds!==yesterdayStr;
+  });
+
+  const lblToday     = lang==='id' ? 'HARI INI'  : 'TODAY';
+  const lblYesterday = lang==='id' ? 'KEMARIN'   : 'YESTERDAY';
+  const lblOlder     = lang==='id' ? 'SEBELUMNYA': 'EARLIER';
+
   let h='';
-  if(today.length){h+='<div class="nc-section-lbl">TODAY</div><div class="nc-list">'+today.map(renderNI).join('')+'</div>';}
-  if(older.length){h+='<div class="nc-section-lbl">EARLIER</div><div class="nc-list">'+older.map(renderNI).join('')+'</div>';}
+  if(todayList.length)    h+=`<div class="nc-section-lbl">${lblToday}</div><div class="nc-list">${todayList.map(renderNI).join('')}</div>`;
+  if(yesterdayList.length)h+=`<div class="nc-section-lbl">${lblYesterday}</div><div class="nc-list">${yesterdayList.map(renderNI).join('')}</div>`;
+  if(olderList.length)    h+=`<div class="nc-section-lbl">${lblOlder}</div><div class="nc-list">${olderList.map(renderNI).join('')}</div>`;
   c.innerHTML=h;
 }
-function renderNI(n){return`<div class="nc-item${n.unread?' unread':''}"><div class="nc-ico" style="background:${nBg[n.type]||'#EBF3FE'};fill:none;stroke-width:1.8;">${nIco[n.type]||nIco.tip}</div><div class="nc-body"><div class="nc-nm">${n.title}</div><div class="nc-msg">${n.msg}</div><div class="nc-time">${timeAgo(n.time)}</div></div></div>`;}
+
+function renderNI(n){
+  return`<div class="nc-item${n.unread?' unread':''}"><div class="nc-ico" style="background:${nBg[n.type]||'#EBF3FE'};fill:none;stroke-width:1.8;">${nIco[n.type]||nIco.tip}</div><div class="nc-body"><div class="nc-nm">${n.title}</div><div class="nc-msg">${n.msg}</div><div class="nc-time">${timeAgo(n.time)}</div></div></div>`;
+}
 
 // ============================================================
 // GOALS
@@ -3798,6 +3927,9 @@ async function enterApp(initialState){
   // ⑦ Schedule tagihan reminders (after SW registration)
   initTagihanScheduler();
 
+  // ⑧ Load notifikasi dari localStorage (per UID, tidak dari RTDB)
+  _loadNotifLocal();
+
   // ⑦ Greeting
   const isNew = !initialState || !(initialState.historyItems?.length);
   setTimeout(()=>{
@@ -3825,6 +3957,7 @@ async function doLogout(){
 
   // ③ Reset seluruh state lokal
   user=null;
+  _clearNotifLocal(); // hapus notifikasi dari localStorage user ini
   notifications=[]; historyItems=[]; goals=[]; wallets=[];
   balance=0; savedPin=''; lockPinBuf='';
 

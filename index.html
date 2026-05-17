@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
-<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
-<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.PNG">
+<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.png">
+<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.png">
+<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.png">
 <meta name="apple-mobile-web-app-title" content="MyMoney">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -71,7 +71,9 @@ async function fbSaveState(){
     wallets,
     goals,
     historyItems,
-    notifications,
+    tagihan: (typeof tagihan !== 'undefined') ? tagihan : [],
+    tagihanBudget: (typeof tagihanBudget !== 'undefined') ? tagihanBudget : 8000000,
+    // notifications SENGAJA tidak disimpan ke RTDB — hanya lokal per-device
     savedPin,
     lang,
     darkMode: document.body.classList.contains('dk'),
@@ -153,7 +155,12 @@ function _applyStateFromDB(data){
   }
   if(Array.isArray(data.goals))        goals         = data.goals;
   if(Array.isArray(data.historyItems)) historyItems  = data.historyItems;
-  if(Array.isArray(data.notifications))notifications = data.notifications;
+  // notifications TIDAK disync dari RTDB — hanya lokal per-device
+  if(Array.isArray(data.tagihan)){
+    tagihan = data.tagihan;
+    if(tagihan.length>0) tagihanIdCtr = Math.max(...data.tagihan.map(t=>t.id||0))+1;
+  }
+  if(data.tagihanBudget !== undefined) tagihanBudget = data.tagihanBudget;
   if(data.savedPin    !== undefined) savedPin      = data.savedPin || '';
   if(data.lang)   { lang = data.lang; }
   if(data.darkMode !== undefined){
@@ -1048,26 +1055,80 @@ body{background:var(--bg);transition:background .35s;}
     <!-- SAVINGS TAB -->
     <div class="tp" id="tab-savings">
       <div class="sv-tabs">
-        <button class="sv-tab on" id="svt-goals" onclick="switchSvTab('goals')">Goals</button>
+        <button class="sv-tab on" id="svt-goals" onclick="switchSvTab('goals')">Tujuan & Tagihan</button>
         <button class="sv-tab" id="svt-wallets" onclick="switchSvTab('wallets')">Wallets & Cards</button>
         <button class="sv-tab" id="svt-history" onclick="switchSvTab('history')">History</button>
       </div>
-      <!-- Goals -->
+      <!-- Goals/Tagihan Content -->
       <div id="sv-goals-content">
-        <div class="sv-hc">
-          <div class="sv-lbl" id="sv-prog">TOTAL PROGRESS</div>
-          <div class="sv-amt" id="svAmt">$24,500.00</div>
-          <div class="sv-ch">↑ +12% <span id="sv-from">from last month</span></div>
-          <div class="sv-btns">
-            <button class="sv-btn p" onclick="openNewGoalModal()" id="sv-new">+ New Goal</button>
-            <button class="sv-btn" onclick="switchTab('analytics')" id="sv-ins">Insights</button>
+        <!-- Sub-navbar: Tujuan | Tagihan -->
+        <div style="display:flex;margin:0 16px 16px;background:var(--surface2);border-radius:12px;padding:4px;gap:0;">
+          <button class="sv-subtab on" id="svsubt-tujuan" onclick="switchGoalsSubTab('tujuan')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;">Tujuan</button>
+          <button class="sv-subtab" id="svsubt-tagihan" onclick="switchGoalsSubTab('tagihan')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;">Tagihan</button>
+        </div>
+
+        <!-- TUJUAN PANEL -->
+        <div id="sv-tujuan-panel">
+          <div class="sv-hc">
+            <div class="sv-lbl" id="sv-prog">TOTAL PROGRESS</div>
+            <div class="sv-amt" id="svAmt">$24,500.00</div>
+            <div class="sv-ch">↑ +12% <span id="sv-from">from last month</span></div>
+            <div class="sv-btns">
+              <button class="sv-btn p" onclick="openNewGoalModal()" id="sv-new">+ New Goal</button>
+              <button class="sv-btn" onclick="switchTab('analytics')" id="sv-ins">Insights</button>
+            </div>
           </div>
+          <div class="tip-ban">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div><p class="tip-ban-txt" id="sv-emtip">Saving for an emergency fund first provides ultimate peace of mind.</p><span class="tip-ban-lnk" id="sv-learn">Learn More</span></div>
+          </div>
+          <div id="goalsContainer"></div>
         </div>
-        <div class="tip-ban">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <div><p class="tip-ban-txt" id="sv-emtip">Saving for an emergency fund first provides ultimate peace of mind.</p><span class="tip-ban-lnk" id="sv-learn">Learn More</span></div>
+
+        <!-- TAGIHAN PANEL -->
+        <div id="sv-tagihan-panel" style="display:none;">
+          <!-- Header Card: Total Tagihan -->
+          <div style="margin:0 16px 14px;background:linear-gradient(135deg,#0D2152,#1a3a7a 55%,var(--blue2));border-radius:18px;padding:20px;color:white;box-shadow:0 12px 32px rgba(13,33,82,.32);">
+            <div style="font-size:10px;letter-spacing:2px;opacity:.7;margin-bottom:4px;font-weight:500;text-transform:uppercase;">TOTAL TAGIHAN MENDATANG</div>
+            <div style="font-family:var(--f);font-size:clamp(22px,6vw,28px);font-weight:800;letter-spacing:-1px;margin-bottom:10px;" id="tagihan-total-amt">Rp 0</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;opacity:.85;" id="tagihan-alert-info">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span id="tagihan-alert-count">0 tagihan perlu perhatian</span>
+              </div>
+              <button onclick="bayarSemuaTagihan()" style="background:white;color:#0D2152;border:none;padding:7px 14px;border-radius:10px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;">Bayar Semua</button>
+            </div>
+          </div>
+
+          <!-- Pengeluaran Bulan Ini -->
+          <div style="margin:0 16px 14px;background:var(--surface);border-radius:16px;padding:16px;box-shadow:var(--sh2);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">Pengeluaran Bulan Ini</div>
+              <button onclick="openTagihanBudgetEdit()" style="background:none;border:none;cursor:pointer;color:var(--t3);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              </button>
+            </div>
+            <div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px;" id="tagihan-expense-amt">Rp 0</div>
+            <div style="font-size:12px;color:var(--t3);margin-bottom:8px;">/ <span id="tagihan-budget-amt">Rp 0</span></div>
+            <div style="background:#E8EEF8;border-radius:4px;height:8px;overflow:hidden;margin-bottom:6px;">
+              <div id="tagihan-expense-bar" style="height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),#34d399);transition:width .6s ease;width:0%;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--t3);text-align:right;" id="tagihan-expense-pct">0% dari anggaran</div>
+          </div>
+
+          <!-- Segera Jatuh Tempo -->
+          <div style="padding:0 16px 8px;">
+            <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:12px;">Segera Jatuh Tempo</div>
+            <div id="tagihan-list"></div>
+          </div>
+
+          <!-- FAB Tambah Tagihan -->
+          <div style="height:80px;"></div>
+          <button onclick="openTambahTagihan()" style="position:fixed;bottom:calc(var(--safe-bot) + 76px);right:16px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;border:none;border-radius:50px;padding:14px 20px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(26,86,196,.4);z-index:50;" id="fab-tambah-tagihan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tambah Tagihan
+          </button>
         </div>
-        <div id="goalsContainer"></div>
       </div>
       <!-- Wallets — SWIPEABLE -->
       <div id="sv-wallets-content" style="display:none;">
@@ -1538,7 +1599,7 @@ let notifications=[], notifId=0;
 function addNotif(type,title,msg){
   notifications.unshift({id:notifId++,type,title,msg,time:new Date(),unread:true});
   updateNotifBadge();
-  fbAutoSave();
+  // fbAutoSave() TIDAK dipanggil di sini — notifikasi hanya disimpan lokal, tidak ke RTDB
 }
 function updateNotifBadge(){
   const u=notifications.filter(n=>n.unread).length;
@@ -1950,6 +2011,9 @@ function switchSvTab(t){
   document.getElementById('sv-goals-content').style.display=t==='goals'?'block':'none';
   document.getElementById('sv-wallets-content').style.display=t==='wallets'?'block':'none';
   document.getElementById('sv-history-content').style.display=t==='history'?'block':'none';
+  // Sembunyikan FAB tagihan jika tidak di goals tab
+  const fab = document.getElementById('fab-tambah-tagihan');
+  if(fab) fab.style.display='none';
   if(t==='wallets') renderWallets();
   if(t==='history'){ updateHistNavbarLabel(); renderHistory(); }
 }
@@ -2427,7 +2491,7 @@ function updateAllAmounts(){
 // LANGUAGE
 // ============================================================
 const TR={
-  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals','svt-wallets':'Wallets & Cards','svt-history':'History','cat-food':'Food','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-rent-sub':'BILLS & HOUSING','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE',
+  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Tujuan & Tagihan','svt-wallets':'Wallets & Cards','svt-history':'History','cat-food':'Food','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-rent-sub':'BILLS & HOUSING','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE',
     'tx-income':'Income','tx-expense':'Expense','tx-transfer':'Transfer',
     'tx-topup':'Top Up','tx-recorded':'recorded','tx-from':'from','tx-to':'to',
     'tx-insufficient':'Insufficient balance! Available',
@@ -2448,7 +2512,7 @@ const TR={
     'pw-nomatch':'Passwords do not match',
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
-  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat','cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS',
+  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat','cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS',
     'tx-income':'Pemasukan','tx-expense':'Pengeluaran','tx-transfer':'Transfer',
     'tx-topup':'Isi Saldo','tx-recorded':'tercatat','tx-from':'dari','tx-to':'ke',
     'tx-insufficient':'Saldo tidak cukup! Tersedia',
@@ -3413,7 +3477,14 @@ goTo('splash');
 </div>
 
 <style>
-/* CALCULATOR */
+/* TAGIHAN OVERLAY */
+#tambahTagihanOvr { flex-direction: column; }
+.tg-remind-pill:active { opacity: .75; }
+
+/* Pastikan FAB tagihan tersembunyi saat tab lain aktif */
+#fab-tambah-tagihan { display: none; }
+
+
 .calc-btn{padding:18px 8px;border-radius:14px;border:none;font-family:var(--f);font-size:20px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:transform .1s,opacity .12s;}
 .calc-btn:active{transform:scale(.91);}
 .calc-btn.op{background:#EBF3FE;color:var(--blue2);}
@@ -3600,7 +3671,12 @@ async function enterApp(initialState){
     if(Array.isArray(initialState.wallets))      wallets       = initialState.wallets;
     if(Array.isArray(initialState.goals))        goals         = initialState.goals;
     if(Array.isArray(initialState.historyItems)) historyItems  = initialState.historyItems;
-    if(Array.isArray(initialState.notifications))notifications = initialState.notifications;
+    // notifications TIDAK dimuat dari RTDB — hanya lokal per-device
+    if(Array.isArray(initialState.tagihan)){
+      tagihan = initialState.tagihan;
+      if(tagihan.length>0) tagihanIdCtr = Math.max(...tagihan.map(t=>t.id||0))+1;
+    }
+    if(initialState.tagihanBudget !== undefined) tagihanBudget = initialState.tagihanBudget;
     if(initialState.savedPin)   savedPin = initialState.savedPin;
     if(initialState.lang)       lang     = initialState.lang;
     if(initialState.darkMode)   document.body.classList.add('dk');
@@ -3935,6 +4011,329 @@ function useCalcResult(){
 
 // AUTO-SAVE sudah terintegrasi langsung di setiap fungsi mutasi.
 
+// ============================================================
+// TAGIHAN — Pengingat Tagihan / Bills Reminder
+// ============================================================
+let tagihan = [];
+let tagihanIdCtr = 1;
+let tagihanFreqSel = 'sekali';
+let tagihanReminderDays = [3]; // default H-3
+let selTagihanCat = '';
+let selTagihanCatColor = '';
+let selTagihanCatIco = '';
+let tagihanBudget = 8000000; // default 8 juta
+
+function switchGoalsSubTab(tab) {
+  // Update sub-tab button styles
+  document.getElementById('svsubt-tujuan').style.background = tab==='tujuan' ? 'var(--surface)' : 'transparent';
+  document.getElementById('svsubt-tujuan').style.color = tab==='tujuan' ? 'var(--navy)' : 'var(--t3)';
+  document.getElementById('svsubt-tujuan').style.boxShadow = tab==='tujuan' ? 'var(--sh2)' : 'none';
+  document.getElementById('svsubt-tagihan').style.background = tab==='tagihan' ? 'var(--surface)' : 'transparent';
+  document.getElementById('svsubt-tagihan').style.color = tab==='tagihan' ? 'var(--navy)' : 'var(--t3)';
+  document.getElementById('svsubt-tagihan').style.boxShadow = tab==='tagihan' ? 'var(--sh2)' : 'none';
+
+  document.getElementById('sv-tujuan-panel').style.display = tab==='tujuan' ? 'block' : 'none';
+  document.getElementById('sv-tagihan-panel').style.display = tab==='tagihan' ? 'block' : 'none';
+  const fab = document.getElementById('fab-tambah-tagihan');
+  if (fab) fab.style.display = tab==='tagihan' ? 'flex' : 'none';
+  if (tab==='tagihan') renderTagihanList();
+}
+
+function renderTagihanList() {
+  const c = document.getElementById('tagihan-list'); if (!c) return;
+  const now = new Date();
+  // Sort: terdekat dulu
+  const sorted = [...tagihan].sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+  if (!sorted.length) {
+    c.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--t3);font-size:13px;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Belum ada tagihan. Tambah tagihan pertama!
+    </div>`;
+    updateTagihanSummary([]);
+    return;
+  }
+
+  c.innerHTML = sorted.map(t => {
+    const due = new Date(t.tanggal);
+    const diffMs = due - now;
+    const diffDays = Math.ceil(diffMs / 86400000);
+    let statusBadge = '';
+    let statusText = '';
+    if (diffDays < 0) {
+      statusBadge = `<span style="background:#FEEBEB;color:var(--red);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;">Terlambat</span>`;
+      statusText = `<span style="color:var(--red);font-size:11px;">⏰ ${Math.abs(diffDays)} hari lalu</span>`;
+    } else if (diffDays === 0) {
+      statusBadge = `<span style="background:#FEF3EB;color:#D97706;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;">Mendesak</span>`;
+      statusText = `<span style="color:#D97706;font-size:11px;">⏰ Hari ini</span>`;
+    } else if (diffDays <= 3) {
+      statusBadge = `<span style="background:#FEF3EB;color:#D97706;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;">Segera</span>`;
+      statusText = `<span style="color:var(--t3);font-size:11px;">📅 ${diffDays} hari lagi</span>`;
+    } else {
+      statusText = `<span style="color:var(--t3);font-size:11px;">📅 ${due.toLocaleDateString('id-ID',{day:'2-digit',month:'short'})}</span>`;
+    }
+    const catBg = t.catColor || '#EBF3FE';
+    const catIco = t.catIco || `<svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+    return `<div style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh2);" onclick="openEditTagihan(${t.id})">
+      <div style="width:42px;height:42px;border-radius:12px;background:${catBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8">${t.catIco ? '' : ''}</svg>
+        <div style="width:20px;height:20px;">${catIco}</div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px;">${t.nama}</div>
+        <div style="display:flex;align-items:center;gap:6px;">${statusText}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Rp ${Number(t.nominal||0).toLocaleString('id-ID')}</div>
+        <div style="margin-top:3px;">${statusBadge}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateTagihanSummary(sorted);
+}
+
+function updateTagihanSummary(list) {
+  const now = new Date();
+  const total = list.reduce((s,t)=>s+(t.nominal||0),0);
+  const needAttn = list.filter(t => {
+    const diff = Math.ceil((new Date(t.tanggal)-now)/86400000);
+    return diff <= 3;
+  }).length;
+
+  const elTotal = document.getElementById('tagihan-total-amt');
+  if (elTotal) elTotal.textContent = 'Rp '+total.toLocaleString('id-ID');
+  const elCount = document.getElementById('tagihan-alert-count');
+  if (elCount) elCount.textContent = needAttn+' tagihan perlu perhatian';
+
+  // Pengeluaran bulan ini dari historyItems
+  const now2 = new Date();
+  const monthExpense = historyItems
+    .filter(h => !h.pos && h.ts && new Date(h.ts).getFullYear()===now2.getFullYear() && new Date(h.ts).getMonth()===now2.getMonth())
+    .reduce((s,h)=>s+Math.abs(h.amt||0),0);
+  const elExp = document.getElementById('tagihan-expense-amt');
+  if (elExp) elExp.textContent = 'Rp '+Math.round(monthExpense).toLocaleString('id-ID');
+  const elBudget = document.getElementById('tagihan-budget-amt');
+  if (elBudget) elBudget.textContent = 'Rp '+tagihanBudget.toLocaleString('id-ID');
+  const pct = tagihanBudget > 0 ? Math.min(100, Math.round(monthExpense/tagihanBudget*100)) : 0;
+  const elBar = document.getElementById('tagihan-expense-bar');
+  if (elBar) {
+    elBar.style.width = pct+'%';
+    elBar.style.background = pct >= 90 ? 'linear-gradient(90deg,var(--red),#f87171)' : pct >= 70 ? 'linear-gradient(90deg,#F59E0B,#fbbf24)' : 'linear-gradient(90deg,var(--green),#34d399)';
+  }
+  const elPct = document.getElementById('tagihan-expense-pct');
+  if (elPct) elPct.textContent = pct+'% dari anggaran';
+}
+
+function openTambahTagihan() {
+  // Reset form
+  document.getElementById('tg-nama').value = '';
+  document.getElementById('tg-tanggal').value = '';
+  document.getElementById('tg-nominal').value = '';
+  document.getElementById('tg-edit-id').value = '';
+  document.getElementById('tg-delete-btn').style.display = 'none';
+  document.getElementById('tambah-tagihan-title').textContent = 'Pengingat Baru';
+  selTagihanCat = ''; selTagihanCatColor = ''; selTagihanCatIco = '';
+  document.getElementById('tg-cat-txt').textContent = 'Pilih kategori...';
+  document.getElementById('tg-cat-sel').style.background = '';
+  tagihanFreqSel = 'sekali';
+  tagihanReminderDays = [3];
+  updateTagihanFreqBtns();
+  updateTagihanReminderPills();
+  document.getElementById('tambahTagihanOvr').style.display = 'flex';
+}
+
+function openEditTagihan(id) {
+  const t = tagihan.find(x=>x.id===id); if (!t) return;
+  document.getElementById('tg-nama').value = t.nama;
+  document.getElementById('tg-tanggal').value = t.tanggal;
+  document.getElementById('tg-nominal').value = Number(t.nominal).toLocaleString('id-ID');
+  document.getElementById('tg-edit-id').value = id;
+  document.getElementById('tg-delete-btn').style.display = 'block';
+  document.getElementById('tambah-tagihan-title').textContent = 'Edit Tagihan';
+  selTagihanCat = t.cat || '';
+  selTagihanCatColor = t.catColor || '';
+  selTagihanCatIco = t.catIco || '';
+  const catTxt = document.getElementById('tg-cat-txt');
+  catTxt.textContent = selTagihanCat ? (T('cat-'+selTagihanCat)||selTagihanCat) : 'Pilih kategori...';
+  catTxt.classList.toggle('sel', !!selTagihanCat);
+  tagihanFreqSel = t.frekuensi || 'sekali';
+  tagihanReminderDays = t.reminders || [3];
+  updateTagihanFreqBtns();
+  updateTagihanReminderPills();
+  document.getElementById('tambahTagihanOvr').style.display = 'flex';
+}
+
+function closeTambahTagihan() {
+  document.getElementById('tambahTagihanOvr').style.display = 'none';
+}
+
+function setTagihanFreq(freq, btn) {
+  tagihanFreqSel = freq;
+  updateTagihanFreqBtns();
+}
+
+function updateTagihanFreqBtns() {
+  ['sekali','bulanan'].forEach(f => {
+    const b = document.getElementById('tgfreq-'+f);
+    if (!b) return;
+    const on = f === tagihanFreqSel;
+    b.style.background = on ? 'var(--surface)' : 'transparent';
+    b.style.color = on ? 'var(--navy)' : 'var(--t3)';
+    b.style.boxShadow = on ? 'var(--sh2)' : 'none';
+  });
+}
+
+function toggleReminderPill(el, days) {
+  if (tagihanReminderDays.includes(days)) {
+    tagihanReminderDays = tagihanReminderDays.filter(d=>d!==days);
+  } else {
+    tagihanReminderDays.push(days);
+  }
+  updateTagihanReminderPills();
+}
+
+function updateTagihanReminderPills() {
+  document.querySelectorAll('.tg-remind-pill').forEach(p => {
+    const d = parseInt(p.getAttribute('data-days'));
+    const on = tagihanReminderDays.includes(d);
+    p.style.background = on ? 'var(--navy)' : 'transparent';
+    p.style.color = on ? 'white' : 'var(--navy)';
+    p.style.borderColor = on ? 'var(--blue2)' : 'var(--border)';
+    p.textContent = on ? (d===0?'✓ Hari H':d===1?'✓ H-1':'✓ H-'+d) : (d===0?'Hari H':d===1?'H-1':'H-'+d);
+  });
+}
+
+function addCustomReminderPill() {
+  const n = prompt('Ingatkan berapa hari sebelumnya? (contoh: 7)','');
+  if (!n || isNaN(parseInt(n))) return;
+  const days = Math.max(0, parseInt(n));
+  if (!tagihanReminderDays.includes(days)) {
+    tagihanReminderDays.push(days);
+    // Add pill ke DOM
+    const container = document.getElementById('tg-reminder-pills');
+    const addBtn = container.lastElementChild;
+    const pill = document.createElement('button');
+    pill.className = 'tg-remind-pill';
+    pill.setAttribute('data-days', days);
+    pill.onclick = function(){ toggleReminderPill(this, days); };
+    pill.style.cssText = 'padding:8px 16px;border-radius:50px;font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;';
+    container.insertBefore(pill, addBtn);
+  }
+  updateTagihanReminderPills();
+}
+
+function openTagihanCatPicker() {
+  buildTagihanCatGrid();
+  document.getElementById('tagihanCatPicker').classList.add('on');
+}
+
+function buildTagihanCatGrid() {
+  const g = document.getElementById('tagihanCatGrid'); if (!g) return;
+  g.innerHTML = '';
+  cats.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cat-c'+(selTagihanCat===c.id?' sel':'');
+    d.onclick = () => selectTagihanCat(d, c);
+    d.innerHTML = `<div class="cico-w"><div class="cico" style="background:${c.bg};"><svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg></div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${T('cat-'+c.id)}</div><div class="csub">${T('cat-'+c.id+'-sub')}</div>`;
+    g.appendChild(d);
+  });
+}
+
+function selectTagihanCat(el, c) {
+  document.querySelectorAll('#tagihanCatGrid .cat-c').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');
+  selTagihanCat = c.id;
+  selTagihanCatIco = `<svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>`;
+  selTagihanCatColor = c.bg;
+  document.getElementById('tagihanCatConfSub').textContent = 'DIPILIH: ' + T('cat-'+c.id);
+}
+
+function confirmTagihanCat() {
+  if (!selTagihanCat) return;
+  const t = document.getElementById('tg-cat-txt');
+  t.textContent = T('cat-'+selTagihanCat) || selTagihanCat;
+  t.classList.add('sel');
+  document.getElementById('tagihanCatPicker').classList.remove('on');
+}
+
+function formatTagihanNominal(el) {
+  const raw = el.value.replace(/\D/g,'');
+  el.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+}
+
+function simpanTagihan() {
+  const nama = document.getElementById('tg-nama').value.trim();
+  if (!nama) { toast('⚠️ Nama tagihan wajib diisi'); return; }
+  const tanggal = document.getElementById('tg-tanggal').value;
+  if (!tanggal) { toast('⚠️ Tanggal jatuh tempo wajib diisi'); return; }
+  const nominalRaw = document.getElementById('tg-nominal').value.replace(/\./g,'').replace(/,/g,'');
+  const nominal = parseInt(nominalRaw) || 0;
+  const editId = document.getElementById('tg-edit-id').value;
+
+  if (editId) {
+    // Edit existing
+    const t = tagihan.find(x=>x.id===parseInt(editId));
+    if (t) {
+      t.nama = nama; t.tanggal = tanggal; t.nominal = nominal;
+      t.cat = selTagihanCat; t.catColor = selTagihanCatColor; t.catIco = selTagihanCatIco;
+      t.frekuensi = tagihanFreqSel; t.reminders = [...tagihanReminderDays];
+      toast('✅ Tagihan diperbarui!');
+    }
+  } else {
+    // New
+    tagihan.push({
+      id: tagihanIdCtr++,
+      nama, tanggal, nominal,
+      cat: selTagihanCat, catColor: selTagihanCatColor, catIco: selTagihanCatIco,
+      frekuensi: tagihanFreqSel,
+      reminders: [...tagihanReminderDays],
+      lunas: false
+    });
+    addNotif('goal', '📅 Tagihan Ditambahkan', `"${nama}" — Rp ${nominal.toLocaleString('id-ID')} · ${new Date(tanggal).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}`);
+    toast('✅ Tagihan disimpan!');
+  }
+  closeTambahTagihan();
+  renderTagihanList();
+  fbAutoSave();
+}
+
+function hapusTagihan() {
+  const editId = document.getElementById('tg-edit-id').value;
+  if (!editId) return;
+  const id = parseInt(editId);
+  const t = tagihan.find(x=>x.id===id);
+  tagihan = tagihan.filter(x=>x.id!==id);
+  closeTambahTagihan();
+  renderTagihanList();
+  toast('🗑️ '+(t?.nama||'Tagihan')+' dihapus');
+  fbAutoSave();
+}
+
+function bayarSemuaTagihan() {
+  if (!tagihan.length) { toast('Tidak ada tagihan aktif'); return; }
+  const total = tagihan.reduce((s,t)=>s+(t.nominal||0),0);
+  toast(`💳 Total tagihan: Rp ${total.toLocaleString('id-ID')}`);
+}
+
+function openTagihanBudgetEdit() {
+  document.getElementById('tg-budget-input').value = tagihanBudget.toLocaleString('id-ID');
+  document.getElementById('tagihanBudgetModal').classList.add('on');
+}
+
+function simpanBudgetTagihan() {
+  const raw = document.getElementById('tg-budget-input').value.replace(/\./g,'').replace(/,/g,'');
+  const val = parseInt(raw) || 0;
+  if (val <= 0) { toast('⚠️ Anggaran tidak valid'); return; }
+  tagihanBudget = val;
+  document.getElementById('tagihanBudgetModal').classList.remove('on');
+  renderTagihanList();
+  toast('✅ Anggaran diperbarui!');
+  fbAutoSave();
+}
+
+
+
 
 
 // Override addNotif to also send push notification for transactions
@@ -3960,8 +4359,107 @@ window.addNotif = function(type, title, msg){
 };
 </script>
 <!-- ══════════════════════════════════════════
-     E-STATEMENT OVERLAY
+     TAMBAH / EDIT TAGIHAN OVERLAY
 ══════════════════════════════════════════ -->
+<div id="tambahTagihanOvr" style="display:none;position:fixed;inset:0;z-index:800;background:var(--bg);flex-direction:column;overflow-y:auto;">
+  <div style="display:flex;align-items:center;padding:calc(var(--safe-top)+14px) 16px 14px;background:var(--bg);position:sticky;top:0;z-index:10;gap:10px;">
+    <button onclick="closeTambahTagihan()" style="width:36px;height:36px;border-radius:50%;background:var(--surface);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh2);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div id="tambah-tagihan-title" style="font-family:var(--f);font-size:18px;font-weight:800;color:var(--navy);flex:1;">Pengingat Baru</div>
+  </div>
+  <div style="padding:0 16px 40px;">
+    <!-- Card 1: Nama, Kategori, Nominal -->
+    <div style="background:var(--surface);border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:var(--sh2);">
+      <!-- Nama Tagihan -->
+      <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;">NAMA TAGIHAN</div>
+      <div class="iwrap" style="margin-bottom:16px;">
+        <span class="iico"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg></span>
+        <input class="finput" type="text" id="tg-nama" placeholder="mis. Listrik PLN">
+      </div>
+
+      <!-- Kategori -->
+      <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;">KATEGORI</div>
+      <div class="csel" onclick="openTagihanCatPicker()" id="tg-cat-sel" style="margin-bottom:16px;">
+        <div class="csel-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+        <span class="csel-txt" id="tg-cat-txt">Pilih kategori...</span>
+        <span class="csel-arr"><svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg></span>
+      </div>
+
+      <!-- Nominal Tagihan -->
+      <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;">NOMINAL TAGIHAN</div>
+      <div style="background:var(--surface2);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:8px;">
+        <span style="font-family:var(--f);font-size:18px;font-weight:700;color:var(--navy);">Rp</span>
+        <input type="text" id="tg-nominal" inputmode="numeric" placeholder="0"
+          style="flex:1;font-family:var(--f);font-size:28px;font-weight:800;color:var(--navy);border:none;outline:none;background:transparent;min-width:0;"
+          oninput="formatTagihanNominal(this)">
+      </div>
+    </div>
+
+    <!-- Card 2: Tanggal, Frekuensi, Ingatkan -->
+    <div style="background:var(--surface);border-radius:18px;padding:18px;margin-bottom:20px;box-shadow:var(--sh2);">
+      <!-- Tanggal Jatuh Tempo -->
+      <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;">TANGGAL JATUH TEMPO</div>
+      <div class="iwrap" style="margin-bottom:16px;">
+        <span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        <input class="finput" type="date" id="tg-tanggal">
+      </div>
+
+      <!-- Frekuensi -->
+      <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;">FREKUENSI</div>
+      <div style="display:flex;gap:0;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:16px;">
+        <button class="tg-freq-btn on" id="tgfreq-sekali" onclick="setTagihanFreq('sekali',this)" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;">Sekali</button>
+        <button class="tg-freq-btn" id="tgfreq-bulanan" onclick="setTagihanFreq('bulanan',this)" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;">Bulanan</button>
+      </div>
+
+      <!-- Ingatkan Saya -->
+      <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase;">INGATKAN SAYA</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tg-reminder-pills">
+        <button class="tg-remind-pill on" data-days="3" onclick="toggleReminderPill(this,3)" style="padding:8px 16px;border-radius:50px;border:1.5px solid var(--blue2);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:var(--navy);color:white;transition:all .2s;">✓ H-3</button>
+        <button class="tg-remind-pill" data-days="1" onclick="toggleReminderPill(this,1)" style="padding:8px 16px;border-radius:50px;border:1.5px solid var(--border);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--navy);transition:all .2s;">H-1</button>
+        <button class="tg-remind-pill" data-days="0" onclick="toggleReminderPill(this,0)" style="padding:8px 16px;border-radius:50px;border:1.5px solid var(--border);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--navy);transition:all .2s;">Hari H</button>
+        <button onclick="addCustomReminderPill()" style="width:36px;height:36px;border-radius:50%;border:1.5px dashed var(--border);font-size:18px;cursor:pointer;background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+    </div>
+
+    <input type="hidden" id="tg-edit-id" value="">
+    <button onclick="simpanTagihan()" style="width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,196,.3);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/></svg>
+      Simpan Pengingat
+    </button>
+    <button id="tg-delete-btn" onclick="hapusTagihan()" style="display:none;width:100%;padding:13px;border-radius:14px;background:rgba(239,68,68,.08);color:var(--red);border:1.5px solid rgba(239,68,68,.15);font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;">Hapus Tagihan</button>
+  </div>
+</div>
+
+<!-- CAT PICKER UNTUK TAGIHAN (reuse cpick style) -->
+<div class="cpick" id="tagihanCatPicker" style="z-index:1000;">
+  <div class="cpick-hdr">
+    <div class="cpick-eye"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> PILIH KATEGORI TAGIHAN</div>
+    <h1 class="cpick-ttl">Pilih <em>Kategori</em></h1>
+    <p class="cpick-sub">Untuk apa tagihan ini?</p>
+  </div>
+  <div class="cat-grid" id="tagihanCatGrid"></div>
+  <div class="conf-w"><button class="btn btn-p" onclick="confirmTagihanCat()">Konfirmasi →</button><p class="conf-sub" id="tagihanCatConfSub">BELUM DIPILIH</p></div>
+</div>
+
+<!-- BUDGET EDIT MODAL -->
+<div class="moverlay" id="tagihanBudgetModal">
+  <div class="msheet" style="padding:20px 20px 28px;">
+    <div class="mhandle"></div>
+    <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;">Atur Anggaran Bulanan</div>
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">ANGGARAN BULANAN</div>
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:20px;">
+      <span style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--blue2);">Rp</span>
+      <input type="text" id="tg-budget-input" inputmode="numeric" placeholder="8.000.000"
+        style="flex:1;font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);border:none;outline:none;background:transparent;min-width:0;"
+        oninput="formatTagihanNominal(this)">
+    </div>
+    <button onclick="simpanBudgetTagihan()" style="width:100%;padding:14px;border-radius:12px;background:var(--navy);color:white;border:none;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Simpan</button>
+    <button onclick="document.getElementById('tagihanBudgetModal').classList.remove('on')" style="width:100%;padding:12px;border-radius:12px;background:var(--surface2);color:var(--navy);border:1.5px solid var(--border);font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;">Batal</button>
+  </div>
+</div>
+
+
 <div id="estat-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
   <!-- Header -->
   <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">

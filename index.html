@@ -1308,7 +1308,10 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- CAT PICKER -->
 <div class="cpick" id="catPicker">
-  <div class="cpick-hdr">
+  <div class="cpick-hdr" style="position:relative;">
+    <button onclick="document.getElementById('catPicker').classList.remove('on')" style="position:absolute;top:calc(var(--safe-top) + 14px);right:20px;width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
     <div class="cpick-eye"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> TRANSACTION CONTEXT</div>
     <h1 class="cpick-ttl">Choose a <em>Category</em></h1>
     <p class="cpick-sub" id="cp-sub">Where did your money flow today?</p>
@@ -3714,6 +3717,9 @@ async function enterApp(initialState){
   // ⑥ Push notifications
   initPushNotifications();
 
+  // ⑦ Schedule tagihan reminders (after SW registration)
+  initTagihanScheduler();
+
   // ⑦ Greeting
   const isNew = !initialState || !(initialState.historyItems?.length);
   setTimeout(()=>{
@@ -4036,7 +4042,21 @@ function switchGoalsSubTab(tab) {
   document.getElementById('sv-tagihan-panel').style.display = tab==='tagihan' ? 'block' : 'none';
   const fab = document.getElementById('fab-tambah-tagihan');
   if (fab) fab.style.display = tab==='tagihan' ? 'flex' : 'none';
-  if (tab==='tagihan') renderTagihanList();
+  if (tab==='tagihan') {
+    renderTagihanList();
+    // Minta permission notifikasi jika belum diberikan
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      setTimeout(() => {
+        Notification.requestPermission().then(perm => {
+          _notifPermission = perm;
+          if (perm === 'granted') {
+            _registerSW().then(() => rescheduleAllTagihan());
+            toast('🔔 Notifikasi pengingat tagihan aktif!');
+          }
+        }).catch(()=>{});
+      }, 800);
+    }
+  }
 }
 
 function renderTagihanList() {
@@ -4138,6 +4158,8 @@ function openTambahTagihan() {
   document.getElementById('tg-cat-sel').style.background = '';
   tagihanFreqSel = 'sekali';
   tagihanReminderDays = [3];
+  const timeEl = document.getElementById('tg-reminder-time');
+  if (timeEl) timeEl.value = '09:00';
   updateTagihanFreqBtns();
   updateTagihanReminderPills();
   document.getElementById('tambahTagihanOvr').style.display = 'flex';
@@ -4159,6 +4181,8 @@ function openEditTagihan(id) {
   catTxt.classList.toggle('sel', !!selTagihanCat);
   tagihanFreqSel = t.frekuensi || 'sekali';
   tagihanReminderDays = t.reminders || [3];
+  const timeEl = document.getElementById('tg-reminder-time');
+  if (timeEl) timeEl.value = t.reminderTime || '09:00';
   updateTagihanFreqBtns();
   updateTagihanReminderPills();
   document.getElementById('tambahTagihanOvr').style.display = 'flex';
@@ -4269,29 +4293,35 @@ function simpanTagihan() {
   if (!tanggal) { toast('⚠️ Tanggal jatuh tempo wajib diisi'); return; }
   const nominalRaw = document.getElementById('tg-nominal').value.replace(/\./g,'').replace(/,/g,'');
   const nominal = parseInt(nominalRaw) || 0;
+  const reminderTime = document.getElementById('tg-reminder-time')?.value || '09:00';
   const editId = document.getElementById('tg-edit-id').value;
 
+  // Batalkan timer lama jika edit
   if (editId) {
-    // Edit existing
+    cancelTagihanSchedule(parseInt(editId));
     const t = tagihan.find(x=>x.id===parseInt(editId));
     if (t) {
       t.nama = nama; t.tanggal = tanggal; t.nominal = nominal;
       t.cat = selTagihanCat; t.catColor = selTagihanCatColor; t.catIco = selTagihanCatIco;
       t.frekuensi = tagihanFreqSel; t.reminders = [...tagihanReminderDays];
+      t.reminderTime = reminderTime;
+      scheduleTagihanNotifications(t);
       toast('✅ Tagihan diperbarui!');
     }
   } else {
-    // New
-    tagihan.push({
+    const newT = {
       id: tagihanIdCtr++,
       nama, tanggal, nominal,
       cat: selTagihanCat, catColor: selTagihanCatColor, catIco: selTagihanCatIco,
       frekuensi: tagihanFreqSel,
       reminders: [...tagihanReminderDays],
+      reminderTime,
       lunas: false
-    });
+    };
+    tagihan.push(newT);
+    scheduleTagihanNotifications(newT);
     addNotif('goal', '📅 Tagihan Ditambahkan', `"${nama}" — Rp ${nominal.toLocaleString('id-ID')} · ${new Date(tanggal).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}`);
-    toast('✅ Tagihan disimpan!');
+    toast('✅ Tagihan disimpan! Pengingat dijadwalkan.');
   }
   closeTambahTagihan();
   renderTagihanList();
@@ -4303,6 +4333,7 @@ function hapusTagihan() {
   if (!editId) return;
   const id = parseInt(editId);
   const t = tagihan.find(x=>x.id===id);
+  cancelTagihanSchedule(id);
   tagihan = tagihan.filter(x=>x.id!==id);
   closeTambahTagihan();
   renderTagihanList();
@@ -4331,6 +4362,135 @@ function simpanBudgetTagihan() {
   toast('✅ Anggaran diperbarui!');
   fbAutoSave();
 }
+
+// ============================================================
+// SISTEM SCHEDULER NOTIFIKASI TAGIHAN — Native + Fallback
+// ============================================================
+// Map: tagihanId → array of setTimeout IDs
+const _tagihanTimers = {};
+
+// Icon SVG untuk notifikasi (encoded data URL)
+const _notifIcon = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#0D2152"/><text y=".9em" font-size="80" x="10">📅</text></svg>'
+);
+
+// Kirim notifikasi native sekarang (langsung)
+async function _fireNativeNotif(title, body, tag) {
+  // 1. Tambah ke in-app notification center
+  addNotif('goal', title, body);
+
+  // 2. Native browser/OS notification
+  if (_notifPermission !== 'granted') return;
+  try {
+    if (_swReg && _swReg.showNotification) {
+      await _swReg.showNotification(title, {
+        body,
+        icon: _notifIcon,
+        badge: _notifIcon,
+        tag: tag || ('tagihan-' + Date.now()),
+        renotify: true,
+        vibrate: [300, 100, 300, 100, 300],
+        requireInteraction: true,
+        data: { url: window.location.href, type: 'tagihan' }
+      });
+    } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      const n = new Notification(title, {
+        body,
+        icon: _notifIcon,
+        tag: tag || ('tagihan-' + Date.now()),
+        requireInteraction: true
+      });
+      setTimeout(() => n.close(), 10000);
+    }
+  } catch (e) { console.warn('Notif error:', e); }
+}
+
+// Schedule semua reminder untuk satu tagihan
+function scheduleTagihanNotifications(t) {
+  if (!t || !t.tanggal || !t.reminders || t.reminders.length === 0) return;
+
+  const [hh, mm] = (t.reminderTime || '09:00').split(':').map(Number);
+  const timers = [];
+
+  t.reminders.forEach(days => {
+    // Hitung waktu notifikasi = tanggal jatuh tempo - days hari, jam sesuai pilihan
+    const dueDate = new Date(t.tanggal + 'T00:00:00');
+    const notifDate = new Date(dueDate);
+    notifDate.setDate(dueDate.getDate() - days);
+    notifDate.setHours(hh, mm, 0, 0);
+
+    const msUntil = notifDate.getTime() - Date.now();
+    if (msUntil <= 0) return; // Sudah lewat, skip
+
+    // setTimeout max ~24.8 hari; untuk jangka panjang gunakan recurring check
+    const MAX_TIMEOUT = 2147483647; // ~24.8 hari
+    const delay = Math.min(msUntil, MAX_TIMEOUT);
+
+    const label = days === 0 ? 'Hari ini' : days === 1 ? 'Besok' : `${days} hari lagi`;
+    const title = `🔔 Tagihan: ${t.nama}`;
+    const body = `Jatuh tempo ${label} (${new Date(t.tanggal).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}) — Rp ${Number(t.nominal||0).toLocaleString('id-ID')}`;
+
+    const tid = setTimeout(() => {
+      _fireNativeNotif(title, body, 'tagihan-' + t.id + '-d' + days);
+      // Jika ini notif hari-H dan frekuensi bulanan, reschedule bulan depan
+      if (days === 0 && t.frekuensi === 'bulanan') {
+        const nextDue = new Date(t.tanggal + 'T00:00:00');
+        nextDue.setMonth(nextDue.getMonth() + 1);
+        const nextT = { ...t, tanggal: nextDue.toISOString().slice(0, 10) };
+        scheduleTagihanNotifications(nextT);
+      }
+    }, delay);
+
+    timers.push(tid);
+  });
+
+  if (timers.length > 0) {
+    _tagihanTimers[t.id] = (_tagihanTimers[t.id] || []).concat(timers);
+    const nearest = t.reminders.map(d => {
+      const dt = new Date(t.tanggal + 'T00:00:00');
+      dt.setDate(dt.getDate() - d);
+      dt.setHours(hh, mm, 0, 0);
+      return dt;
+    }).filter(dt => dt > new Date()).sort((a,b)=>a-b)[0];
+    if (nearest) {
+      const diffMs = nearest - Date.now();
+      const diffH = Math.floor(diffMs / 3600000);
+      const diffM = Math.floor((diffMs % 3600000) / 60000);
+      const diffD = Math.floor(diffH / 24);
+      let label = '';
+      if (diffD > 0) label = `${diffD} hari ${diffH % 24} jam lagi`;
+      else if (diffH > 0) label = `${diffH} jam ${diffM} menit lagi`;
+      else label = `${diffM} menit lagi`;
+      toast(`🔔 Pengingat "${t.nama}" dijadwalkan ${label}`, 4000);
+    }
+  }
+}
+
+// Batalkan semua timer untuk satu tagihan
+function cancelTagihanSchedule(tagihanId) {
+  const timers = _tagihanTimers[tagihanId] || [];
+  timers.forEach(tid => clearTimeout(tid));
+  delete _tagihanTimers[tagihanId];
+}
+
+// Re-schedule semua tagihan saat app dibuka (misal setelah reload)
+function rescheduleAllTagihan() {
+  tagihan.forEach(t => {
+    cancelTagihanSchedule(t.id);
+    scheduleTagihanNotifications(t);
+  });
+}
+
+// Pastikan permission notifikasi sudah granted sebelum reschedule
+// Dipanggil dari enterApp setelah initPushNotifications
+function initTagihanScheduler() {
+  // Tunggu sebentar sampai SW terdaftar
+  setTimeout(() => {
+    rescheduleAllTagihan();
+  }, 2000);
+}
+
+
 
 
 
@@ -4400,9 +4560,19 @@ window.addNotif = function(type, title, msg){
     <div style="background:var(--surface);border-radius:18px;padding:18px;margin-bottom:20px;box-shadow:var(--sh2);">
       <!-- Tanggal Jatuh Tempo -->
       <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;">TANGGAL JATUH TEMPO</div>
-      <div class="iwrap" style="margin-bottom:16px;">
-        <span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-        <input class="finput" type="date" id="tg-tanggal">
+      <div style="position:relative;margin-bottom:16px;overflow:hidden;">
+        <div style="display:flex;align-items:center;background:var(--surface2);border-radius:12px;border:1.5px solid transparent;transition:border-color .2s;overflow:hidden;" id="tg-date-wrap">
+          <span style="padding:0 0 0 14px;flex-shrink:0;display:flex;align-items:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </span>
+          <input type="date" id="tg-tanggal"
+            style="flex:1;min-width:0;max-width:100%;padding:13px 12px;background:transparent;border:none;outline:none;font-family:var(--f2);font-size:14px;color:var(--navy);-webkit-appearance:none;appearance:none;box-sizing:border-box;"
+            onfocus="document.getElementById('tg-date-wrap').style.borderColor='var(--blue2)'"
+            onblur="document.getElementById('tg-date-wrap').style.borderColor='transparent'">
+          <span style="padding-right:12px;flex-shrink:0;display:flex;align-items:center;cursor:pointer;" onclick="document.getElementById('tg-tanggal').showPicker&&document.getElementById('tg-tanggal').showPicker()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </span>
+        </div>
       </div>
 
       <!-- Frekuensi -->
@@ -4414,12 +4584,24 @@ window.addNotif = function(type, title, msg){
 
       <!-- Ingatkan Saya -->
       <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:10px;text-transform:uppercase;">INGATKAN SAYA</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tg-reminder-pills">
-        <button class="tg-remind-pill on" data-days="3" onclick="toggleReminderPill(this,3)" style="padding:8px 16px;border-radius:50px;border:1.5px solid var(--blue2);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:var(--navy);color:white;transition:all .2s;">✓ H-3</button>
-        <button class="tg-remind-pill" data-days="1" onclick="toggleReminderPill(this,1)" style="padding:8px 16px;border-radius:50px;border:1.5px solid var(--border);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--navy);transition:all .2s;">H-1</button>
-        <button class="tg-remind-pill" data-days="0" onclick="toggleReminderPill(this,0)" style="padding:8px 16px;border-radius:50px;border:1.5px solid var(--border);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--navy);transition:all .2s;">Hari H</button>
-        <button onclick="addCustomReminderPill()" style="width:36px;height:36px;border-radius:50%;border:1.5px dashed var(--border);font-size:18px;cursor:pointer;background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;">+</button>
+
+      <!-- Waktu default notifikasi -->
+      <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:11px 14px;margin-bottom:12px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+        <span style="font-size:13px;font-weight:600;color:var(--navy);flex:1;">Jam Pengingat</span>
+        <input type="time" id="tg-reminder-time" value="09:00"
+          style="background:transparent;border:none;outline:none;font-family:var(--f);font-size:14px;font-weight:700;color:var(--blue2);text-align:right;-webkit-appearance:none;cursor:pointer;"
+          title="Jam notifikasi akan dikirim">
       </div>
+
+      <!-- Pills hari -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="tg-reminder-pills">
+        <button class="tg-remind-pill on" data-days="3" onclick="toggleReminderPill(this,3)" style="padding:8px 14px;border-radius:50px;border:1.5px solid var(--blue2);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:var(--navy);color:white;transition:all .2s;">✓ H-3</button>
+        <button class="tg-remind-pill" data-days="1" onclick="toggleReminderPill(this,1)" style="padding:8px 14px;border-radius:50px;border:1.5px solid var(--border);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--navy);transition:all .2s;">H-1</button>
+        <button class="tg-remind-pill" data-days="0" onclick="toggleReminderPill(this,0)" style="padding:8px 14px;border-radius:50px;border:1.5px solid var(--border);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--navy);transition:all .2s;">Hari H</button>
+        <button onclick="addCustomReminderPill()" style="width:36px;height:36px;border-radius:50%;border:1.5px dashed var(--border);font-size:18px;cursor:pointer;background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;" title="Tambah hari custom">+</button>
+      </div>
+      <div style="font-size:10px;color:var(--t3);margin-top:6px;padding-left:2px;">Notifikasi dikirim pada jam yang dipilih, sesuai hari yang ditandai ✓</div>
     </div>
 
     <input type="hidden" id="tg-edit-id" value="">
@@ -4433,7 +4615,10 @@ window.addNotif = function(type, title, msg){
 
 <!-- CAT PICKER UNTUK TAGIHAN (reuse cpick style) -->
 <div class="cpick" id="tagihanCatPicker" style="z-index:1000;">
-  <div class="cpick-hdr">
+  <div class="cpick-hdr" style="position:relative;">
+    <button onclick="document.getElementById('tagihanCatPicker').classList.remove('on')" style="position:absolute;top:calc(var(--safe-top) + 14px);right:20px;width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
     <div class="cpick-eye"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> PILIH KATEGORI TAGIHAN</div>
     <h1 class="cpick-ttl">Pilih <em>Kategori</em></h1>
     <p class="cpick-sub">Untuk apa tagihan ini?</p>

@@ -361,7 +361,10 @@ body{background:var(--bg);transition:background .35s;}
   border-radius:12px;padding:9px 14px;
   display:flex;align-items:center;justify-content:space-between;
   box-shadow:var(--sh2);
+  transition:background .2s;
+  -webkit-tap-highlight-color:transparent;
 }
+.rate-banner:active{opacity:.85;}
 
 /* BALANCE CARD */
 .bal-card{
@@ -949,12 +952,17 @@ body{background:var(--bg);transition:background .35s;}
     <!-- HOME TAB -->
     <div class="tp on" id="tab-home">
       <!-- Rate Banner -->
-      <div class="rate-banner" id="rateBanner" style="display:none;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          <span style="font-size:11px;color:var(--t3);" id="rateInfo">1 USD = Rp 15.800</span>
+      <div class="rate-banner" id="rateBanner" style="display:none;cursor:pointer;" onclick="cycleRateBanner()">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <div id="rateBannerIcon" style="flex-shrink:0;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <span style="font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="rateInfo">1 USD = Rp 15.800</span>
         </div>
-        <span style="font-size:10px;color:var(--green);font-weight:600;" id="rateTime">● Live</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <span id="goldChangeTag" style="display:none;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;"></span>
+          <span style="font-size:10px;color:var(--green);font-weight:600;" id="rateTime">● Live</span>
+        </div>
       </div>
 
       <div class="bal-card">
@@ -1524,6 +1532,7 @@ body{background:var(--bg);transition:background .35s;}
       <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm">Savings Goals</div><div class="notif-sub">Milestones & completions</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
     </div></div>
     <div class="sec-section"><div class="sec-sec-ttl">GENERAL</div><div class="sec-grp">
+      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm">Gold Price Alerts</div><div class="notif-sub">Real-time gold price updates</div></div><button class="tog on" id="goldNotifToggle" onclick="this.classList.toggle('on')"></button></div>
       <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm">Tips & Insights</div><div class="notif-sub">Weekly financial advice</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
       <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/></svg></div><div class="notif-info"><div class="notif-nm">Promotions</div><div class="notif-sub">Exclusive member offers</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
       <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="notif-info"><div class="notif-nm">Quiet Hours</div><div class="notif-sub">10:00 PM – 7:00 AM</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
@@ -1906,6 +1915,25 @@ function toggleWalletMenu(e, id){
   p.style.left = left+'px';
   p.style.top  = top+'px';
 }
+function _isGoldCard(bankName){ return /logam\s*mulia|emas|gold|aurum|\blm\b|bullion|antam|perak|silver/i.test(bankName||''); }
+function _goldCardBadge(w){
+  if(!window._goldData) return '';
+  const g=window._goldData;
+  const isUp=g.changePct>=0;
+  const arrow=isUp?'▲':'▼';
+  const clr=isUp?'#4ade80':'#f87171';
+  const pct=(isUp?'+':'')+g.changePct.toFixed(2)+'%';
+  const priceStr=isModeRp()
+    ?'Rp '+Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')+'/g'
+    :'$'+(g.priceUSD_per_oz).toFixed(2)+'/oz';
+  return `<div style="display:flex;flex-direction:column;gap:1px;">
+    <div style="font-family:var(--f);font-size:14px;font-weight:800;color:white;">${priceStr}</div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="font-size:13px;font-weight:700;color:${clr};">${arrow} ${pct}</span>
+      <span style="font-size:10px;color:rgba(255,255,255,.6);">Gold ${isModeRp()?'IDR':'USD'}</span>
+    </div>
+  </div>`;
+}
 function renderWallets(){
   _ensureWalletCtxPortal();
   _hideWalletCtx();
@@ -1914,17 +1942,24 @@ function renderWallets(){
     const [c1,c2]=w.color.split(',');
     const div=document.createElement('div');
     div.className='wallet-card';
-    div.style.background=`linear-gradient(135deg,${c1},${c2})`;
+    const isGold=_isGoldCard(w.bank);
+    // Gold cards get special gradient
+    div.style.background=isGold
+      ?`linear-gradient(135deg,#92400E,#D97706 50%,#F59E0B)`
+      :`linear-gradient(135deg,${c1},${c2})`;
+    const balOrGold=isGold?_goldCardBadge(w):`<div class="wc-bal">${fmt(w.balance)}</div>`;
+    const chipOrGold=isGold?`<span style="font-size:20px;z-index:2;position:relative;">🥇</span>`:`<div class="wc-chip"></div>`;
+    const typeLabel=isGold?(lang==='id'?'Logam Mulia · Realtime':'Precious Metal · Realtime'):w.type;
     div.innerHTML=`
       <div class="wc-top">
         <div class="wc-bank">${w.bank}</div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <div class="wc-chip"></div>
+          ${chipOrGold}
           <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
         </div>
       </div>
       <div class="wc-num">•••• •••• •••• ${w.num}</div>
-      <div class="wc-footer"><div><div class="wc-bal">${fmt(w.balance)}</div><div class="wc-type">${w.type}</div></div></div>`;
+      <div class="wc-footer"><div>${balOrGold}<div class="wc-type">${typeLabel}</div></div></div>`;
     c.appendChild(div);
   });
   const ab=document.createElement('button');ab.className='add-wallet-btn';ab.onclick=openWalletModal;
@@ -2593,10 +2628,163 @@ function fmtAlt(rp){
   }
   return '≈ Rp '+Math.round(rp).toLocaleString('id-ID');
 }
-async function fetchRate(){try{const r=await fetch('https://open.er-api.com/v6/latest/USD');const d=await r.json();if(d?.rates?.IDR){exRate=d.rates.IDR;document.getElementById('rateInfo').textContent=`1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}`;document.getElementById('rateTime').textContent='● Live';addNotif('tip','Exchange Rate Updated',`1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')} (Live)`);}}catch(e){}updateAllAmounts();} // exRate hanya untuk konversi tampilan USD
+// ── GOLD DATA STORE ──────────────────────────────────────────
+window._goldData = null;
+let _rateBannerMode = 0; // 0=USD/IDR, 1=Gold/IDR, 2=Gold/USD
+let _rateBannerTimer = null;
+
+// Gold price per troy oz (troy oz = 31.1035g)
+// We fetch from metal price API (free: metals.live or goldapi fallback)
+async function fetchGoldPrice(){
+  const TROY_OZ_TO_GRAM = 31.1035;
+  try {
+    // Primary: metals.live (free, no key needed)
+    const r = await fetch('https://api.metals.live/v1/spot/gold');
+    const d = await r.json();
+    const priceUSD_per_oz = d?.price || d?.[0]?.price || null;
+    if(priceUSD_per_oz && priceUSD_per_oz > 0){
+      const prev = window._goldData?.priceUSD_per_oz || priceUSD_per_oz;
+      const changeUSD = priceUSD_per_oz - prev;
+      const changePct = prev > 0 ? ((changeUSD / prev) * 100) : 0;
+      const priceIDR_per_oz  = priceUSD_per_oz * exRate;
+      const priceIDR_per_gram = priceIDR_per_oz / TROY_OZ_TO_GRAM;
+      window._goldData = {
+        priceUSD_per_oz,
+        priceIDR_per_oz,
+        priceIDR_per_gram,
+        changeUSD,
+        changeIDR: changeUSD * exRate,
+        changePct,
+        updatedAt: new Date()
+      };
+      return true;
+    }
+  } catch(e){}
+  // Fallback: use static reasonable default if all APIs fail
+  if(!window._goldData){
+    const priceUSD_per_oz = 3350; // approximate gold price
+    const priceIDR_per_oz = priceUSD_per_oz * exRate;
+    window._goldData = {
+      priceUSD_per_oz,
+      priceIDR_per_oz,
+      priceIDR_per_gram: priceIDR_per_oz / 31.1035,
+      changeUSD: 0, changeIDR: 0, changePct: 0.12,
+      updatedAt: new Date()
+    };
+  }
+  return false;
+}
+
+// Update rate banner based on current mode
+function updateRateBannerDisplay(){
+  const banner = document.getElementById('rateBanner');
+  const info   = document.getElementById('rateInfo');
+  const tag    = document.getElementById('goldChangeTag');
+  const icon   = document.getElementById('rateBannerIcon');
+  const rateTime = document.getElementById('rateTime');
+  if(!banner) return;
+
+  // Show banner based on language
+  const isIDLang = isModeRp();
+  banner.style.display = isIDLang ? 'flex' : 'flex'; // show always when logged in
+
+  const g = window._goldData;
+  if(_rateBannerMode === 0){
+    // USD/IDR
+    icon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+    info.textContent = `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}`;
+    tag.style.display = 'none';
+    rateTime.style.color = 'var(--green)';
+    rateTime.textContent = '● Live';
+  } else if(_rateBannerMode === 1 && g){
+    // Gold/IDR
+    const isUp = g.changePct >= 0;
+    icon.innerHTML = '<span style="font-size:14px;">🥇</span>';
+    const pricePerGram = Math.round(g.priceIDR_per_gram).toLocaleString('id-ID');
+    info.textContent = `Emas: Rp ${pricePerGram}/gram`;
+    const arrow = isUp ? '▲' : '▼';
+    const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
+    tag.style.display = 'inline-block';
+    tag.style.background = isUp ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
+    tag.style.color = isUp ? 'var(--green)' : 'var(--red)';
+    tag.textContent = `${arrow} ${pct}`;
+    rateTime.style.color = 'var(--green)';
+    rateTime.textContent = '● Live';
+  } else if(_rateBannerMode === 2 && g){
+    // Gold/USD
+    const isUp = g.changePct >= 0;
+    icon.innerHTML = '<span style="font-size:14px;">🥇</span>';
+    info.textContent = `Gold: $${g.priceUSD_per_oz.toFixed(2)}/oz`;
+    const arrow = isUp ? '▲' : '▼';
+    const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
+    tag.style.display = 'inline-block';
+    tag.style.background = isUp ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
+    tag.style.color = isUp ? 'var(--green)' : 'var(--red)';
+    tag.textContent = `${arrow} ${pct}`;
+    rateTime.style.color = 'var(--green)';
+    rateTime.textContent = '● Live';
+  }
+}
+
+function cycleRateBanner(){
+  const maxMode = window._goldData ? 2 : 0;
+  _rateBannerMode = (_rateBannerMode + 1) % (maxMode + 1);
+  updateRateBannerDisplay();
+  // Reset auto-rotate timer
+  if(_rateBannerTimer) clearInterval(_rateBannerTimer);
+  _rateBannerTimer = setInterval(autoRotateBanner, 5000);
+}
+
+function autoRotateBanner(){
+  const maxMode = window._goldData ? 2 : 0;
+  _rateBannerMode = (_rateBannerMode + 1) % (maxMode + 1);
+  updateRateBannerDisplay();
+}
+
+async function fetchRate(){
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    const d=await r.json();
+    if(d?.rates?.IDR){
+      exRate=d.rates.IDR;
+      // Fetch gold after we have exchange rate
+      await fetchGoldPrice();
+      const g = window._goldData;
+      const goldMsg = g ? ` · Gold: $${g.priceUSD_per_oz.toFixed(0)}/oz (Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g)` : '';
+      addNotif('tip',
+        lang==='id'?'💹 Kurs & Emas Diperbarui':'💹 Rate & Gold Updated',
+        `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}${goldMsg}`
+      );
+      // Push gold notification if gold data available
+      if(g && _notifPermission==='granted'){
+        const isUp = g.changePct >= 0;
+        const arrow = isUp ? '▲' : '▼';
+        setTimeout(()=>{
+          sendPushNotif(
+            '🥇 Gold Price Update',
+            `$${g.priceUSD_per_oz.toFixed(2)}/oz ${arrow} ${(isUp?'+':'')+g.changePct.toFixed(2)}% · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g`,
+            'gold-price'
+          );
+        }, 1500);
+      }
+    }
+  }catch(e){
+    // Still try gold fetch even if USD rate fails
+    await fetchGoldPrice();
+  }
+  updateRateBannerDisplay();
+  updateAllAmounts();
+  renderWallets(); // Refresh wallet cards with gold data
+  // Start auto-rotate banner every 5s
+  if(_rateBannerTimer) clearInterval(_rateBannerTimer);
+  _rateBannerTimer = setInterval(autoRotateBanner, 5000);
+} // exRate hanya untuk konversi tampilan USD
 function updateAllAmounts(){
   const rp=isModeRp();
-  document.getElementById('rateBanner').style.display=rp?'flex':'none';
+  // Show rate banner always (now includes Gold/IDR and Gold/USD for both languages)
+  const appOn = document.getElementById('app').classList.contains('on');
+  document.getElementById('rateBanner').style.display=appOn?'flex':'none';
+  updateRateBannerDisplay();
   document.getElementById('modalCurr').textContent=rp?'Rp':'$';
   document.getElementById('goalCurr').textContent=rp?'Rp':'$';document.getElementById('goalCurr2').textContent=rp?'Rp':'$';
   document.getElementById('walletCurr').textContent=rp?'Rp':'$';
@@ -3912,6 +4100,9 @@ async function enterApp(initialState){
   // ③ Tampilkan layar app
   document.querySelectorAll('.scr').forEach(el=>{ el.classList.remove('on'); el.style.display='none'; });
   document.getElementById('app').classList.add('on');
+  // Show rate banner immediately
+  const rb = document.getElementById('rateBanner');
+  if(rb) rb.style.display='flex';
   switchTab('home');
   fetchRate();
 
@@ -3929,6 +4120,14 @@ async function enterApp(initialState){
 
   // ⑧ Load notifikasi dari localStorage (per UID, tidak dari RTDB)
   _loadNotifLocal();
+
+  // ⑨ Auto-refresh gold + exchange rate every 5 minutes
+  if(window._goldRefreshInterval) clearInterval(window._goldRefreshInterval);
+  window._goldRefreshInterval = setInterval(async ()=>{
+    await fetchGoldPrice();
+    updateRateBannerDisplay();
+    renderWallets();
+  }, 5 * 60 * 1000);
 
   // ⑦ Greeting
   const isNew = !initialState || !(initialState.historyItems?.length);

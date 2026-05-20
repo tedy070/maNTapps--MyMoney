@@ -1916,24 +1916,35 @@ function toggleWalletMenu(e, id){
   p.style.top  = top+'px';
 }
 function _isGoldCard(bankName){ return /logam\s*mulia|emas|gold|aurum|\blm\b|bullion|antam|perak|silver/i.test(bankName||''); }
+
 function _goldCardBadge(w){
-  if(!window._goldData) return '';
-  const g=window._goldData;
-  const isUp=g.changePct>=0;
-  const arrow=isUp?'▲':'▼';
-  const clr=isUp?'#4ade80':'#f87171';
-  const pct=(isUp?'+':'')+g.changePct.toFixed(2)+'%';
-  const priceStr=isModeRp()
-    ?'Rp '+Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')+'/g'
-    :'$'+(g.priceUSD_per_oz).toFixed(2)+'/oz';
-  return `<div style="display:flex;flex-direction:column;gap:1px;">
-    <div style="font-family:var(--f);font-size:14px;font-weight:800;color:white;">${priceStr}</div>
-    <div style="display:flex;align-items:center;gap:5px;">
-      <span style="font-size:13px;font-weight:700;color:${clr};">${arrow} ${pct}</span>
-      <span style="font-size:10px;color:rgba(255,255,255,.6);">Gold ${isModeRp()?'IDR':'USD'}</span>
-    </div>
-  </div>`;
+  const g = window._goldData;
+  const isUp = g ? g.changePct >= 0 : true;
+  const arrow = isUp ? '▲' : '▼';
+  const clr   = isUp ? '#4ade80' : '#f87171';
+  const pct   = g ? (isUp?'+':'')+g.changePct.toFixed(2)+'%' : '—';
+  const priceStr = g
+    ? (isModeRp()
+        ? 'Rp '+Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')+'/g'
+        : '$'+g.priceUSD_per_oz.toFixed(2)+'/oz')
+    : '—';
+
+  // Invested balance (saldo/investasi)
+  const investStr = fmt(w.balance);
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:3px;">
+      <!-- Saldo investasi -->
+      <div style="font-size:10px;color:rgba(255,255,255,.65);letter-spacing:.8px;text-transform:uppercase;font-weight:600;">${lang==='id'?'NILAI INVESTASI':'INVESTED'}</div>
+      <div style="font-family:var(--f);font-size:17px;font-weight:800;color:white;letter-spacing:-.5px;">${investStr}</div>
+      <!-- Harga emas + % perubahan -->
+      <div style="display:flex;align-items:center;gap:6px;margin-top:1px;">
+        <span style="font-size:12px;color:rgba(255,255,255,.8);font-weight:600;">${priceStr}</span>
+        <span style="font-size:12px;font-weight:700;color:${clr};">${arrow} ${pct}</span>
+      </div>
+    </div>`;
 }
+
 function renderWallets(){
   _ensureWalletCtxPortal();
   _hideWalletCtx();
@@ -1945,21 +1956,37 @@ function renderWallets(){
     const isGold=_isGoldCard(w.bank);
     // Gold cards get special gradient
     div.style.background=isGold
-      ?`linear-gradient(135deg,#92400E,#D97706 50%,#F59E0B)`
+      ?`linear-gradient(135deg,#7c3c0e,#c47a1a 45%,#e8a820)`
       :`linear-gradient(135deg,${c1},${c2})`;
-    const balOrGold=isGold?_goldCardBadge(w):`<div class="wc-bal">${fmt(w.balance)}</div>`;
-    const chipOrGold=isGold?`<span style="font-size:20px;z-index:2;position:relative;">🥇</span>`:`<div class="wc-chip"></div>`;
-    const typeLabel=isGold?(lang==='id'?'Logam Mulia · Realtime':'Precious Metal · Realtime'):w.type;
-    div.innerHTML=`
-      <div class="wc-top">
-        <div class="wc-bank">${w.bank}</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${chipOrGold}
-          <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
+
+    if(isGold){
+      const typeLabel = lang==='id'?'Logam Mulia · Realtime':'Precious Metal · Realtime';
+      div.innerHTML=`
+        <div class="wc-top">
+          <div class="wc-bank">${w.bank}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;line-height:1;">🥇</span>
+            <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
+          </div>
         </div>
-      </div>
-      <div class="wc-num">•••• •••• •••• ${w.num}</div>
-      <div class="wc-footer"><div>${balOrGold}<div class="wc-type">${typeLabel}</div></div></div>`;
+        <div class="wc-footer" style="align-items:flex-end;justify-content:space-between;">
+          ${_goldCardBadge(w)}
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="wc-type" style="color:rgba(255,215,0,.85);font-weight:700;">${typeLabel}</div>
+          </div>
+        </div>`;
+    } else {
+      div.innerHTML=`
+        <div class="wc-top">
+          <div class="wc-bank">${w.bank}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="wc-chip"></div>
+            <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
+          </div>
+        </div>
+        <div class="wc-num">•••• •••• •••• ${w.num}</div>
+        <div class="wc-footer"><div><div class="wc-bal">${fmt(w.balance)}</div><div class="wc-type">${w.type}</div></div></div>`;
+    }
     c.appendChild(div);
   });
   const ab=document.createElement('button');ab.className='add-wallet-btn';ab.onclick=openWalletModal;

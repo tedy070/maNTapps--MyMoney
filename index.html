@@ -911,8 +911,8 @@ body{background:var(--bg);transition:background .35s;}
     <p class="auth-sub" id="r-sub">Join thousands managing money smarter</p>
     <div class="fgrp"><label class="flbl" id="r-nlbl">FULL NAME</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><input class="finput" type="text" id="regName" placeholder="Jordan Miller"></div><div class="emsg" id="regNameErr">Name is required</div></div>
     <div class="fgrp"><label class="flbl" id="r-elbl">EMAIL ADDRESS</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg></span><input class="finput" type="email" id="regEmail" placeholder="name@example.com"></div><div class="emsg" id="regEmailErr">Invalid email format</div></div>
-    <div class="fgrp"><label class="flbl" id="r-plbl">PASSWORD</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><input class="finput" type="password" id="regPw" placeholder="Min. 6 characters"><span class="ieye" id="eyeReg" onclick="togglePw('regPw','eyeReg')"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></div><div class="emsg" id="regPwErr">Password must be at least 6 characters</div></div>
-    <div class="fgrp"><label class="flbl" id="r-p2lbl">CONFIRM PASSWORD</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><input class="finput" type="password" id="regPw2" placeholder="Repeat password"><span class="ieye" id="eyeReg2" onclick="togglePw('regPw2','eyeReg2')"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></div><div class="emsg" id="regPw2Err">Passwords do not match</div></div>
+    <div class="fgrp"><label class="flbl" id="r-plbl">PASSWORD</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><input class="finput" type="password" id="regPw" placeholder="Min. 6 characters"><span class="ieye" id="eyeReg" onclick="togglePw('regPw','eyeReg')"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></div><div class="emsg" id="regPwErr">Password minimal 6 karakter</div></div>
+    <div class="fgrp"><label class="flbl" id="r-p2lbl">CONFIRM PASSWORD</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span><input class="finput" type="password" id="regPw2" placeholder="Repeat password"><span class="ieye" id="eyeReg2" onclick="togglePw('regPw2','eyeReg2')"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></div><div class="emsg" id="regPw2Err">Password tidak cocok</div></div>
     <button class="btn btn-p" onclick="doRegister()" id="r-btn">Create Account</button>
     <p class="alink"><span id="r-have">Already have an account?</span> <a onclick="goTo('login')" id="r-login">Log In</a></p>
   </div>
@@ -1446,29 +1446,29 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- SECURITY OVERLAY -->
 <div class="ovr" id="secOvr">
-  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl" data-i18n="ovr-sec">Keamanan</div></div>
+  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Keamanan</div></div>
   <div id="secMain">
     <div class="sec-section">
-      <div class="sec-sec-ttl">AUTHENTICATION</div>
+      <div class="sec-sec-ttl">AUTENTIKASI</div>
       <div class="sec-grp">
-        <div class="sec-row" onclick="showPinChange()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-pin">Kunci PIN</div><div class="sec-row-sub" id="pinStatusLbl" data-i18n="sec-pin-sub">Ketuk untuk atur PIN</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
-        <div class="sec-row" onclick="showPasswordChange()"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-pw">Ganti Password</div><div class="sec-row-sub" data-i18n="sec-pw-sub">Perbarui password login Anda</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
-        <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-bio">Biometrik</div><div class="sec-row-sub" data-i18n="sec-bio-sub">Face ID / Sidik Jari</div></div><button class="tog on" onclick="const on=this.classList.toggle('on');toast(t(on?'sec-bio-on':'sec-bio-off'))"></button></div>
-        <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-2fa">Autentikasi Dua Faktor (2FA)</div><div class="sec-row-sub" data-i18n="sec-2fa-sub">SMS & Aplikasi Autentikator</div></div><button class="tog" onclick="const on=this.classList.toggle('on');toast(t(on?'sec-2fa-on':'sec-2fa-off'))"></button></div>
+        <div class="sec-row" onclick="showPinChange()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Kunci PIN</div><div class="sec-row-sub" id="pinStatusLbl">Ketuk untuk mengatur PIN</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="sec-row" onclick="showPasswordChange()"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Ganti Password</div><div class="sec-row-sub">Perbarui password login Anda</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Biometrik</div><div class="sec-row-sub">Face ID / Sidik Jari</div></div><button class="tog on" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'Biometrik diaktifkan':'Biometrik dinonaktifkan')"></button></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Autentikasi 2 Langkah (2FA)</div><div class="sec-row-sub">SMS &amp; Aplikasi Autentikator</div></div><button class="tog" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'2FA diaktifkan':'2FA dinonaktifkan')"></button></div>
       </div>
     </div>
     <div class="sec-section">
-      <div class="sec-sec-ttl">SESSION</div>
+      <div class="sec-sec-ttl">SESI</div>
       <div class="sec-grp">
-        <div class="sec-row"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-priv">Mode Privasi</div><div class="sec-row-sub" data-i18n="sec-priv-sub">Sembunyikan saldo saat screenshot</div></div><button class="tog" onclick="this.classList.toggle('on');toast(t('sec-priv-tog'))"></button></div>
-        <div class="sec-row" onclick="toast('1 active device: iPhone 14 Pro')"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-dev">Perangkat Aktif</div><div class="sec-row-sub" data-i18n="sec-dev-sub">1 perangkat terhubung</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Mode Privasi</div><div class="sec-row-sub">Sembunyikan saldo saat screenshot</div></div><button class="tog" onclick="this.classList.toggle('on');toast('Mode Privasi diaktifkan')"></button></div>
+        <div class="sec-row" onclick="toast('1 perangkat aktif: iPhone 14 Pro')"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Perangkat Aktif</div><div class="sec-row-sub">1 perangkat terhubung</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
       </div>
     </div>
   </div>
 
   <!-- PIN SETUP VIEW -->
   <div id="pinChangeView" style="display:none;padding:0 20px 20px;">
-    <div style="text-align:center;margin-bottom:22px;"><div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;" id="pin-instruction">Enter New PIN</div><div style="font-size:12px;color:var(--t3);">Enter a 4-digit PIN</div></div>
+    <div style="text-align:center;margin-bottom:22px;"><div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;" id="pin-instruction">Masukkan PIN Baru</div><div style="font-size:12px;color:var(--t3);">Masukkan 4 digit PIN</div></div>
     <div class="pin-display" id="pinDisplay"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
     <div class="pin-pad">
       <button class="pin-key" onclick="pinKey('1')">1</button><button class="pin-key" onclick="pinKey('2')">2</button><button class="pin-key" onclick="pinKey('3')">3</button>
@@ -1477,66 +1477,65 @@ body{background:var(--bg);transition:background .35s;}
       <button class="pin-key emp"></button><button class="pin-key" onclick="pinKey('0')">0</button><button class="pin-key" onclick="pinDel()">⌫</button>
     </div>
     <div style="height:14px;"></div>
-    <button class="btn btn-s" onclick="hidePinChange()">Cancel</button>
+    <button class="btn btn-s" onclick="hidePinChange()">Batal</button>
   </div>
 
   <!-- CHANGE PASSWORD VIEW -->
   <div id="pwChangeView" style="display:none;padding:0 20px 20px;">
-    <div style="text-align:center;margin-bottom:20px;"><div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;">Change Password</div><div style="font-size:12px;color:var(--t3);">Enter your current and new password</div></div>
+    <div style="text-align:center;margin-bottom:20px;"><div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;">Ganti Password</div><div style="font-size:12px;color:var(--t3);">Masukkan password lama dan password baru</div></div>
     <div class="fgrp">
-      <label class="flbl">CURRENT PASSWORD</label>
+      <label class="flbl">PASSWORD SAAT INI</label>
       <div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-      <input class="finput" type="password" id="pwCurrent" placeholder="Current password">
+      <input class="finput" type="password" id="pwCurrent" placeholder="Password saat ini">
       <span class="ieye" onclick="togglePw('pwCurrent','eyePwC')"><svg viewBox="0 0 24 24" id="eyePwC"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
       </div>
-      <div class="emsg" id="pwCurrentErr" style="display:none;">Current password incorrect</div>
+      <div class="emsg" id="pwCurrentErr" style="display:none;">Password saat ini tidak sesuai</div>
     </div>
     <div class="fgrp">
-      <label class="flbl">NEW PASSWORD</label>
+      <label class="flbl">PASSWORD BARU</label>
       <div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-      <input class="finput" type="password" id="pwNew" placeholder="New password (min. 6 chars)">
+      <input class="finput" type="password" id="pwNew" placeholder="Password baru (min. 6 karakter)">
       <span class="ieye" onclick="togglePw('pwNew','eyePwN')"><svg viewBox="0 0 24 24" id="eyePwN"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
       </div>
-      <div class="emsg" id="pwNewErr" style="display:none;">Password must be at least 6 characters</div>
+      <div class="emsg" id="pwNewErr" style="display:none;">Password minimal 6 karakter</div>
     </div>
     <div class="fgrp">
-      <label class="flbl">CONFIRM NEW PASSWORD</label>
+      <label class="flbl">KONFIRMASI PASSWORD BARU</label>
       <div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-      <input class="finput" type="password" id="pwConfirm" placeholder="Confirm new password">
+      <input class="finput" type="password" id="pwConfirm" placeholder="Konfirmasi password baru">
       <span class="ieye" onclick="togglePw('pwConfirm','eyePwCf')"><svg viewBox="0 0 24 24" id="eyePwCf"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
       </div>
-      <div class="emsg" id="pwConfirmErr" style="display:none;">Passwords do not match</div>
+      <div class="emsg" id="pwConfirmErr" style="display:none;">Password tidak cocok</div>
     </div>
-    <button class="btn btn-p" onclick="doChangePassword()" style="margin-bottom:8px;">Save New Password</button>
-    <button class="btn btn-s" onclick="hidePasswordChange()">Cancel</button>
+    <button class="btn btn-p" onclick="doChangePassword()" style="margin-bottom:8px;">Simpan Password Baru</button>
+    <button class="btn btn-s" onclick="hidePasswordChange()">Batal</button>
   </div>
 </div>
 
 <!-- NOTIF SETTINGS OVERLAY -->
 <div class="ovr" id="notifSettingsOvr">
-  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl" data-i18n="ovr-notif">Notifikasi</div></div>
+  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Notifikasi</div></div>
   <div>
     <!-- Push Notification Permission Banner -->
     <div id="pushPermBanner" style="margin:16px 16px 0;background:linear-gradient(135deg,#0D2152,#1a3a7a);border-radius:14px;padding:16px;display:none;">
       <div style="font-family:var(--f);font-size:14px;font-weight:700;color:white;margin-bottom:6px;">🔔 Aktifkan Notifikasi Push</div>
       <div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:12px;">Dapatkan notifikasi transaksi langsung di perangkat Anda, bahkan saat app tertutup.</div>
-      <button onclick="requestPushPermission()" style="background:white;color:#0D2152;border:none;padding:9px 18px;border-radius:9px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;width:100%;" data-i18n="ntf-enable-btn">Izinkan Notifikasi</button>
+      <button onclick="requestPushPermission()" style="background:white;color:#0D2152;border:none;padding:9px 18px;border-radius:9px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;width:100%;">Izinkan Notifikasi</button>
     </div>
     <div id="pushPermGranted" style="margin:16px 16px 0;background:var(--surface);border-radius:14px;padding:13px 16px;display:none;align-items:center;gap:10px;box-shadow:var(--sh2);">
       <span style="font-size:20px;">✅</span>
-      <div><div style="font-size:13px;font-weight:600;color:var(--navy);" data-i18n="ntf-active-title">Notifikasi Aktif</div><div style="font-size:11px;color:var(--t3);" data-i18n="ntf-active-sub">Push notification berfungsi di perangkat ini</div></div>
+      <div><div style="font-size:13px;font-weight:600;color:var(--navy);">Notifikasi Aktif</div><div style="font-size:11px;color:var(--t3);">Push notification berfungsi di perangkat ini</div></div>
     </div>
-    <div class="sec-section"><div class="sec-sec-ttl">TRANSACTION ALERTS</div><div class="sec-grp">
-      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-tx">Peringatan Transaksi</div><div class="notif-sub" data-i18n="ntf-tx-sub">Setiap debit & kredit</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-limit">Peringatan Batas Pengeluaran</div><div class="notif-sub" data-i18n="ntf-limit-sub">Peringatan di 80% anggaran</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-goals">Tujuan Tabungan</div><div class="notif-sub" data-i18n="ntf-goals-sub">Pencapaian & penyelesaian</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+    <div class="sec-section"><div class="sec-sec-ttl">PERINGATAN TRANSAKSI</div><div class="sec-grp">
+      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="notif-info"><div class="notif-nm">Peringatan Transaksi</div><div class="notif-sub">Setiap debit &amp; kredit</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="notif-info"><div class="notif-nm">Peringatan Batas Pengeluaran</div><div class="notif-sub">Peringatan saat 80% anggaran terpakai</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm">Tujuan Tabungan</div><div class="notif-sub">Pencapaian &amp; penyelesaian</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
     </div></div>
-    <div class="sec-section"><div class="sec-sec-ttl">GENERAL</div><div class="sec-grp">
-      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-bills">Pengingat Tagihan</div><div class="notif-sub" data-i18n="ntf-bills-sub">Notifikasi jatuh tempo</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-gold">Peringatan Harga Emas</div><div class="notif-sub" data-i18n="ntf-gold-sub">Update harga emas realtime</div></div><button class="tog on" id="goldNotifToggle" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-tips">Tips & Wawasan</div><div class="notif-sub" data-i18n="ntf-tips-sub">Saran keuangan mingguan</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-promo">Promosi</div><div class="notif-sub" data-i18n="ntf-promo-sub">Penawaran eksklusif member</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-quiet">Jam Hening</div><div class="notif-sub" data-i18n="ntf-quiet-sub">22:00 – 07:00</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+    <div class="sec-section"><div class="sec-sec-ttl">UMUM</div><div class="sec-grp">
+      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm">Peringatan Harga Emas</div><div class="notif-sub">Update harga emas secara realtime</div></div><button class="tog on" id="goldNotifToggle" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm">Tips &amp; Wawasan</div><div class="notif-sub">Saran keuangan mingguan</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/></svg></div><div class="notif-info"><div class="notif-nm">Promosi</div><div class="notif-sub">Penawaran eksklusif member</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="notif-info"><div class="notif-nm">Jam Hening</div><div class="notif-sub">22:00 – 7:00 AM</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
     </div></div>
     <div style="height:20px;"></div>
   </div>
@@ -2668,82 +2667,67 @@ const TROY_OZ_TO_GRAM = 31.1035;
 // ── GOLD FETCH: multi-source, dijalankan secara berurutan sampai ada yang berhasil ──
 async function fetchGoldPrice(){
   const sources = [
-    _goldFromGoldPriceOrg,   // ★ UTAMA: goldprice.org — live, akurat, no key
-    _goldFromMetalsLive,     // Fallback 1
-    _goldFromOpenERXAU,      // Fallback 2: open.er-api XAU/USD
-    _goldFromExchangeRateXAU,// Fallback 3
+    _goldFromMetalsLive,
+    _goldFromFrankfurter,   // open.er-api style — pair XAU/USD via frankfurter
+    _goldFromExchangeRate,  // exchange rate API — XAU pair
+    _goldFromForexAPI,      // forexapi.eu — gratis, no key
   ];
 
   for(const src of sources){
     try{
-      const result = await src();
-      // result bisa berupa { price, open } atau hanya angka
-      const priceUSD = (typeof result === 'object') ? result.price : result;
-      const openUSD  = (typeof result === 'object' && result.open) ? result.open : null;
-
-      if(priceUSD && priceUSD > 1000 && priceUSD < 50000){ // sanity check harga wajar
-        _applyGoldPrice(priceUSD, openUSD);
+      const priceUSD = await src();
+      if(priceUSD && priceUSD > 1500 && priceUSD < 20000){ // sanity check harga emas realistis
+        _applyGoldPrice(priceUSD);
         return true;
       }
     }catch(e){}
   }
 
-  // Semua gagal → pertahankan data lama jika ada
+  // Semua gagal → pertahankan data lama jika ada, atau pakai estimasi
   if(!window._goldData){
-    // Estimasi fallback berdasarkan tren harga emas 2026
-    _applyGoldPrice(4900, 4885);
+    _applyGoldPrice(3250); // estimasi fallback harga emas Mei 2026
     window._goldData.isEstimate = true;
   }
   return false;
 }
 
-// ★ Source 1: GoldPrice.org — paling akurat, live spot, no API key
-async function _goldFromGoldPriceOrg(){
-  const r = await fetch('https://data-asg.goldprice.org/dbXRates/USD', {
-    cache: 'no-store',
-    headers: { 'Accept': 'application/json' }
-  });
-  const d = await r.json();
-  // Response: { items: [{ curr:'USD', xauPrice: 4872.50, xauClose: 4850.00, ... }] }
-  const item = Array.isArray(d?.items) ? d.items.find(i => i.curr === 'USD') : null;
-  if(item?.xauPrice && item.xauPrice > 1000){
-    return { price: item.xauPrice, open: item.xauClose || null };
-  }
-  return null;
-}
-
-// Source 2: metals.live
+// Source 1: metals.live — no CORS issue, free
 async function _goldFromMetalsLive(){
   const r = await fetch('https://api.metals.live/v1/spot/gold', {cache:'no-store'});
   const d = await r.json();
-  const p = d?.price || (Array.isArray(d) && d[0]?.price) || null;
-  return p;
+  return d?.price || (Array.isArray(d) && d[0]?.price) || null;
 }
 
-// Source 3: open.er-api XAU/USD (1 XAU = price in USD per troy oz)
-async function _goldFromOpenERXAU(){
+// Source 2: open.er-api XAU base — rates.USD = USD per 1 troy oz
+async function _goldFromFrankfurter(){
   const r = await fetch('https://open.er-api.com/v6/latest/XAU', {cache:'no-store'});
   const d = await r.json();
-  // rates.USD = berapa USD untuk 1 XAU (= 1 troy oz emas)
-  if(d?.rates?.USD && d.rates.USD > 1000) return d.rates.USD;
+  if(d?.rates?.USD && d.rates.USD > 1500) return d.rates.USD;
   return null;
 }
 
-// Source 4: exchangerate-api XAU
-async function _goldFromExchangeRateXAU(){
+// Source 3: ExchangeRate-API XAU v4 fallback
+async function _goldFromExchangeRate(){
   const r = await fetch('https://api.exchangerate-api.com/v4/latest/XAU', {cache:'no-store'});
   const d = await r.json();
-  if(d?.rates?.USD && d.rates.USD > 1000) return d.rates.USD;
+  if(d?.rates?.USD && d.rates.USD > 1500) return d.rates.USD;
+  return null;
+}
+
+// Source 4: exchangerate.host XAU — alternatif gratis
+async function _goldFromForexAPI(){
+  const r = await fetch('https://api.exchangerate.host/latest?base=XAU&symbols=USD', {cache:'no-store'});
+  const d = await r.json();
+  if(d?.rates?.USD && d.rates.USD > 1500) return d.rates.USD;
   return null;
 }
 
 // Terapkan harga USD ke _goldData
-// openUSD = harga penutupan kemarin (referensi % change), opsional
-function _applyGoldPrice(priceUSD_per_oz, openUSD){
-  // Prioritas referensi: openUSD dari API → _goldOpenPrice → harga pertama
-  if(openUSD && openUSD > 1000)       window._goldOpenPrice = openUSD;
-  if(!window._goldOpenPrice)          window._goldOpenPrice = priceUSD_per_oz;
+function _applyGoldPrice(priceUSD_per_oz){
+  // Simpan harga awal hari pertama kali sebagai referensi
+  if(!window._goldOpenPrice) window._goldOpenPrice = priceUSD_per_oz;
 
+  const prev      = window._goldData?.priceUSD_per_oz || window._goldOpenPrice || priceUSD_per_oz;
   const changeUSD = priceUSD_per_oz - window._goldOpenPrice;
   const changePct = window._goldOpenPrice > 0 ? (changeUSD / window._goldOpenPrice) * 100 : 0;
 
@@ -2770,6 +2754,14 @@ function startGoldLivePolling(){
     if(ok){
       updateRateBannerDisplay();
       renderWallets();
+      // Kirim push notif mobile setiap update
+      const g2 = window._goldData;
+      if(g2 && !g2.isEstimate){
+        const isUp2 = g2.changePct >= 0;
+        const arrow2 = isUp2 ? '▲' : '▼';
+        const pct2   = (isUp2?'+':'')+g2.changePct.toFixed(2)+'%';
+        _sendGoldMobileNotif(g2, arrow2, pct2);
+      }
     }
   }, 30_000); // 30 detik
 }
@@ -2888,21 +2880,10 @@ async function fetchRate(){
     const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
     addNotif('tip',
       lang==='id' ? '💹 Kurs & Emas Live' : '💹 Live Rate & Gold',
-      `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')} · Gold $${g.priceUSD_per_oz.toFixed(0)}/oz ${arrow}${pct} · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g`
+      `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')} (Kurs Live) · Gold/IDR Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/gram · Gold/USD $${g.priceUSD_per_oz.toFixed(2)}/oz ${arrow}${pct}`
     );
-    // Push notif gold jika diizinkan
-    if(_notifPermission === 'granted'){
-      const tog = document.getElementById('goldNotifToggle');
-      if(!tog || tog.classList.contains('on')){
-        setTimeout(()=>{
-          sendPushNotif(
-            `🥇 Gold ${arrow} ${pct}`,
-            `$${g.priceUSD_per_oz.toFixed(2)}/oz · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/gram`,
-            'gold-price'
-          );
-        }, 1000);
-      }
-    }
+    // Push notif gold ke mobile (langsung kirim)
+    _sendGoldMobileNotif(g, arrow, pct);
   }
 
   updateRateBannerDisplay();
@@ -2949,25 +2930,6 @@ function updateAllAmounts(){
 // ============================================================
 const TR={
   en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
-'ovr-sec':'Security','ovr-notif':'Notifications',
-'sec-pin':'PIN Lock','sec-pin-sub':'Tap to set up PIN','sec-pin-active':'PIN Active · Tap to change',
-'sec-pw':'Change Password','sec-pw-sub':'Update your login password',
-'sec-bio':'Biometrics','sec-bio-sub':'Face ID / Fingerprint',
-'sec-2fa':'Two-Factor Auth (2FA)','sec-2fa-sub':'SMS & Authenticator',
-'sec-priv':'Privacy Mode','sec-priv-sub':'Hide balances on screenshot',
-'sec-dev':'Active Devices','sec-dev-sub':'1 device connected',
-'sec-bio-on':'Biometrics enabled','sec-bio-off':'Biometrics disabled',
-'sec-2fa-on':'2FA enabled','sec-2fa-off':'2FA disabled',
-'sec-priv-tog':'Privacy Mode toggled',
-'ntf-enable-btn':'Allow Notifications','ntf-active-title':'Notifications Active','ntf-active-sub':'Push notifications working on this device',
-'ntf-tx':'Transaction Alerts','ntf-tx-sub':'Every debit & credit',
-'ntf-limit':'Spending Limit Warning','ntf-limit-sub':'Alert at 80% of budget',
-'ntf-goals':'Savings Goals','ntf-goals-sub':'Milestones & completions',
-'ntf-bills':'Bill Reminders','ntf-bills-sub':'Due date notifications',
-'ntf-gold':'Gold Price Alerts','ntf-gold-sub':'Real-time gold price updates',
-'ntf-tips':'Tips & Insights','ntf-tips-sub':'Weekly financial advice',
-'ntf-promo':'Promotions','ntf-promo-sub':'Exclusive member offers',
-'ntf-quiet':'Quiet Hours','ntf-quiet-sub':'10:00 PM – 7:00 AM',
 'tg-tab-goals':'Goals','tg-tab-bills':'Bills',
 'tg-upcoming-total':'UPCOMING BILLS TOTAL','tg-need-attention':'bill(s) need attention','tg-pay-all':'Pay All',
 'tg-monthly-spending':'Monthly Spending','tg-of-budget':'% of budget','tg-due-soon':'Due Soon',
@@ -3013,25 +2975,6 @@ const TR={
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
   id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
-'ovr-sec':'Keamanan','ovr-notif':'Notifikasi',
-'sec-pin':'Kunci PIN','sec-pin-sub':'Ketuk untuk atur PIN','sec-pin-active':'PIN Aktif · Ketuk untuk ubah',
-'sec-pw':'Ganti Password','sec-pw-sub':'Perbarui password login Anda',
-'sec-bio':'Biometrik','sec-bio-sub':'Face ID / Sidik Jari',
-'sec-2fa':'Autentikasi Dua Faktor (2FA)','sec-2fa-sub':'SMS & Aplikasi Autentikator',
-'sec-priv':'Mode Privasi','sec-priv-sub':'Sembunyikan saldo saat screenshot',
-'sec-dev':'Perangkat Aktif','sec-dev-sub':'1 perangkat terhubung',
-'sec-bio-on':'Biometrik diaktifkan','sec-bio-off':'Biometrik dinonaktifkan',
-'sec-2fa-on':'2FA diaktifkan','sec-2fa-off':'2FA dinonaktifkan',
-'sec-priv-tog':'Mode Privasi diubah',
-'ntf-enable-btn':'Izinkan Notifikasi','ntf-active-title':'Notifikasi Aktif','ntf-active-sub':'Push notification berfungsi di perangkat ini',
-'ntf-tx':'Peringatan Transaksi','ntf-tx-sub':'Setiap debit & kredit',
-'ntf-limit':'Peringatan Batas Pengeluaran','ntf-limit-sub':'Peringatan di 80% anggaran',
-'ntf-goals':'Tujuan Tabungan','ntf-goals-sub':'Pencapaian & penyelesaian',
-'ntf-bills':'Pengingat Tagihan','ntf-bills-sub':'Notifikasi jatuh tempo',
-'ntf-gold':'Peringatan Harga Emas','ntf-gold-sub':'Update harga emas realtime',
-'ntf-tips':'Tips & Wawasan','ntf-tips-sub':'Saran keuangan mingguan',
-'ntf-promo':'Promosi','ntf-promo-sub':'Penawaran eksklusif member',
-'ntf-quiet':'Jam Hening','ntf-quiet-sub':'22:00 – 07:00',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',
@@ -3078,7 +3021,6 @@ const TR={
     'today':'Hari ini','nav-income':'Pendapatan','nav-expense':'Pengeluaran','nav-transfer':'Transfer'},
 };
 function T(k){return(TR[lang]&&TR[lang][k])||TR.en[k]||k;}
-function t(k){return T(k);} // alias pendek untuk dipakai di onclick inline
 function applyLang(){
   // 1. Elemen dengan ID persis = key terjemahan (cara lama)
   Object.keys(TR[lang]).forEach(id=>{
@@ -4007,7 +3949,7 @@ goTo('splash');
 <div id="pwChangeOverlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:6000;flex-direction:column;overflow-y:auto;transition:background .35s;">
   <div class="ovr-hdr">
     <button class="ovr-back" onclick="hidePwChangeOverlay()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button>
-    <div class="ovr-ttl">Change Password</div>
+    <div class="ovr-ttl">Ganti Password</div>
   </div>
   <div style="padding:0 20px 28px;">
     <div style="text-align:center;margin-bottom:24px;">
@@ -4017,35 +3959,35 @@ goTo('splash');
       <div style="font-size:13px;color:var(--t2);">Keep your account safe by using a strong password.</div>
     </div>
     <div class="fgrp">
-      <label class="flbl">CURRENT PASSWORD</label>
+      <label class="flbl">PASSWORD SAAT INI</label>
       <div class="iwrap">
         <span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-        <input class="finput" type="password" id="pwCurrent" placeholder="Current password">
+        <input class="finput" type="password" id="pwCurrent" placeholder="Password saat ini">
         <span class="ieye" onclick="togglePw('pwCurrent','eyePwC')"><svg viewBox="0 0 24 24" id="eyePwC"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
       </div>
       <div class="emsg on" id="pwCurrentErr" style="display:none;">Current password is incorrect</div>
     </div>
     <div class="fgrp">
-      <label class="flbl">NEW PASSWORD</label>
+      <label class="flbl">PASSWORD BARU</label>
       <div class="iwrap">
         <span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-        <input class="finput" type="password" id="pwNew" placeholder="New password (min. 6 chars)">
+        <input class="finput" type="password" id="pwNew" placeholder="Password baru (min. 6 karakter)">
         <span class="ieye" onclick="togglePw('pwNew','eyePwN')"><svg viewBox="0 0 24 24" id="eyePwN"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
       </div>
       <div id="pwStrengthBar" style="margin-top:6px;height:4px;border-radius:2px;background:var(--border);overflow:hidden;"><div id="pwStrengthFill" style="height:100%;width:0%;border-radius:2px;transition:all .3s;"></div></div>
       <div id="pwStrengthLabel" style="font-size:11px;color:var(--t3);margin-top:3px;"></div>
-      <div class="emsg" id="pwNewErr" style="display:none;">Password must be at least 6 characters</div>
+      <div class="emsg" id="pwNewErr" style="display:none;">Password minimal 6 karakter</div>
     </div>
     <div class="fgrp">
-      <label class="flbl">CONFIRM NEW PASSWORD</label>
+      <label class="flbl">KONFIRMASI PASSWORD BARU</label>
       <div class="iwrap">
         <span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-        <input class="finput" type="password" id="pwConfirm" placeholder="Confirm new password">
+        <input class="finput" type="password" id="pwConfirm" placeholder="Konfirmasi password baru">
         <span class="ieye" onclick="togglePw('pwConfirm','eyePwCf')"><svg viewBox="0 0 24 24" id="eyePwCf"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
       </div>
-      <div class="emsg" id="pwConfirmErr" style="display:none;">Passwords do not match</div>
+      <div class="emsg" id="pwConfirmErr" style="display:none;">Password tidak cocok</div>
     </div>
-    <button class="btn btn-p" onclick="doChangePassword()" style="margin-bottom:10px;">Save New Password</button>
+    <button class="btn btn-p" onclick="doChangePassword()" style="margin-bottom:10px;">Simpan Password Baru</button>
     <button class="btn btn-s" onclick="hidePwChangeOverlay()">Cancel</button>
   </div>
 </div>
@@ -4103,18 +4045,49 @@ async function _registerSW(){
     // Create inline SW for notifications
     const swCode = `
 self.addEventListener('push', e => {
-  const d = e.data ? e.data.json() : {title:'maNTapps', body:'Notifikasi baru'};
+  const d = e.data ? e.data.json() : {title:'MyMoney', body:'Notifikasi baru'};
   e.waitUntil(self.registration.showNotification(d.title, {
-    body: d.body, icon: d.icon||'/favicon.ico', badge: '/favicon.ico',
-    tag: d.tag||'mantapps', renotify: true, vibrate:[200,100,200]
+    body: d.body,
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    tag: d.tag || 'mymoney',
+    renotify: true,
+    vibrate: [200, 100, 200],
+    requireInteraction: false
   }));
 });
-self.addEventListener('notificationclick', e => { e.notification.close(); clients.openWindow('/'); });
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(cs => {
+    for(var i=0;i<cs.length;i++){ if(cs[i].focus) return cs[i].focus(); }
+    if(clients.openWindow) return clients.openWindow('/');
+  }));
+});
 `;
     const blob = new Blob([swCode], {type:'text/javascript'});
     const swUrl = URL.createObjectURL(blob);
     _swReg = await navigator.serviceWorker.register(swUrl);
   } catch(e){ console.warn('SW register error:', e); }
+}
+
+// Helper: kirim push notifikasi harga emas ke mobile
+function _sendGoldMobileNotif(g, arrow, pct){
+  var tog = document.getElementById('goldNotifToggle');
+  if(tog && !tog.classList.contains('on')) return;
+  var priceIDRg  = Math.round(g.priceIDR_per_gram).toLocaleString('id-ID');
+  var priceUSDoz = g.priceUSD_per_oz.toFixed(2);
+  var notifTitle = 'Gold/IDR & USD ' + arrow + ' ' + pct;
+  var notifBody  = 'Gold/IDR Rp ' + priceIDRg + '/gram  |  Gold/USD $' + priceUSDoz + '/oz';
+  if(_notifPermission === 'granted'){
+    try{
+      var opts = {body: notifBody, tag: 'gold-price', renotify: true, vibrate: [200, 100, 200]};
+      if(_swReg){
+        _swReg.showNotification(notifTitle, opts);
+      } else if('Notification' in window){
+        new Notification(notifTitle, {body: notifBody, tag: 'gold-price'});
+      }
+    }catch(e){ console.warn('Gold mobile notif error:', e); }
+  }
 }
 
 // Kirim push notification (in-app + browser native)
@@ -4454,7 +4427,7 @@ function pinKey(k){
       else{
         if(pinBuf===newPinSaved){
           savedPin=newPinSaved;
-          const lbl=document.getElementById('pinStatusLbl'); if(lbl){ lbl.textContent=T('sec-pin-active'); lbl.removeAttribute('data-i18n'); }
+          const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
           addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
           toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
           fbAutoSave();

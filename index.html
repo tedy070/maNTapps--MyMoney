@@ -2656,66 +2656,137 @@ function fmtAlt(rp){
   return '≈ Rp '+Math.round(rp).toLocaleString('id-ID');
 }
 // ── GOLD DATA STORE ──────────────────────────────────────────
-window._goldData = null;
-let _rateBannerMode = 0; // 0=USD/IDR, 1=Gold/IDR, 2=Gold/USD
-let _rateBannerTimer = null;
+window._goldData      = null;
+window._goldOpenPrice = null; // harga awal hari (referensi % change)
+let _rateBannerMode   = 0;    // 0=USD/IDR, 1=Gold/IDR, 2=Gold/USD
+let _rateBannerTimer  = null;
+let _goldLiveTimer    = null;
 
-// Gold price per troy oz (troy oz = 31.1035g)
-// We fetch from metal price API (free: metals.live or goldapi fallback)
+const TROY_OZ_TO_GRAM = 31.1035;
+
+// ── GOLD FETCH: multi-source, dijalankan secara berurutan sampai ada yang berhasil ──
 async function fetchGoldPrice(){
-  const TROY_OZ_TO_GRAM = 31.1035;
-  try {
-    // Primary: metals.live (free, no key needed)
-    const r = await fetch('https://api.metals.live/v1/spot/gold');
-    const d = await r.json();
-    const priceUSD_per_oz = d?.price || d?.[0]?.price || null;
-    if(priceUSD_per_oz && priceUSD_per_oz > 0){
-      const prev = window._goldData?.priceUSD_per_oz || priceUSD_per_oz;
-      const changeUSD = priceUSD_per_oz - prev;
-      const changePct = prev > 0 ? ((changeUSD / prev) * 100) : 0;
-      const priceIDR_per_oz  = priceUSD_per_oz * exRate;
-      const priceIDR_per_gram = priceIDR_per_oz / TROY_OZ_TO_GRAM;
-      window._goldData = {
-        priceUSD_per_oz,
-        priceIDR_per_oz,
-        priceIDR_per_gram,
-        changeUSD,
-        changeIDR: changeUSD * exRate,
-        changePct,
-        updatedAt: new Date()
-      };
-      return true;
-    }
-  } catch(e){}
-  // Fallback: use static reasonable default if all APIs fail
+  const sources = [
+    _goldFromMetalsLive,
+    _goldFromFrankfurter,   // open.er-api style — pair XAU/USD via frankfurter
+    _goldFromExchangeRate,  // exchange rate API — XAU pair
+    _goldFromForexAPI,      // forexapi.eu — gratis, no key
+  ];
+
+  for(const src of sources){
+    try{
+      const priceUSD = await src();
+      if(priceUSD && priceUSD > 500 && priceUSD < 20000){ // sanity check
+        _applyGoldPrice(priceUSD);
+        return true;
+      }
+    }catch(e){}
+  }
+
+  // Semua gagal → pertahankan data lama jika ada, atau pakai estimasi
   if(!window._goldData){
-    const priceUSD_per_oz = 3350; // approximate gold price
-    const priceIDR_per_oz = priceUSD_per_oz * exRate;
-    window._goldData = {
-      priceUSD_per_oz,
-      priceIDR_per_oz,
-      priceIDR_per_gram: priceIDR_per_oz / 31.1035,
-      changeUSD: 0, changeIDR: 0, changePct: 0.12,
-      updatedAt: new Date()
-    };
+    _applyGoldPrice(3350); // estimasi fallback
+    window._goldData.isEstimate = true;
   }
   return false;
 }
 
+// Source 1: metals.live — no CORS issue, free
+async function _goldFromMetalsLive(){
+  const r = await fetch('https://api.metals.live/v1/spot/gold', {cache:'no-store'});
+  const d = await r.json();
+  return d?.price || (Array.isArray(d) && d[0]?.price) || null;
+}
+
+// Source 2: Frankfurter (ECB data) — XAU/USD via commodity pair
+async function _goldFromFrankfurter(){
+  // Frankfurter tidak punya XAU, kita pakai open.er-api XAU pair
+  const r = await fetch('https://open.er-api.com/v6/latest/XAU', {cache:'no-store'});
+  const d = await r.json();
+  // d.rates.USD = berapa USD per 1 troy oz emas
+  if(d?.rates?.USD && d.rates.USD > 0) return d.rates.USD;
+  return null;
+}
+
+// Source 3: ExchangeRate-API XAU
+async function _goldFromExchangeRate(){
+  const r = await fetch('https://api.exchangerate-api.com/v4/latest/XAU', {cache:'no-store'});
+  const d = await r.json();
+  if(d?.rates?.USD && d.rates.USD > 0) return d.rates.USD;
+  return null;
+}
+
+// Source 4: GoldAPI free tier via CORS proxy
+async function _goldFromForexAPI(){
+  const r = await fetch('https://www.goldapi.io/api/XAU/USD', {
+    headers:{'x-access-token':'goldapi-demo'}, cache:'no-store'
+  });
+  const d = await r.json();
+  if(d?.price && d.price > 0) return d.price;
+  // goldapi also returns open price for % change
+  return null;
+}
+
+// Terapkan harga USD ke _goldData
+function _applyGoldPrice(priceUSD_per_oz){
+  // Simpan harga awal hari pertama kali sebagai referensi
+  if(!window._goldOpenPrice) window._goldOpenPrice = priceUSD_per_oz;
+
+  const prev      = window._goldData?.priceUSD_per_oz || window._goldOpenPrice || priceUSD_per_oz;
+  const changeUSD = priceUSD_per_oz - window._goldOpenPrice;
+  const changePct = window._goldOpenPrice > 0 ? (changeUSD / window._goldOpenPrice) * 100 : 0;
+
+  const priceIDR_per_oz   = priceUSD_per_oz * exRate;
+  const priceIDR_per_gram = priceIDR_per_oz / TROY_OZ_TO_GRAM;
+
+  window._goldData = {
+    priceUSD_per_oz,
+    priceIDR_per_oz,
+    priceIDR_per_gram,
+    changeUSD,
+    changeIDR : changeUSD * exRate,
+    changePct,
+    isEstimate: false,
+    updatedAt : new Date()
+  };
+}
+
+// ── Mulai polling live setiap 30 detik ──
+function startGoldLivePolling(){
+  if(_goldLiveTimer) clearInterval(_goldLiveTimer);
+  _goldLiveTimer = setInterval(async ()=>{
+    const ok = await fetchGoldPrice();
+    if(ok){
+      updateRateBannerDisplay();
+      renderWallets();
+    }
+  }, 30_000); // 30 detik
+}
+
 // Update rate banner based on current mode
 function updateRateBannerDisplay(){
-  const banner = document.getElementById('rateBanner');
-  const info   = document.getElementById('rateInfo');
-  const tag    = document.getElementById('goldChangeTag');
-  const icon   = document.getElementById('rateBannerIcon');
+  const banner   = document.getElementById('rateBanner');
+  const info     = document.getElementById('rateInfo');
+  const tag      = document.getElementById('goldChangeTag');
+  const icon     = document.getElementById('rateBannerIcon');
   const rateTime = document.getElementById('rateTime');
   if(!banner) return;
 
-  // Show banner based on language
-  const isIDLang = isModeRp();
-  banner.style.display = isIDLang ? 'flex' : 'flex'; // show always when logged in
+  const appOn = document.getElementById('app').classList.contains('on');
+  banner.style.display = appOn ? 'flex' : 'none';
 
   const g = window._goldData;
+
+  // Helper: format "updated X detik/menit lalu"
+  function _liveLabel(d){
+    if(!d) return '● Live';
+    const s = Math.floor((Date.now() - d.getTime()) / 1000);
+    if(s < 10)  return '● Live';
+    if(s < 60)  return `${s}s ago`;
+    if(s < 3600) return `${Math.floor(s/60)}m ago`;
+    return '● Live';
+  }
+
   if(_rateBannerMode === 0){
     // USD/IDR
     icon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
@@ -2723,33 +2794,37 @@ function updateRateBannerDisplay(){
     tag.style.display = 'none';
     rateTime.style.color = 'var(--green)';
     rateTime.textContent = '● Live';
+
   } else if(_rateBannerMode === 1 && g){
     // Gold/IDR
-    const isUp = g.changePct >= 0;
-    icon.innerHTML = '<span style="font-size:14px;">🥇</span>';
-    const pricePerGram = Math.round(g.priceIDR_per_gram).toLocaleString('id-ID');
-    info.textContent = `Emas: Rp ${pricePerGram}/gram`;
+    const isUp  = g.changePct >= 0;
     const arrow = isUp ? '▲' : '▼';
     const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
-    tag.style.display = 'inline-block';
+    const pricePerGram = Math.round(g.priceIDR_per_gram).toLocaleString('id-ID');
+
+    icon.innerHTML = '<span style="font-size:14px;line-height:1;">🥇</span>';
+    info.textContent = `Gold/IDR  Rp ${pricePerGram}/gram`;
+    tag.style.display    = 'inline-block';
     tag.style.background = isUp ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
-    tag.style.color = isUp ? 'var(--green)' : 'var(--red)';
-    tag.textContent = `${arrow} ${pct}`;
-    rateTime.style.color = 'var(--green)';
-    rateTime.textContent = '● Live';
+    tag.style.color      = isUp ? 'var(--green)' : 'var(--red)';
+    tag.textContent      = `${arrow} ${pct}`;
+    rateTime.style.color = g.isEstimate ? 'var(--orange)' : 'var(--green)';
+    rateTime.textContent = g.isEstimate ? '⚠ Est.' : _liveLabel(g.updatedAt);
+
   } else if(_rateBannerMode === 2 && g){
     // Gold/USD
-    const isUp = g.changePct >= 0;
-    icon.innerHTML = '<span style="font-size:14px;">🥇</span>';
-    info.textContent = `Gold: $${g.priceUSD_per_oz.toFixed(2)}/oz`;
+    const isUp  = g.changePct >= 0;
     const arrow = isUp ? '▲' : '▼';
     const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
-    tag.style.display = 'inline-block';
+
+    icon.innerHTML = '<span style="font-size:14px;line-height:1;">🥇</span>';
+    info.textContent = `Gold/USD  $${g.priceUSD_per_oz.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}/oz`;
+    tag.style.display    = 'inline-block';
     tag.style.background = isUp ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
-    tag.style.color = isUp ? 'var(--green)' : 'var(--red)';
-    tag.textContent = `${arrow} ${pct}`;
-    rateTime.style.color = 'var(--green)';
-    rateTime.textContent = '● Live';
+    tag.style.color      = isUp ? 'var(--green)' : 'var(--red)';
+    tag.textContent      = `${arrow} ${pct}`;
+    rateTime.style.color = g.isEstimate ? 'var(--orange)' : 'var(--green)';
+    rateTime.textContent = g.isEstimate ? '⚠ Est.' : _liveLabel(g.updatedAt);
   }
 }
 
@@ -2768,41 +2843,65 @@ function autoRotateBanner(){
   updateRateBannerDisplay();
 }
 
+// Refresh hanya label waktu ("30s ago" dll) setiap 10 detik
+setInterval(()=>{
+  if(_rateBannerMode !== 0 && window._goldData){
+    const rateTime = document.getElementById('rateTime');
+    if(!rateTime) return;
+    const g = window._goldData;
+    if(g.isEstimate){ rateTime.textContent = '⚠ Est.'; return; }
+    const s = Math.floor((Date.now() - g.updatedAt.getTime()) / 1000);
+    if(s < 10)       rateTime.textContent = '● Live';
+    else if(s < 60)  rateTime.textContent = `${s}s ago`;
+    else if(s < 3600)rateTime.textContent = `${Math.floor(s/60)}m ago`;
+    else             rateTime.textContent = '● Live';
+  }
+}, 10_000);
+
 async function fetchRate(){
   try{
-    const r=await fetch('https://open.er-api.com/v6/latest/USD');
-    const d=await r.json();
+    const r = await fetch('https://open.er-api.com/v6/latest/USD', {cache:'no-store'});
+    const d = await r.json();
     if(d?.rates?.IDR){
-      exRate=d.rates.IDR;
-      // Fetch gold after we have exchange rate
-      await fetchGoldPrice();
-      const g = window._goldData;
-      const goldMsg = g ? ` · Gold: $${g.priceUSD_per_oz.toFixed(0)}/oz (Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g)` : '';
-      addNotif('tip',
-        lang==='id'?'💹 Kurs & Emas Diperbarui':'💹 Rate & Gold Updated',
-        `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}${goldMsg}`
-      );
-      // Push gold notification if gold data available
-      if(g && _notifPermission==='granted'){
-        const isUp = g.changePct >= 0;
-        const arrow = isUp ? '▲' : '▼';
+      exRate = d.rates.IDR;
+    }
+  }catch(e){}
+
+  // Fetch gold dengan multi-source (exRate sudah diset dulu agar IDR akurat)
+  await fetchGoldPrice();
+
+  const g = window._goldData;
+  if(g && !g.isEstimate){
+    const isUp  = g.changePct >= 0;
+    const arrow = isUp ? '▲' : '▼';
+    const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
+    addNotif('tip',
+      lang==='id' ? '💹 Kurs & Emas Live' : '💹 Live Rate & Gold',
+      `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')} · Gold $${g.priceUSD_per_oz.toFixed(0)}/oz ${arrow}${pct} · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g`
+    );
+    // Push notif gold jika diizinkan
+    if(_notifPermission === 'granted'){
+      const tog = document.getElementById('goldNotifToggle');
+      if(!tog || tog.classList.contains('on')){
         setTimeout(()=>{
           sendPushNotif(
-            '🥇 Gold Price Update',
-            `$${g.priceUSD_per_oz.toFixed(2)}/oz ${arrow} ${(isUp?'+':'')+g.changePct.toFixed(2)}% · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g`,
+            `🥇 Gold ${arrow} ${pct}`,
+            `$${g.priceUSD_per_oz.toFixed(2)}/oz · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/gram`,
             'gold-price'
           );
-        }, 1500);
+        }, 1000);
       }
     }
-  }catch(e){
-    // Still try gold fetch even if USD rate fails
-    await fetchGoldPrice();
   }
+
   updateRateBannerDisplay();
   updateAllAmounts();
-  renderWallets(); // Refresh wallet cards with gold data
-  // Start auto-rotate banner every 5s
+  renderWallets();
+
+  // Mulai polling live gold setiap 30 detik
+  startGoldLivePolling();
+
+  // Auto-rotate banner setiap 5 detik
   if(_rateBannerTimer) clearInterval(_rateBannerTimer);
   _rateBannerTimer = setInterval(autoRotateBanner, 5000);
 } // exRate hanya untuk konversi tampilan USD
@@ -4148,12 +4247,17 @@ async function enterApp(initialState){
   // ⑧ Load notifikasi dari localStorage (per UID, tidak dari RTDB)
   _loadNotifLocal();
 
-  // ⑨ Auto-refresh gold + exchange rate every 5 minutes
+  // ⑨ USD rate refresh setiap 5 menit (gold sudah di-poll tiap 30 detik via startGoldLivePolling)
   if(window._goldRefreshInterval) clearInterval(window._goldRefreshInterval);
   window._goldRefreshInterval = setInterval(async ()=>{
-    await fetchGoldPrice();
+    // Refresh kurs USD saja; gold sudah di-handle oleh startGoldLivePolling
+    try{
+      const r = await fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'});
+      const d = await r.json();
+      if(d?.rates?.IDR){ exRate = d.rates.IDR; }
+    }catch(e){}
     updateRateBannerDisplay();
-    renderWallets();
+    updateAllAmounts();
   }, 5 * 60 * 1000);
 
   // ⑦ Greeting
@@ -4175,8 +4279,13 @@ async function enterApp(initialState){
 // doLogout — Firebase signOut + bersihkan state
 // ════════════════════════════════════════════════════════════
 async function doLogout(){
-  // ① Hentikan realtime sync
+  // ① Hentikan realtime sync & gold polling
   fbStopRealtimeSync();
+  if(_goldLiveTimer)    { clearInterval(_goldLiveTimer);    _goldLiveTimer    = null; }
+  if(_rateBannerTimer)  { clearInterval(_rateBannerTimer);  _rateBannerTimer  = null; }
+  if(window._goldRefreshInterval){ clearInterval(window._goldRefreshInterval); window._goldRefreshInterval=null; }
+  window._goldData      = null;
+  window._goldOpenPrice = null;
 
   // ② Sign out dari Firebase Auth
   try { await fbAuth.signOut(); } catch(e){}

@@ -1542,7 +1542,7 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- EDIT PROFILE OVERLAY -->
 <div class="ovr" id="editProfileOvr">
-  <div class="ovr-hdr"><button class="ovr-back" onclick="closeEditProfile()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Edit Profile</div></div>
+  <div class="ovr-hdr"><button class="ovr-back" onclick="closeEditProfile()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Edit Profil</div></div>
   <div style="padding:0 20px 24px;">
     <div style="text-align:center;margin-bottom:16px;">
       <div style="position:relative;display:inline-block;">
@@ -1550,10 +1550,10 @@ body{background:var(--bg);transition:background .35s;}
         <div style="position:absolute;bottom:1px;right:1px;width:26px;height:26px;background:var(--blue2);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.5px solid var(--surface);cursor:pointer;" onclick="document.getElementById('photoInput').click()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
       </div>
       <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoUpload(this)">
-      <div style="font-size:11px;color:var(--t3);margin-top:8px;">Tap to change photo</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:8px;">Ketuk untuk ganti foto</div>
     </div>
-    <button class="photo-upload-btn" onclick="document.getElementById('photoInput').click()"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Upload Photo from Gallery</button>
-    <div style="font-size:11px;color:var(--t3);margin-bottom:14px;text-align:center;">— or choose an avatar —</div>
+    <button class="photo-upload-btn" onclick="document.getElementById('photoInput').click()"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Unggah Foto dari Galeri</button>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:14px;text-align:center;">— atau pilih avatar —</div>
     <div class="avpick" id="avatarPicker">
       <div class="av-opt sel" data-av="default" onclick="pickAv(this,'default')"><svg viewBox="0 0 24 24" fill="var(--t2)"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <div class="av-opt" data-av="star" onclick="pickAv(this,'star')"><svg viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/></svg></div>
@@ -1567,10 +1567,10 @@ body{background:var(--bg);transition:background .35s;}
       <div class="av-opt" data-av="biz" onclick="pickAv(this,'biz')"><svg viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
     </div>
     <div style="height:1px;background:var(--border);margin:14px 0;"></div>
-    <div class="fgrp"><label class="flbl">FULL NAME</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><input class="finput" type="text" id="editName" value="Jordan Miller"></div></div>
-    <div class="fgrp"><label class="flbl">EMAIL ADDRESS</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg></span><input class="finput" type="email" id="editEmail" value="jordan.miller@curated.io"></div></div>
-    <button class="btn btn-p" onclick="saveProfile()" style="margin-bottom:10px;">Save Changes</button>
-    <button class="btn btn-s" onclick="closeEditProfile()">Cancel</button>
+    <div class="fgrp"><label class="flbl">NAMA LENGKAP</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><input class="finput" type="text" id="editName" value="Jordan Miller"></div></div>
+    <div class="fgrp"><label class="flbl">ALAMAT EMAIL</label><div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg></span><input class="finput" type="email" id="editEmail" value="jordan.miller@curated.io"></div></div>
+    <button class="btn btn-p" onclick="saveProfile()" style="margin-bottom:10px;">Simpan Perubahan</button>
+    <button class="btn btn-s" onclick="closeEditProfile()">Batal</button>
     <div style="height:20px;"></div>
   </div>
 </div>
@@ -2659,63 +2659,51 @@ window._goldData = null;
 let _rateBannerMode = 0; // 0=USD/IDR, 1=Gold/IDR, 2=Gold/USD
 let _rateBannerTimer = null;
 
-// Gold price per troy oz (troy oz = 31.1035g)
-// We fetch from metal price API (free: metals.live or goldapi fallback)
+// XAU/USD & XAU/IDR — harga emas realtime (3 sumber terpercaya)
+// Troy oz = 31.1035 gram
 async function fetchGoldPrice(){
-  const TROY_OZ_TO_GRAM = 31.1035;
-  try {
-    // Primary: metals.live (free, no key needed)
-    const r = await fetch('https://api.metals.live/v1/spot/gold');
-    const d = await r.json();
-    const priceUSD_per_oz = d?.price || d?.[0]?.price || null;
-    if(priceUSD_per_oz && priceUSD_per_oz > 0){
-      const prev = window._goldData?.priceUSD_per_oz || priceUSD_per_oz;
-      const changeUSD = priceUSD_per_oz - prev;
-      const changePct = prev > 0 ? ((changeUSD / prev) * 100) : 0;
-      const priceIDR_per_oz  = priceUSD_per_oz * exRate;
-      const priceIDR_per_gram = priceIDR_per_oz / TROY_OZ_TO_GRAM;
-      window._goldData = {
-        priceUSD_per_oz,
-        priceIDR_per_oz,
-        priceIDR_per_gram,
-        changeUSD,
-        changeIDR: changeUSD * exRate,
-        changePct,
-        updatedAt: new Date()
-      };
-      return true;
-    }
-  } catch(e){}
-  // Fallback: use static reasonable default if all APIs fail
-  if(!window._goldData){
-    // Fallback: try secondary API
-    try {
-      const r2 = await fetch('https://data-asg.goldprice.org/dbXRates/USD');
-      const d2 = await r2.json();
-      const priceUSD_per_oz_alt = d2?.items?.[0]?.xauPrice || null;
-      if(priceUSD_per_oz_alt && priceUSD_per_oz_alt > 0){
-        const priceIDR_per_oz2 = priceUSD_per_oz_alt * exRate;
-        window._goldData = {
-          priceUSD_per_oz: priceUSD_per_oz_alt,
-          priceIDR_per_oz: priceIDR_per_oz2,
-          priceIDR_per_gram: priceIDR_per_oz2 / 31.1035,
-          changeUSD: 0, changeIDR: 0, changePct: 0,
-          updatedAt: new Date()
-        };
-        return true;
-      }
-    } catch(e2){}
-    // Last resort static value — updated to reflect current market ~3230 USD/oz
-    const priceUSD_per_oz = 3230;
-    const priceIDR_per_oz = priceUSD_per_oz * (exRate > 10000 ? exRate : 16400);
+  const TROY = 31.1035;
+  const prev_oz = window._goldData?.priceUSD_per_oz || 0;
+
+  function _setGold(priceUSD_per_oz){
+    const changeUSD = prev_oz > 0 ? priceUSD_per_oz - prev_oz : 0;
+    const changePct = prev_oz > 0 ? (changeUSD / prev_oz) * 100 : 0;
+    const rate = exRate > 10000 ? exRate : 16400;
     window._goldData = {
       priceUSD_per_oz,
-      priceIDR_per_oz,
-      priceIDR_per_gram: priceIDR_per_oz / 31.1035,
-      changeUSD: 0, changeIDR: 0, changePct: 0,
+      priceIDR_per_oz: priceUSD_per_oz * rate,
+      priceIDR_per_gram: (priceUSD_per_oz * rate) / TROY,
+      changeUSD, changeIDR: changeUSD * rate, changePct,
       updatedAt: new Date()
     };
   }
+
+  // Sumber 1: Frankfurter.app (ECB-based, XAU/USD cross rate)
+  try {
+    const r = await fetch('https://api.frankfurter.app/latest?from=XAU&to=USD');
+    const d = await r.json();
+    const priceUSD = d && d.rates && d.rates.USD;
+    if(priceUSD && priceUSD > 100){ _setGold(priceUSD); return true; }
+  } catch(e){}
+
+  // Sumber 2: metals.live
+  try {
+    const r2 = await fetch('https://api.metals.live/v1/spot/gold');
+    const d2 = await r2.json();
+    const priceUSD2 = d2 && (d2.price || (d2[0] && d2[0].price));
+    if(priceUSD2 && priceUSD2 > 100){ _setGold(priceUSD2); return true; }
+  } catch(e){}
+
+  // Sumber 3: open.er-api XAU (rates.USD = harga 1 XAU dalam USD)
+  try {
+    const r3 = await fetch('https://open.er-api.com/v6/latest/XAU');
+    const d3 = await r3.json();
+    const xauUsd = d3 && d3.rates && d3.rates.USD;
+    if(xauUsd && xauUsd > 100){ _setGold(xauUsd); return true; }
+  } catch(e){}
+
+  // Fallback statis: ~$3.320/oz (Mei 2026)
+  if(!window._goldData){ _setGold(3320); }
   return false;
 }
 
@@ -2755,11 +2743,11 @@ function updateRateBannerDisplay(){
     rateTime.style.color = 'var(--green)';
     rateTime.textContent = '● Live';
   } else if(_rateBannerMode === 2 && g){
-    // Gold/USD — tampilkan harga per gram dalam USD
+    // Gold/USD — tampilkan harga per troy oz (standar TradingView)
     const isUp = g.changePct >= 0;
     icon.innerHTML = '<span style="font-size:14px;">🥇</span>';
-    const priceUSDPerGram = (g.priceUSD_per_oz / 31.1035).toFixed(2);
-    info.textContent = `Gold: $${priceUSDPerGram}/g (Live)`;
+    
+    info.textContent = `XAU/USD: $${g.priceUSD_per_oz.toFixed(2)}/oz (Live)`;
     const arrow = isUp ? '▲' : '▼';
     const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
     tag.style.display = 'inline-block';

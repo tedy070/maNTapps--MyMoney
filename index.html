@@ -1446,22 +1446,22 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- SECURITY OVERLAY -->
 <div class="ovr" id="secOvr">
-  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl" data-i18n="ovr-sec">Keamanan</div></div>
+  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Security</div></div>
   <div id="secMain">
     <div class="sec-section">
       <div class="sec-sec-ttl">AUTHENTICATION</div>
       <div class="sec-grp">
-        <div class="sec-row" onclick="showPinChange()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-pin">Kunci PIN</div><div class="sec-row-sub" id="pinStatusLbl" data-i18n="sec-pin-sub">Ketuk untuk atur PIN</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
-        <div class="sec-row" onclick="showPasswordChange()"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-pw">Ganti Password</div><div class="sec-row-sub" data-i18n="sec-pw-sub">Perbarui password login Anda</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
-        <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-bio">Biometrik</div><div class="sec-row-sub" data-i18n="sec-bio-sub">Face ID / Sidik Jari</div></div><button class="tog on" onclick="const on=this.classList.toggle('on');toast(t(on?'sec-bio-on':'sec-bio-off'))"></button></div>
-        <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-2fa">Autentikasi Dua Faktor (2FA)</div><div class="sec-row-sub" data-i18n="sec-2fa-sub">SMS & Aplikasi Autentikator</div></div><button class="tog" onclick="const on=this.classList.toggle('on');toast(t(on?'sec-2fa-on':'sec-2fa-off'))"></button></div>
+        <div class="sec-row" onclick="showPinChange()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">PIN Lock</div><div class="sec-row-sub" id="pinStatusLbl">Tap to set up PIN</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="sec-row" onclick="showPasswordChange()"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Change Password</div><div class="sec-row-sub">Update your login password</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Biometrics</div><div class="sec-row-sub">Face ID / Fingerprint</div></div><button class="tog on" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'Biometrics enabled':'Biometrics disabled')"></button></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Two-Factor Auth (2FA)</div><div class="sec-row-sub">SMS & Authenticator</div></div><button class="tog" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'2FA enabled':'2FA disabled')"></button></div>
       </div>
     </div>
     <div class="sec-section">
       <div class="sec-sec-ttl">SESSION</div>
       <div class="sec-grp">
-        <div class="sec-row"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-priv">Mode Privasi</div><div class="sec-row-sub" data-i18n="sec-priv-sub">Sembunyikan saldo saat screenshot</div></div><button class="tog" onclick="this.classList.toggle('on');toast(t('sec-priv-tog'))"></button></div>
-        <div class="sec-row" onclick="toast('1 active device: iPhone 14 Pro')"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="sec-row-info"><div class="sec-row-nm" data-i18n="sec-dev">Perangkat Aktif</div><div class="sec-row-sub" data-i18n="sec-dev-sub">1 perangkat terhubung</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Privacy Mode</div><div class="sec-row-sub">Hide balances on screenshot</div></div><button class="tog" onclick="this.classList.toggle('on');toast('Privacy Mode toggled')"></button></div>
+        <div class="sec-row" onclick="toast('1 active device: iPhone 14 Pro')"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Active Devices</div><div class="sec-row-sub">1 device connected</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
       </div>
     </div>
   </div>
@@ -1514,29 +1514,28 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- NOTIF SETTINGS OVERLAY -->
 <div class="ovr" id="notifSettingsOvr">
-  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl" data-i18n="ovr-notif">Notifikasi</div></div>
+  <div class="ovr-hdr"><button class="ovr-back" onclick="this.closest('.ovr').classList.remove('on')"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Notifications</div></div>
   <div>
     <!-- Push Notification Permission Banner -->
     <div id="pushPermBanner" style="margin:16px 16px 0;background:linear-gradient(135deg,#0D2152,#1a3a7a);border-radius:14px;padding:16px;display:none;">
       <div style="font-family:var(--f);font-size:14px;font-weight:700;color:white;margin-bottom:6px;">🔔 Aktifkan Notifikasi Push</div>
       <div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:12px;">Dapatkan notifikasi transaksi langsung di perangkat Anda, bahkan saat app tertutup.</div>
-      <button onclick="requestPushPermission()" style="background:white;color:#0D2152;border:none;padding:9px 18px;border-radius:9px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;width:100%;" data-i18n="ntf-enable-btn">Izinkan Notifikasi</button>
+      <button onclick="requestPushPermission()" style="background:white;color:#0D2152;border:none;padding:9px 18px;border-radius:9px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;width:100%;">Izinkan Notifikasi</button>
     </div>
     <div id="pushPermGranted" style="margin:16px 16px 0;background:var(--surface);border-radius:14px;padding:13px 16px;display:none;align-items:center;gap:10px;box-shadow:var(--sh2);">
       <span style="font-size:20px;">✅</span>
-      <div><div style="font-size:13px;font-weight:600;color:var(--navy);" data-i18n="ntf-active-title">Notifikasi Aktif</div><div style="font-size:11px;color:var(--t3);" data-i18n="ntf-active-sub">Push notification berfungsi di perangkat ini</div></div>
+      <div><div style="font-size:13px;font-weight:600;color:var(--navy);">Notifikasi Aktif</div><div style="font-size:11px;color:var(--t3);">Push notification berfungsi di perangkat ini</div></div>
     </div>
     <div class="sec-section"><div class="sec-sec-ttl">TRANSACTION ALERTS</div><div class="sec-grp">
-      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-tx">Peringatan Transaksi</div><div class="notif-sub" data-i18n="ntf-tx-sub">Setiap debit & kredit</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-limit">Peringatan Batas Pengeluaran</div><div class="notif-sub" data-i18n="ntf-limit-sub">Peringatan di 80% anggaran</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-goals">Tujuan Tabungan</div><div class="notif-sub" data-i18n="ntf-goals-sub">Pencapaian & penyelesaian</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="notif-info"><div class="notif-nm">Transaction Alerts</div><div class="notif-sub">Every debit & credit</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="notif-info"><div class="notif-nm">Spending Limit Warning</div><div class="notif-sub">Alert at 80% of budget</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm">Savings Goals</div><div class="notif-sub">Milestones & completions</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
     </div></div>
     <div class="sec-section"><div class="sec-sec-ttl">GENERAL</div><div class="sec-grp">
-      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-bills">Pengingat Tagihan</div><div class="notif-sub" data-i18n="ntf-bills-sub">Notifikasi jatuh tempo</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-gold">Peringatan Harga Emas</div><div class="notif-sub" data-i18n="ntf-gold-sub">Update harga emas realtime</div></div><button class="tog on" id="goldNotifToggle" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-tips">Tips & Wawasan</div><div class="notif-sub" data-i18n="ntf-tips-sub">Saran keuangan mingguan</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-promo">Promosi</div><div class="notif-sub" data-i18n="ntf-promo-sub">Penawaran eksklusif member</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="notif-info"><div class="notif-nm" data-i18n="ntf-quiet">Jam Hening</div><div class="notif-sub" data-i18n="ntf-quiet-sub">22:00 – 07:00</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm">Gold Price Alerts</div><div class="notif-sub">Real-time gold price updates</div></div><button class="tog on" id="goldNotifToggle" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm">Tips & Insights</div><div class="notif-sub">Weekly financial advice</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/></svg></div><div class="notif-info"><div class="notif-nm">Promotions</div><div class="notif-sub">Exclusive member offers</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="notif-info"><div class="notif-nm">Quiet Hours</div><div class="notif-sub">10:00 PM – 7:00 AM</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
     </div></div>
     <div style="height:20px;"></div>
   </div>
@@ -2657,147 +2656,66 @@ function fmtAlt(rp){
   return '≈ Rp '+Math.round(rp).toLocaleString('id-ID');
 }
 // ── GOLD DATA STORE ──────────────────────────────────────────
-window._goldData      = null;
-window._goldOpenPrice = null; // harga awal hari (referensi % change)
-let _rateBannerMode   = 0;    // 0=USD/IDR, 1=Gold/IDR, 2=Gold/USD
-let _rateBannerTimer  = null;
-let _goldLiveTimer    = null;
+window._goldData = null;
+let _rateBannerMode = 0; // 0=USD/IDR, 1=Gold/IDR, 2=Gold/USD
+let _rateBannerTimer = null;
 
-const TROY_OZ_TO_GRAM = 31.1035;
-
-// ── GOLD FETCH: multi-source, dijalankan secara berurutan sampai ada yang berhasil ──
+// Gold price per troy oz (troy oz = 31.1035g)
+// We fetch from metal price API (free: metals.live or goldapi fallback)
 async function fetchGoldPrice(){
-  const sources = [
-    _goldFromGoldPriceOrg,   // ★ UTAMA: goldprice.org — live, akurat, no key
-    _goldFromMetalsLive,     // Fallback 1
-    _goldFromOpenERXAU,      // Fallback 2: open.er-api XAU/USD
-    _goldFromExchangeRateXAU,// Fallback 3
-  ];
-
-  for(const src of sources){
-    try{
-      const result = await src();
-      // result bisa berupa { price, open } atau hanya angka
-      const priceUSD = (typeof result === 'object') ? result.price : result;
-      const openUSD  = (typeof result === 'object' && result.open) ? result.open : null;
-
-      if(priceUSD && priceUSD > 1000 && priceUSD < 50000){ // sanity check harga wajar
-        _applyGoldPrice(priceUSD, openUSD);
-        return true;
-      }
-    }catch(e){}
-  }
-
-  // Semua gagal → pertahankan data lama jika ada
+  const TROY_OZ_TO_GRAM = 31.1035;
+  try {
+    // Primary: metals.live (free, no key needed)
+    const r = await fetch('https://api.metals.live/v1/spot/gold');
+    const d = await r.json();
+    const priceUSD_per_oz = d?.price || d?.[0]?.price || null;
+    if(priceUSD_per_oz && priceUSD_per_oz > 0){
+      const prev = window._goldData?.priceUSD_per_oz || priceUSD_per_oz;
+      const changeUSD = priceUSD_per_oz - prev;
+      const changePct = prev > 0 ? ((changeUSD / prev) * 100) : 0;
+      const priceIDR_per_oz  = priceUSD_per_oz * exRate;
+      const priceIDR_per_gram = priceIDR_per_oz / TROY_OZ_TO_GRAM;
+      window._goldData = {
+        priceUSD_per_oz,
+        priceIDR_per_oz,
+        priceIDR_per_gram,
+        changeUSD,
+        changeIDR: changeUSD * exRate,
+        changePct,
+        updatedAt: new Date()
+      };
+      return true;
+    }
+  } catch(e){}
+  // Fallback: use static reasonable default if all APIs fail
   if(!window._goldData){
-    // Estimasi fallback berdasarkan tren harga emas 2026
-    _applyGoldPrice(4900, 4885);
-    window._goldData.isEstimate = true;
+    const priceUSD_per_oz = 3350; // approximate gold price
+    const priceIDR_per_oz = priceUSD_per_oz * exRate;
+    window._goldData = {
+      priceUSD_per_oz,
+      priceIDR_per_oz,
+      priceIDR_per_gram: priceIDR_per_oz / 31.1035,
+      changeUSD: 0, changeIDR: 0, changePct: 0.12,
+      updatedAt: new Date()
+    };
   }
   return false;
 }
 
-// ★ Source 1: GoldPrice.org — paling akurat, live spot, no API key
-async function _goldFromGoldPriceOrg(){
-  const r = await fetch('https://data-asg.goldprice.org/dbXRates/USD', {
-    cache: 'no-store',
-    headers: { 'Accept': 'application/json' }
-  });
-  const d = await r.json();
-  // Response: { items: [{ curr:'USD', xauPrice: 4872.50, xauClose: 4850.00, ... }] }
-  const item = Array.isArray(d?.items) ? d.items.find(i => i.curr === 'USD') : null;
-  if(item?.xauPrice && item.xauPrice > 1000){
-    return { price: item.xauPrice, open: item.xauClose || null };
-  }
-  return null;
-}
-
-// Source 2: metals.live
-async function _goldFromMetalsLive(){
-  const r = await fetch('https://api.metals.live/v1/spot/gold', {cache:'no-store'});
-  const d = await r.json();
-  const p = d?.price || (Array.isArray(d) && d[0]?.price) || null;
-  return p;
-}
-
-// Source 3: open.er-api XAU/USD (1 XAU = price in USD per troy oz)
-async function _goldFromOpenERXAU(){
-  const r = await fetch('https://open.er-api.com/v6/latest/XAU', {cache:'no-store'});
-  const d = await r.json();
-  // rates.USD = berapa USD untuk 1 XAU (= 1 troy oz emas)
-  if(d?.rates?.USD && d.rates.USD > 1000) return d.rates.USD;
-  return null;
-}
-
-// Source 4: exchangerate-api XAU
-async function _goldFromExchangeRateXAU(){
-  const r = await fetch('https://api.exchangerate-api.com/v4/latest/XAU', {cache:'no-store'});
-  const d = await r.json();
-  if(d?.rates?.USD && d.rates.USD > 1000) return d.rates.USD;
-  return null;
-}
-
-// Terapkan harga USD ke _goldData
-// openUSD = harga penutupan kemarin (referensi % change), opsional
-function _applyGoldPrice(priceUSD_per_oz, openUSD){
-  // Prioritas referensi: openUSD dari API → _goldOpenPrice → harga pertama
-  if(openUSD && openUSD > 1000)       window._goldOpenPrice = openUSD;
-  if(!window._goldOpenPrice)          window._goldOpenPrice = priceUSD_per_oz;
-
-  const changeUSD = priceUSD_per_oz - window._goldOpenPrice;
-  const changePct = window._goldOpenPrice > 0 ? (changeUSD / window._goldOpenPrice) * 100 : 0;
-
-  const priceIDR_per_oz   = priceUSD_per_oz * exRate;
-  const priceIDR_per_gram = priceIDR_per_oz / TROY_OZ_TO_GRAM;
-
-  window._goldData = {
-    priceUSD_per_oz,
-    priceIDR_per_oz,
-    priceIDR_per_gram,
-    changeUSD,
-    changeIDR : changeUSD * exRate,
-    changePct,
-    isEstimate: false,
-    updatedAt : new Date()
-  };
-}
-
-// ── Mulai polling live setiap 30 detik ──
-function startGoldLivePolling(){
-  if(_goldLiveTimer) clearInterval(_goldLiveTimer);
-  _goldLiveTimer = setInterval(async ()=>{
-    const ok = await fetchGoldPrice();
-    if(ok){
-      updateRateBannerDisplay();
-      renderWallets();
-    }
-  }, 30_000); // 30 detik
-}
-
 // Update rate banner based on current mode
 function updateRateBannerDisplay(){
-  const banner   = document.getElementById('rateBanner');
-  const info     = document.getElementById('rateInfo');
-  const tag      = document.getElementById('goldChangeTag');
-  const icon     = document.getElementById('rateBannerIcon');
+  const banner = document.getElementById('rateBanner');
+  const info   = document.getElementById('rateInfo');
+  const tag    = document.getElementById('goldChangeTag');
+  const icon   = document.getElementById('rateBannerIcon');
   const rateTime = document.getElementById('rateTime');
   if(!banner) return;
 
-  const appOn = document.getElementById('app').classList.contains('on');
-  banner.style.display = appOn ? 'flex' : 'none';
+  // Show banner based on language
+  const isIDLang = isModeRp();
+  banner.style.display = isIDLang ? 'flex' : 'flex'; // show always when logged in
 
   const g = window._goldData;
-
-  // Helper: format "updated X detik/menit lalu"
-  function _liveLabel(d){
-    if(!d) return '● Live';
-    const s = Math.floor((Date.now() - d.getTime()) / 1000);
-    if(s < 10)  return '● Live';
-    if(s < 60)  return `${s}s ago`;
-    if(s < 3600) return `${Math.floor(s/60)}m ago`;
-    return '● Live';
-  }
-
   if(_rateBannerMode === 0){
     // USD/IDR
     icon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
@@ -2805,37 +2723,33 @@ function updateRateBannerDisplay(){
     tag.style.display = 'none';
     rateTime.style.color = 'var(--green)';
     rateTime.textContent = '● Live';
-
   } else if(_rateBannerMode === 1 && g){
     // Gold/IDR
-    const isUp  = g.changePct >= 0;
+    const isUp = g.changePct >= 0;
+    icon.innerHTML = '<span style="font-size:14px;">🥇</span>';
+    const pricePerGram = Math.round(g.priceIDR_per_gram).toLocaleString('id-ID');
+    info.textContent = `Emas: Rp ${pricePerGram}/gram`;
     const arrow = isUp ? '▲' : '▼';
     const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
-    const pricePerGram = Math.round(g.priceIDR_per_gram).toLocaleString('id-ID');
-
-    icon.innerHTML = '<span style="font-size:14px;line-height:1;">🥇</span>';
-    info.textContent = `Gold/IDR  Rp ${pricePerGram}/gram`;
-    tag.style.display    = 'inline-block';
+    tag.style.display = 'inline-block';
     tag.style.background = isUp ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
-    tag.style.color      = isUp ? 'var(--green)' : 'var(--red)';
-    tag.textContent      = `${arrow} ${pct}`;
-    rateTime.style.color = g.isEstimate ? 'var(--orange)' : 'var(--green)';
-    rateTime.textContent = g.isEstimate ? '⚠ Est.' : _liveLabel(g.updatedAt);
-
+    tag.style.color = isUp ? 'var(--green)' : 'var(--red)';
+    tag.textContent = `${arrow} ${pct}`;
+    rateTime.style.color = 'var(--green)';
+    rateTime.textContent = '● Live';
   } else if(_rateBannerMode === 2 && g){
     // Gold/USD
-    const isUp  = g.changePct >= 0;
+    const isUp = g.changePct >= 0;
+    icon.innerHTML = '<span style="font-size:14px;">🥇</span>';
+    info.textContent = `Gold: $${g.priceUSD_per_oz.toFixed(2)}/oz`;
     const arrow = isUp ? '▲' : '▼';
     const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
-
-    icon.innerHTML = '<span style="font-size:14px;line-height:1;">🥇</span>';
-    info.textContent = `Gold/USD  $${g.priceUSD_per_oz.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}/oz`;
-    tag.style.display    = 'inline-block';
+    tag.style.display = 'inline-block';
     tag.style.background = isUp ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
-    tag.style.color      = isUp ? 'var(--green)' : 'var(--red)';
-    tag.textContent      = `${arrow} ${pct}`;
-    rateTime.style.color = g.isEstimate ? 'var(--orange)' : 'var(--green)';
-    rateTime.textContent = g.isEstimate ? '⚠ Est.' : _liveLabel(g.updatedAt);
+    tag.style.color = isUp ? 'var(--green)' : 'var(--red)';
+    tag.textContent = `${arrow} ${pct}`;
+    rateTime.style.color = 'var(--green)';
+    rateTime.textContent = '● Live';
   }
 }
 
@@ -2854,65 +2768,41 @@ function autoRotateBanner(){
   updateRateBannerDisplay();
 }
 
-// Refresh hanya label waktu ("30s ago" dll) setiap 10 detik
-setInterval(()=>{
-  if(_rateBannerMode !== 0 && window._goldData){
-    const rateTime = document.getElementById('rateTime');
-    if(!rateTime) return;
-    const g = window._goldData;
-    if(g.isEstimate){ rateTime.textContent = '⚠ Est.'; return; }
-    const s = Math.floor((Date.now() - g.updatedAt.getTime()) / 1000);
-    if(s < 10)       rateTime.textContent = '● Live';
-    else if(s < 60)  rateTime.textContent = `${s}s ago`;
-    else if(s < 3600)rateTime.textContent = `${Math.floor(s/60)}m ago`;
-    else             rateTime.textContent = '● Live';
-  }
-}, 10_000);
-
 async function fetchRate(){
   try{
-    const r = await fetch('https://open.er-api.com/v6/latest/USD', {cache:'no-store'});
-    const d = await r.json();
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    const d=await r.json();
     if(d?.rates?.IDR){
-      exRate = d.rates.IDR;
-    }
-  }catch(e){}
-
-  // Fetch gold dengan multi-source (exRate sudah diset dulu agar IDR akurat)
-  await fetchGoldPrice();
-
-  const g = window._goldData;
-  if(g && !g.isEstimate){
-    const isUp  = g.changePct >= 0;
-    const arrow = isUp ? '▲' : '▼';
-    const pct   = (isUp?'+':'')+g.changePct.toFixed(2)+'%';
-    addNotif('tip',
-      lang==='id' ? '💹 Kurs & Emas Live' : '💹 Live Rate & Gold',
-      `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')} · Gold $${g.priceUSD_per_oz.toFixed(0)}/oz ${arrow}${pct} · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g`
-    );
-    // Push notif gold jika diizinkan
-    if(_notifPermission === 'granted'){
-      const tog = document.getElementById('goldNotifToggle');
-      if(!tog || tog.classList.contains('on')){
+      exRate=d.rates.IDR;
+      // Fetch gold after we have exchange rate
+      await fetchGoldPrice();
+      const g = window._goldData;
+      const goldMsg = g ? ` · Gold: $${g.priceUSD_per_oz.toFixed(0)}/oz (Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g)` : '';
+      addNotif('tip',
+        lang==='id'?'💹 Kurs & Emas Diperbarui':'💹 Rate & Gold Updated',
+        `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}${goldMsg}`
+      );
+      // Push gold notification if gold data available
+      if(g && _notifPermission==='granted'){
+        const isUp = g.changePct >= 0;
+        const arrow = isUp ? '▲' : '▼';
         setTimeout(()=>{
           sendPushNotif(
-            `🥇 Gold ${arrow} ${pct}`,
-            `$${g.priceUSD_per_oz.toFixed(2)}/oz · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/gram`,
+            '🥇 Gold Price Update',
+            `$${g.priceUSD_per_oz.toFixed(2)}/oz ${arrow} ${(isUp?'+':'')+g.changePct.toFixed(2)}% · Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g`,
             'gold-price'
           );
-        }, 1000);
+        }, 1500);
       }
     }
+  }catch(e){
+    // Still try gold fetch even if USD rate fails
+    await fetchGoldPrice();
   }
-
   updateRateBannerDisplay();
   updateAllAmounts();
-  renderWallets();
-
-  // Mulai polling live gold setiap 30 detik
-  startGoldLivePolling();
-
-  // Auto-rotate banner setiap 5 detik
+  renderWallets(); // Refresh wallet cards with gold data
+  // Start auto-rotate banner every 5s
   if(_rateBannerTimer) clearInterval(_rateBannerTimer);
   _rateBannerTimer = setInterval(autoRotateBanner, 5000);
 } // exRate hanya untuk konversi tampilan USD
@@ -2949,25 +2839,6 @@ function updateAllAmounts(){
 // ============================================================
 const TR={
   en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
-'ovr-sec':'Security','ovr-notif':'Notifications',
-'sec-pin':'PIN Lock','sec-pin-sub':'Tap to set up PIN','sec-pin-active':'PIN Active · Tap to change',
-'sec-pw':'Change Password','sec-pw-sub':'Update your login password',
-'sec-bio':'Biometrics','sec-bio-sub':'Face ID / Fingerprint',
-'sec-2fa':'Two-Factor Auth (2FA)','sec-2fa-sub':'SMS & Authenticator',
-'sec-priv':'Privacy Mode','sec-priv-sub':'Hide balances on screenshot',
-'sec-dev':'Active Devices','sec-dev-sub':'1 device connected',
-'sec-bio-on':'Biometrics enabled','sec-bio-off':'Biometrics disabled',
-'sec-2fa-on':'2FA enabled','sec-2fa-off':'2FA disabled',
-'sec-priv-tog':'Privacy Mode toggled',
-'ntf-enable-btn':'Allow Notifications','ntf-active-title':'Notifications Active','ntf-active-sub':'Push notifications working on this device',
-'ntf-tx':'Transaction Alerts','ntf-tx-sub':'Every debit & credit',
-'ntf-limit':'Spending Limit Warning','ntf-limit-sub':'Alert at 80% of budget',
-'ntf-goals':'Savings Goals','ntf-goals-sub':'Milestones & completions',
-'ntf-bills':'Bill Reminders','ntf-bills-sub':'Due date notifications',
-'ntf-gold':'Gold Price Alerts','ntf-gold-sub':'Real-time gold price updates',
-'ntf-tips':'Tips & Insights','ntf-tips-sub':'Weekly financial advice',
-'ntf-promo':'Promotions','ntf-promo-sub':'Exclusive member offers',
-'ntf-quiet':'Quiet Hours','ntf-quiet-sub':'10:00 PM – 7:00 AM',
 'tg-tab-goals':'Goals','tg-tab-bills':'Bills',
 'tg-upcoming-total':'UPCOMING BILLS TOTAL','tg-need-attention':'bill(s) need attention','tg-pay-all':'Pay All',
 'tg-monthly-spending':'Monthly Spending','tg-of-budget':'% of budget','tg-due-soon':'Due Soon',
@@ -3013,25 +2884,6 @@ const TR={
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
   id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
-'ovr-sec':'Keamanan','ovr-notif':'Notifikasi',
-'sec-pin':'Kunci PIN','sec-pin-sub':'Ketuk untuk atur PIN','sec-pin-active':'PIN Aktif · Ketuk untuk ubah',
-'sec-pw':'Ganti Password','sec-pw-sub':'Perbarui password login Anda',
-'sec-bio':'Biometrik','sec-bio-sub':'Face ID / Sidik Jari',
-'sec-2fa':'Autentikasi Dua Faktor (2FA)','sec-2fa-sub':'SMS & Aplikasi Autentikator',
-'sec-priv':'Mode Privasi','sec-priv-sub':'Sembunyikan saldo saat screenshot',
-'sec-dev':'Perangkat Aktif','sec-dev-sub':'1 perangkat terhubung',
-'sec-bio-on':'Biometrik diaktifkan','sec-bio-off':'Biometrik dinonaktifkan',
-'sec-2fa-on':'2FA diaktifkan','sec-2fa-off':'2FA dinonaktifkan',
-'sec-priv-tog':'Mode Privasi diubah',
-'ntf-enable-btn':'Izinkan Notifikasi','ntf-active-title':'Notifikasi Aktif','ntf-active-sub':'Push notification berfungsi di perangkat ini',
-'ntf-tx':'Peringatan Transaksi','ntf-tx-sub':'Setiap debit & kredit',
-'ntf-limit':'Peringatan Batas Pengeluaran','ntf-limit-sub':'Peringatan di 80% anggaran',
-'ntf-goals':'Tujuan Tabungan','ntf-goals-sub':'Pencapaian & penyelesaian',
-'ntf-bills':'Pengingat Tagihan','ntf-bills-sub':'Notifikasi jatuh tempo',
-'ntf-gold':'Peringatan Harga Emas','ntf-gold-sub':'Update harga emas realtime',
-'ntf-tips':'Tips & Wawasan','ntf-tips-sub':'Saran keuangan mingguan',
-'ntf-promo':'Promosi','ntf-promo-sub':'Penawaran eksklusif member',
-'ntf-quiet':'Jam Hening','ntf-quiet-sub':'22:00 – 07:00',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',
@@ -3078,7 +2930,6 @@ const TR={
     'today':'Hari ini','nav-income':'Pendapatan','nav-expense':'Pengeluaran','nav-transfer':'Transfer'},
 };
 function T(k){return(TR[lang]&&TR[lang][k])||TR.en[k]||k;}
-function t(k){return T(k);} // alias pendek untuk dipakai di onclick inline
 function applyLang(){
   // 1. Elemen dengan ID persis = key terjemahan (cara lama)
   Object.keys(TR[lang]).forEach(id=>{
@@ -4297,17 +4148,12 @@ async function enterApp(initialState){
   // ⑧ Load notifikasi dari localStorage (per UID, tidak dari RTDB)
   _loadNotifLocal();
 
-  // ⑨ USD rate refresh setiap 5 menit (gold sudah di-poll tiap 30 detik via startGoldLivePolling)
+  // ⑨ Auto-refresh gold + exchange rate every 5 minutes
   if(window._goldRefreshInterval) clearInterval(window._goldRefreshInterval);
   window._goldRefreshInterval = setInterval(async ()=>{
-    // Refresh kurs USD saja; gold sudah di-handle oleh startGoldLivePolling
-    try{
-      const r = await fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'});
-      const d = await r.json();
-      if(d?.rates?.IDR){ exRate = d.rates.IDR; }
-    }catch(e){}
+    await fetchGoldPrice();
     updateRateBannerDisplay();
-    updateAllAmounts();
+    renderWallets();
   }, 5 * 60 * 1000);
 
   // ⑦ Greeting
@@ -4329,13 +4175,8 @@ async function enterApp(initialState){
 // doLogout — Firebase signOut + bersihkan state
 // ════════════════════════════════════════════════════════════
 async function doLogout(){
-  // ① Hentikan realtime sync & gold polling
+  // ① Hentikan realtime sync
   fbStopRealtimeSync();
-  if(_goldLiveTimer)    { clearInterval(_goldLiveTimer);    _goldLiveTimer    = null; }
-  if(_rateBannerTimer)  { clearInterval(_rateBannerTimer);  _rateBannerTimer  = null; }
-  if(window._goldRefreshInterval){ clearInterval(window._goldRefreshInterval); window._goldRefreshInterval=null; }
-  window._goldData      = null;
-  window._goldOpenPrice = null;
 
   // ② Sign out dari Firebase Auth
   try { await fbAuth.signOut(); } catch(e){}
@@ -4454,7 +4295,7 @@ function pinKey(k){
       else{
         if(pinBuf===newPinSaved){
           savedPin=newPinSaved;
-          const lbl=document.getElementById('pinStatusLbl'); if(lbl){ lbl.textContent=T('sec-pin-active'); lbl.removeAttribute('data-i18n'); }
+          const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
           addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
           toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
           fbAutoSave();

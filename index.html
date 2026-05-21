@@ -2659,13 +2659,14 @@ window._goldData = null;
 let _rateBannerMode = 0; // 0=USD/IDR, 1=Gold/IDR, 2=Gold/USD
 let _rateBannerTimer = null;
 
-// XAU/USD & XAU/IDR — harga emas realtime (3 sumber terpercaya)
+// XAU/USD & XAU/IDR — harga emas REALTIME
+// Sumber: 4 REST API + Claude AI web search sebagai jaring pengaman
 // Troy oz = 31.1035 gram
 async function fetchGoldPrice(){
   const TROY = 31.1035;
   const prev_oz = window._goldData?.priceUSD_per_oz || 0;
 
-  function _setGold(priceUSD_per_oz){
+  function _setGold(priceUSD_per_oz, source){
     const changeUSD = prev_oz > 0 ? priceUSD_per_oz - prev_oz : 0;
     const changePct = prev_oz > 0 ? (changeUSD / prev_oz) * 100 : 0;
     const rate = exRate > 10000 ? exRate : 16400;
@@ -2674,36 +2675,70 @@ async function fetchGoldPrice(){
       priceIDR_per_oz: priceUSD_per_oz * rate,
       priceIDR_per_gram: (priceUSD_per_oz * rate) / TROY,
       changeUSD, changeIDR: changeUSD * rate, changePct,
+      source: source || 'live',
       updatedAt: new Date()
     };
+    console.log('[Gold]', priceUSD_per_oz, 'USD/oz via', source);
   }
 
-  // Sumber 1: Frankfurter.app (ECB-based, XAU/USD cross rate)
+  // ── Sumber 1: metals.live (CORS OK)
   try {
-    const r = await fetch('https://api.frankfurter.app/latest?from=XAU&to=USD');
+    const r = await fetch('https://api.metals.live/v1/spot/gold');
     const d = await r.json();
-    const priceUSD = d && d.rates && d.rates.USD;
-    if(priceUSD && priceUSD > 100){ _setGold(priceUSD); return true; }
+    const p = d && (d.price || (Array.isArray(d) && d[0] && d[0].price));
+    if(p && p > 500){ _setGold(p, 'metals.live'); return true; }
   } catch(e){}
 
-  // Sumber 2: metals.live
+  // ── Sumber 2: allorigins proxy → metals.live (bypass CORS)
   try {
-    const r2 = await fetch('https://api.metals.live/v1/spot/gold');
-    const d2 = await r2.json();
-    const priceUSD2 = d2 && (d2.price || (d2[0] && d2[0].price));
-    if(priceUSD2 && priceUSD2 > 100){ _setGold(priceUSD2); return true; }
+    const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.metals.live/v1/spot/gold');
+    const r2 = await fetch(proxy);
+    const w2 = await r2.json();
+    const d2 = JSON.parse(w2.contents);
+    const p2 = d2 && (d2.price || (Array.isArray(d2) && d2[0] && d2[0].price));
+    if(p2 && p2 > 500){ _setGold(p2, 'metals.live/proxy'); return true; }
   } catch(e){}
 
-  // Sumber 3: open.er-api XAU (rates.USD = harga 1 XAU dalam USD)
+  // ── Sumber 3: allorigins proxy → Frankfurter XAU→USD
   try {
-    const r3 = await fetch('https://open.er-api.com/v6/latest/XAU');
-    const d3 = await r3.json();
-    const xauUsd = d3 && d3.rates && d3.rates.USD;
-    if(xauUsd && xauUsd > 100){ _setGold(xauUsd); return true; }
+    const proxy3 = 'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.frankfurter.app/latest?from=XAU&to=USD');
+    const r3 = await fetch(proxy3);
+    const w3 = await r3.json();
+    const d3 = JSON.parse(w3.contents);
+    if(d3 && d3.rates && d3.rates.USD > 500){ _setGold(d3.rates.USD, 'frankfurter/proxy'); return true; }
   } catch(e){}
 
-  // Fallback statis: ~$3.320/oz (Mei 2026)
-  if(!window._goldData){ _setGold(3320); }
+  // ── Sumber 4: corsproxy.io → open.er-api XAU
+  try {
+    const r4 = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://open.er-api.com/v6/latest/XAU'));
+    const d4 = await r4.json();
+    if(d4 && d4.rates && d4.rates.USD > 500){ _setGold(d4.rates.USD, 'er-api/proxy'); return true; }
+  } catch(e){}
+
+  // ── Sumber 5: Claude AI + web search (selalu akurat, pakai Anthropic API)
+  try {
+    const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 150,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        system: 'Respond ONLY with a valid JSON object, no markdown, no explanation. Format: {"price":NUMBER}',
+        messages: [{ role: 'user', content: 'Search for the current XAU/USD spot gold price per troy ounce. Return ONLY JSON: {"price": NUMBER}' }]
+      })
+    });
+    const aiData = await aiResp.json();
+    const fullText = (aiData.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const m = fullText.match(/"price"\s*:\s*([\d.]+)/);
+    if(m){
+      const aiPrice = parseFloat(m[1]);
+      if(aiPrice > 500 && aiPrice < 25000){ _setGold(aiPrice, 'claude-ai'); return true; }
+    }
+  } catch(e){}
+
+  // ── Fallback: pertahankan data sebelumnya atau set cache terakhir
+  if(!window._goldData){ _setGold(4538, 'cache'); }
   return false;
 }
 

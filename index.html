@@ -30,9 +30,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.png">
-<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.png">
-<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.png">
+<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
+<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
+<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.PNG">
 <meta name="apple-mobile-web-app-title" content="MyMoney">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -106,6 +106,16 @@ async function verifyPin(input, storedHash){
   return inputHash === storedHash;
 }
 
+// ── Timeout wrapper ──────────────────────────────────────────
+// Mencegah Firebase call hang selamanya (mis. jaringan lambat)
+// Jika melebihi ms milidetik, resolve dengan nilai fallback
+function withTimeout(promise, ms, fallback=null){
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(()=>resolve(fallback), ms))
+  ]);
+}
+
 
 
 // ═══════════════════════════════════════════════════════
@@ -145,7 +155,11 @@ async function fbSaveState(){
 async function fbLoadState(){
   const uid = fbUID(); if(!uid) return null;
   try {
-    const snap = await fbDB.ref(`users/${uid}/state`).once('value');
+    const snap = await withTimeout(
+      fbDB.ref(`users/${uid}/state`).once('value'),
+      8000  // timeout 8 detik
+    );
+    if(!snap) return null; // timeout
     return snap.val();
   } catch(e){ console.warn('RTDB load error:', e); return null; }
 }
@@ -168,7 +182,11 @@ async function fsSaveProfile(data){
 async function fsLoadProfile(){
   const uid = fbUID(); if(!uid) return null;
   try {
-    const doc = await fsDB.collection('users').doc(uid).get();
+    const doc = await withTimeout(
+      fsDB.collection('users').doc(uid).get(),
+      8000  // timeout 8 detik
+    );
+    if(!doc) return null; // timeout
     return doc.exists ? doc.data() : null;
   } catch(e){ console.warn('Firestore profile read error:', e); return null; }
 }
@@ -3959,13 +3977,22 @@ function _fbErrMsg(code){
 // ============================================================
 // FIREBASE AUTH STATE OBSERVER — auto-login jika sesi aktif
 // ============================================================
+// Flag: mencegah onAuthStateChanged double-load saat doLogin() sudah handle sendiri
+let _manualLoginInProgress = false;
+
 fbAuth.onAuthStateChanged(async (fu) => {
+  // Jika login sedang ditangani oleh doLogin()/doGoogleLogin(), skip di sini
+  if(_manualLoginInProgress) return;
+
   if(fu && !document.getElementById('app').classList.contains('on')){
-    // Sesi aktif, restore langsung
+    // Sesi aktif (refresh halaman / session restore)
     document.getElementById('fbLoadingOverlay').style.display='flex';
     document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
     try {
-      const prof = await fsLoadProfile();
+      const [prof, state] = await Promise.all([
+        fsLoadProfile().catch(()=>null),
+        fbLoadState().catch(()=>null)
+      ]);
       user = {
         email:  fu.email,
         name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
@@ -3973,12 +4000,12 @@ fbAuth.onAuthStateChanged(async (fu) => {
         photo:  prof?.photo  || null,
         uid:    fu.uid
       };
-      const state = await fbLoadState();
       document.getElementById('fbLoadingOverlay').style.display='none';
       await enterApp(state);
     } catch(e){
       document.getElementById('fbLoadingOverlay').style.display='none';
       console.warn('Auto-login restore error:', e);
+      goTo('login');
     }
   }
 });
@@ -4228,11 +4255,21 @@ async function doLogin(){
   const setBtn = (t,dis=false)=>{ if(btn){ btn.textContent=t; btn.disabled=dis; } };
   setBtn('🔄 Masuk...', true);
   document.getElementById('fbLoadingOverlay').style.display='flex';
+  document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
+
+  // Tandai agar onAuthStateChanged tidak ikut handle alur ini
+  _manualLoginInProgress = true;
 
   try {
     const cred = await fbAuth.signInWithEmailAndPassword(em, pw);
     const fu   = cred.user;
-    const prof = await fsLoadProfile();
+
+    // Load profil & state secara paralel (lebih cepat)
+    const [prof, state] = await Promise.all([
+      fsLoadProfile().catch(()=>null),
+      fbLoadState().catch(()=>null)
+    ]);
+
     user = {
       email:  fu.email,
       name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
@@ -4240,11 +4277,13 @@ async function doLogin(){
       photo:  prof?.photo  || null,
       uid:    fu.uid
     };
-    const state = await fbLoadState();
+
     setBtn(T('l-btn'), false);
     document.getElementById('fbLoadingOverlay').style.display='none';
+    _manualLoginInProgress = false;
     await enterApp(state);
   } catch(e){
+    _manualLoginInProgress = false;
     document.getElementById('fbLoadingOverlay').style.display='none';
     setBtn(T('l-btn'), false);
     const msg = _fbErrMsg(e.code);
@@ -4409,14 +4448,21 @@ async function doLogout(){
 
 // Login dengan Google — Firebase
 async function socialLogin(){
+  _manualLoginInProgress = true;
+  document.getElementById('fbLoadingOverlay').style.display='flex';
+  document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     const cred = await fbAuth.signInWithPopup(provider);
     const fu   = cred.user;
-    // Cek apakah user baru
     const isNewUser = cred.additionalUserInfo?.isNewUser;
-    // Muat / buat profil
-    let prof = await fsLoadProfile();
+
+    // Load profil & state secara paralel
+    const [prof, state] = await Promise.all([
+      fsLoadProfile().catch(()=>null),
+      fbLoadState().catch(()=>null)
+    ]);
+
     user = {
       email:  fu.email,
       name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
@@ -4425,13 +4471,16 @@ async function socialLogin(){
       uid:    fu.uid
     };
     if(isNewUser || !prof){
-      await fsSaveProfile(user);
+      await fsSaveProfile(user).catch(()=>{});
       balance=0; goals=[]; wallets=[]; historyItems=[]; notifications=[];
-      await fbSaveState();
+      await fbSaveState().catch(()=>{});
     }
-    const state = await fbLoadState();
+    document.getElementById('fbLoadingOverlay').style.display='none';
+    _manualLoginInProgress = false;
     await enterApp(isNewUser ? null : state);
   } catch(e){
+    _manualLoginInProgress = false;
+    document.getElementById('fbLoadingOverlay').style.display='none';
     if(e.code !== 'auth/popup-closed-by-user'){
       toast('❌ Google login gagal: ' + _fbErrMsg(e.code));
     }

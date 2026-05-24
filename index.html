@@ -162,11 +162,6 @@ function _applyStateFromDB(data){
     if(tagihan.length>0) tagihanIdCtr = Math.max(...data.tagihan.map(t=>t.id||0))+1;
   }
   if(data.tagihanBudget !== undefined) tagihanBudget = data.tagihanBudget;
-  // ── ANGGARAN / BUDGETS — restore dari RTDB ──
-  if(Array.isArray(data.budgets)){
-    budgets = data.budgets;
-    if(budgets.length>0) budgetIdCtr = Math.max(...budgets.map(b=>b.id||0))+1;
-  }
   if(data.savedPin    !== undefined) savedPin      = data.savedPin || '';
   if(data.lang)   { lang = data.lang; }
   if(data.darkMode !== undefined){
@@ -795,7 +790,6 @@ body{background:var(--bg);transition:background .35s;}
   max-width:500px;margin:0 auto;
 }
 @keyframes fiu{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse-red{from{opacity:1;}to{opacity:.55;}}
 .tp{display:none;}.tp.on{display:block;}
 
 /* RESPONSIVE TWEAKS for larger screens */
@@ -813,6 +807,9 @@ body{background:var(--bg);transition:background .35s;}
 }
 /* ── SRC BAL INFO ── */
 #srcBalInfo{align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--t2);margin-bottom:12px;border:1.5px solid var(--border);}
+/* ── DATE INPUT ── */
+#txDateInput{color-scheme:light;}
+.dk #txDateInput{color-scheme:dark;}
 /* ── MONTHLY/YEARLY BAR ── */
 #barChartMonthly,#barChartYearly{display:flex;align-items:flex-end;gap:6px;min-height:96px;padding:8px 0 4px;overflow-x:auto;}
 #barChartYearly{gap:2px;}
@@ -1356,6 +1353,15 @@ body{background:var(--bg);transition:background .35s;}
       <div class="csel-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
       <span class="csel-txt" id="catSelTxt">Choose a category</span>
       <span class="csel-arr"><svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg></span>
+    </div>
+
+    <!-- DATE -->
+    <div class="albl" id="m-date-lbl">TANGGAL TRANSAKSI</div>
+    <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:11px 14px;margin-bottom:16px;border:2px solid transparent;transition:border-color .2s;" id="dateWrap"
+      onfocusin="this.style.borderColor='var(--blue2)'" onfocusout="this.style.borderColor='transparent'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="date" id="txDateInput"
+        style="flex:1;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;-webkit-appearance:none;cursor:pointer;">
     </div>
 
     <!-- NOTE -->
@@ -2929,7 +2935,7 @@ function updateAllAmounts(){
 // LANGUAGE
 // ============================================================
 const TR={
-  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
+  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-date-lbl':'TRANSACTION DATE','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
 'tg-tab-goals':'Goals','tg-tab-bills':'Bills',
 'tg-upcoming-total':'UPCOMING BILLS TOTAL','tg-need-attention':'bill(s) need attention','tg-pay-all':'Pay All',
 'tg-monthly-spending':'Monthly Spending','tg-of-budget':'% of budget','tg-due-soon':'Due Soon',
@@ -2974,7 +2980,7 @@ const TR={
     'pw-nomatch':'Passwords do not match',
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
-  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Kartu & Anggaran','svt-history':'Riwayat',
+  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-date-lbl':'TANGGAL TRANSAKSI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',
@@ -3389,6 +3395,10 @@ function openAddModal(){
   // Set type buttons
   document.querySelectorAll('.tx-type-btn').forEach(b=>b.classList.remove('on','income-type','transfer-type'));
   document.getElementById('txtype-expense')?.classList.add('on');
+  // Set default tanggal = hari ini (format YYYY-MM-DD untuk input[type=date])
+  const todayStr = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD"
+  const dateEl = document.getElementById('txDateInput');
+  if(dateEl) dateEl.value = todayStr;
   buildSourceGrid();
   setTimeout(()=>document.getElementById('amountRaw').focus(), 200);
 }
@@ -3422,9 +3432,20 @@ function completeTx(){
   const isIncome   = txType === 'income';
   const isTransfer = txType === 'transfer';
   const isExpense  = txType === 'expense';
-  const now = new Date();
-  const dateStr = now.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'});
-  const timeStr = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+  // ── Tanggal dari input field (user bisa ganti), fallback ke sekarang ──
+  const dateInputVal = document.getElementById('txDateInput')?.value; // "YYYY-MM-DD"
+  let txDate;
+  if(dateInputVal){
+    // Gabungkan tanggal pilihan + jam sekarang agar ts akurat dalam hari itu
+    const now2 = new Date();
+    txDate = new Date(`${dateInputVal}T${now2.toTimeString().slice(0,8)}`);
+    if(isNaN(txDate.getTime())) txDate = new Date(); // fallback jika parse gagal
+  } else {
+    txDate = new Date();
+  }
+  const dateStr = txDate.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'});
+  const timeStr = txDate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 
   // ══ VALIDASI SALDO — cek dulu sebelum proses ══
   if (isExpense || isTransfer) {
@@ -3475,7 +3496,7 @@ function completeTx(){
     src:    srcLabel,
     dest:   destLabel,
     type:   txType,
-    ts:     now.getTime()
+    ts:     txDate.getTime()
   };
   historyItems.unshift(hItem);
   renderHistory();
@@ -5116,14 +5137,17 @@ function matchAnggaranCatId(histItem){
 }
 
 // Calculate total spent per cat ID for the selected month
+// Menggunakan ts (timestamp) dari historyItem — akurat berdasarkan tanggal transaksi yang dipilih user
 function calcAnggaranSpent(){
   const key = _anggaranPeriodeKey();
   const spent = {};
   historyItems.forEach(h => {
-    if(h.pos) return;
-    const d = new Date(h.ts || 0);
+    if(h.pos) return;                          // skip income
+    if(!h.ts || h.ts <= 0) return;            // skip item tanpa timestamp valid
+    const d = new Date(h.ts);
+    if(isNaN(d.getTime())) return;            // skip timestamp rusak
     const hKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if(hKey !== key) return;
+    if(hKey !== key) return;                  // hanya bulan yang dipilih
     const cid = matchAnggaranCatId(h);
     if(cid) spent[cid] = (spent[cid]||0) + Math.abs(h.amt||0);
   });
@@ -5142,7 +5166,7 @@ function renderAnggaranList(){
   const totalSpent   = monthBudgets.reduce((s,b) => s + (spent[b.catId]||0), 0);
   const totalSisa    = totalNominal - totalSpent;
   const pct          = totalNominal > 0 ? Math.min(100, Math.round((totalSpent/totalNominal)*100)) : 0;
-  const barColor     = pct >= 100 ? 'linear-gradient(90deg,var(--red),#f87171)' : pct >= 80 ? 'linear-gradient(90deg,var(--orange),var(--red))' : pct >= 60 ? 'linear-gradient(90deg,var(--orange),#fbbf24)' : 'linear-gradient(90deg,var(--blue),var(--blue2))';
+  const barColor     = pct >= 80 ? 'linear-gradient(90deg,var(--orange),var(--red))' : pct >= 60 ? 'linear-gradient(90deg,var(--orange),#fbbf24)' : 'linear-gradient(90deg,var(--blue),var(--blue2))';
 
   const totalEl = document.getElementById('anggaran-total-amt');
   const terEl   = document.getElementById('anggaran-terpakai-amt');
@@ -5151,18 +5175,9 @@ function renderAnggaranList(){
   const pctEl   = document.getElementById('anggaran-pct-label');
   if(totalEl) totalEl.textContent = fmt(totalNominal);
   if(terEl)   terEl.textContent   = fmt(totalSpent);
-  // Sisa bisa minus — tampilkan angka real tanpa floor di 0
-  if(sisaEl){
-    sisaEl.textContent = (totalSisa < 0 ? '-' : '') + fmt(Math.abs(totalSisa));
-    sisaEl.style.color = totalSisa < 0 ? 'var(--red)' : 'var(--teal2)';
-    sisaEl.style.fontWeight = totalSisa < 0 ? '800' : '700';
-  }
+  if(sisaEl)  { sisaEl.textContent = fmt(Math.max(0,totalSisa)); sisaEl.style.color = totalSisa < 0 ? 'var(--red)' : 'var(--teal2)'; }
   if(barEl)   { barEl.style.width = pct+'%'; barEl.style.background = barColor; }
-  if(pctEl){
-    pctEl.textContent = pct + '% Terpakai';
-    pctEl.style.color = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--orange)' : 'var(--t3)';
-    pctEl.style.fontWeight = pct >= 100 ? '700' : 'normal';
-  }
+  if(pctEl)   pctEl.textContent   = pct+'% Terpakai';
 
   if(!monthBudgets.length){
     list.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--t3);font-size:13px;">
@@ -5175,71 +5190,33 @@ function renderAnggaranList(){
   list.innerHTML = monthBudgets.map(b => {
     const c = cats.find(x => x.id === b.catId);
     if(!c) return '';
-    const catName  = T('cat-'+c.id) || c.id;
+    const catName = T('cat-'+c.id) || c.id;
     const spentAmt = spent[b.catId] || 0;
-    const sisa     = b.nominal - spentAmt;
-    const isOver   = sisa < 0;
-
-    // Progress pct: boleh > 100 untuk visualisasi full merah
-    const bpct     = b.nominal > 0 ? Math.round((spentAmt/b.nominal)*100) : 0;
-    const bpctBar  = Math.min(100, bpct); // bar max 100%
-
-    // Warna bar berdasarkan pct
-    const bBarColor = isOver
-      ? 'linear-gradient(90deg,#dc2626,#ef4444)'
-      : bpct >= 80
-        ? 'linear-gradient(90deg,var(--orange),var(--red))'
-        : bpct >= 60
-          ? 'linear-gradient(90deg,var(--orange),#fbbf24)'
-          : 'var(--green)';
-
-    // Status label & warna
-    let statusTxt, statusClr, statusBg;
-    if(isOver){
-      statusTxt = '🔴 Over Budget';
-      statusClr = '#ffffff';
-      statusBg  = 'var(--red)';
-    } else if(bpct >= 80){
-      statusTxt = '⚠️ Waspada';
-      statusClr = '#92400e';
-      statusBg  = '#FEF3EB';
-    } else {
-      statusTxt = '✅ Aman';
-      statusClr = '#065f46';
-      statusBg  = '#D1FAE5';
-    }
-
-    // Sisa — tampilkan minus jika over budget
-    const sisaDisplay = isOver
-      ? `-${fmt(Math.abs(sisa))}`
-      : fmt(sisa);
-    const sisaColor = isOver ? 'var(--red)' : 'var(--teal)';
-    const sisaLabel = isOver ? 'Melebihi' : 'Sisa';
-
-    // Card border merah jika over
-    const cardBorder = isOver ? 'border:1.5px solid rgba(239,68,68,.35);' : '';
-
-    return `<div style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);cursor:pointer;${cardBorder}" onclick="editAnggaran(${b.id})">
+    const sisa = b.nominal - spentAmt;
+    const bpct = b.nominal > 0 ? Math.min(100, Math.round((spentAmt/b.nominal)*100)) : 0;
+    const bBarColor = bpct >= 80 ? 'linear-gradient(90deg,var(--orange),var(--red))' : bpct >= 60 ? 'linear-gradient(90deg,var(--orange),#fbbf24)' : 'var(--green)';
+    const statusTxt = bpct >= 80 ? 'Waspada' : 'Aman';
+    const statusClr = bpct >= 80 ? 'var(--orange)' : 'var(--green)';
+    return `<div style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);cursor:pointer;" onclick="editAnggaran(${b.id})">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <div style="width:40px;height:40px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>
         </div>
-        <div style="flex:1;">
+        <div>
           <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">${catName}</div>
           <div style="font-size:11px;color:var(--t3);">Anggaran: ${fmt(b.nominal)}</div>
         </div>
-        <span style="font-size:11px;font-weight:700;color:${statusClr};background:${statusBg};padding:4px 10px;border-radius:20px;">${statusTxt}</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:12px;color:var(--t3);">Terpakai</span>
-        <span style="font-family:var(--f);font-size:16px;font-weight:700;color:${isOver?'var(--red)':'var(--navy)'};">${fmt(spentAmt)}${bpct>0?` <span style="font-size:11px;color:${isOver?'var(--red)':'var(--t3)'};">(${bpct}%)</span>`:''}</span>
+        <span style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);">${fmt(spentAmt)}</span>
       </div>
-      <div style="background:#E8EEF8;border-radius:4px;height:8px;overflow:hidden;margin-bottom:8px;">
-        <div style="height:100%;border-radius:4px;background:${bBarColor};width:${bpctBar}%;transition:width .5s ease;${isOver?'animation:pulse-red .8s ease infinite alternate;':''}"></div>
+      <div style="background:#E8EEF8;border-radius:4px;height:6px;overflow:hidden;margin-bottom:7px;">
+        <div style="height:100%;border-radius:4px;background:${bBarColor};width:${bpct}%;transition:width .5s ease;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:12px;color:${sisaColor};font-weight:${isOver?'700':'500'};">${sisaLabel}: <strong style="font-family:var(--f);font-size:13px;">${sisaDisplay}</strong></span>
-        ${isOver ? `<span style="font-size:11px;color:var(--red);font-weight:600;">Melebihi ${fmt(Math.abs(sisa))}</span>` : ''}
+        <span style="font-size:11px;color:var(--t3);">Sisa: <strong>${fmt(Math.max(0,sisa))}</strong></span>
+        <span style="font-size:11px;font-weight:700;color:${statusClr};">${statusTxt}</span>
       </div>
     </div>`;
   }).join('');
@@ -5345,7 +5322,35 @@ function hapusAnggaran(){
   fbAutoSave();
 }
 
+// Hook into fbSaveState / fbLoadState — budgets included via updated fbSaveState and _applyStateFromDB below
+
 // fbSaveState and _applyStateFromDB already updated above to include budgets
+function _applyStateFromDB(data){
+  if(data.balance     !== undefined) balance       = data.balance;
+  if(Array.isArray(data.wallets)){
+    wallets = data.wallets;
+    if(wallets.length>0) window.walletIdCtr = Math.max(...wallets.map(w=>w.id||0))+1;
+  }
+  if(Array.isArray(data.goals))        goals         = data.goals;
+  if(Array.isArray(data.historyItems)) historyItems  = data.historyItems;
+  if(Array.isArray(data.tagihan)){
+    tagihan = data.tagihan;
+    if(tagihan.length>0) window.tagihanIdCtr = Math.max(...data.tagihan.map(t=>t.id||0))+1;
+  }
+  if(data.tagihanBudget !== undefined) tagihanBudget = data.tagihanBudget;
+  if(Array.isArray(data.budgets)){
+    budgets = data.budgets;
+    if(budgets.length>0) budgetIdCtr = Math.max(...budgets.map(b=>b.id||0))+1;
+  }
+  if(data.savedPin    !== undefined) savedPin      = data.savedPin || '';
+  if(data.lang)   { lang = data.lang; }
+  if(data.darkMode !== undefined){
+    if(data.darkMode) document.body.classList.add('dk');
+    else              document.body.classList.remove('dk');
+  }
+  refreshAllUI();
+}
+
 // Hook into completeTx to auto-refresh anggaran panel if visible - handled in completeTx directly
 // Also hook refreshAllUI - handled inline above
 </script>

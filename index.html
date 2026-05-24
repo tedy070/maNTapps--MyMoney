@@ -146,23 +146,6 @@ function fbStopRealtimeSync(){
   _rtdbListener = null;
 }
 
-// Helper: parse string waktu format "25 Jun 2026, 10:00" atau "25 Jun 2026" ke Date
-// Digunakan sebagai fallback ketika h.ts tidak ada (user edit RTDB langsung via h.time)
-function _parseTimeString(timeStr){
-  if(!timeStr) return null;
-  try {
-    // Format: "25 Jun 2026, 10:00" atau "25 Jun 2026"
-    // Coba parse langsung via Date constructor (works for most formats)
-    const d = new Date(timeStr);
-    if(!isNaN(d.getTime())) return d;
-    // Fallback: ganti bulan Indonesia jika ada
-    const bulanID = {'Jan':'Jan','Feb':'Feb','Mar':'Mar','Apr':'Apr','Mei':'May','Jun':'Jun','Jul':'Jul','Agu':'Aug','Sep':'Sep','Okt':'Oct','Nov':'Nov','Des':'Dec'};
-    let s = timeStr;
-    Object.entries(bulanID).forEach(([id, en]) => { s = s.replace(new RegExp(id,'g'), en); });
-    return new Date(s);
-  } catch(e){ return null; }
-}
-
 // Terapkan data dari DB ke variabel app
 function _applyStateFromDB(data){
   if(data.balance     !== undefined) balance       = data.balance;
@@ -173,25 +156,17 @@ function _applyStateFromDB(data){
   }
   if(Array.isArray(data.goals))        goals         = data.goals;
   if(Array.isArray(data.historyItems)){
+    // ── Simpan snapshot lama (full copy) sebelum historyItems ditimpa ──
+    const _oldSnapshot = historyItems ? historyItems.map(h => Object.assign({}, h)) : null;
     historyItems = data.historyItems;
-    // ── SYNC ts dari time string ──
-    // Jika user mengedit h.time langsung di RTDB (hardcoded string seperti "25 Jun 2026, 10:00"),
-    // maka ts perlu dikalkulasi ulang dari time agar filter bulan tetap akurat.
-    let needResave = false;
-    historyItems.forEach(h => {
-      if(h.time){
-        const parsed = _parseTimeString(h.time);
-        if(parsed && !isNaN(parsed.getTime())){
-          const tsFromTime = parsed.getTime();
-          // Update ts jika tidak ada atau beda > 60 detik dari time string
-          if(!h.ts || Math.abs(h.ts - tsFromTime) > 60000){
-            h.ts = tsFromTime;
-            needResave = true;
-          }
-        }
-      }
-    });
-    if(needResave) fbAutoSave(); // simpan kembali dengan ts yang sudah disync
+    // ── KUNCI FIX: rekonsiliasi h.ts dari h.time ──────────────────────────────
+    // User lebih mudah mengubah h.time (string seperti "25 Mei 2026, 10:30") di RTDB
+    // daripada mengubah h.ts (integer Unix ms). Setelah rekonsiliasi, h.ts akan
+    // mencerminkan tanggal di h.time sehingga semua filter (renderHistory,
+    // calcAnggaranSpent) yang bergantung pada h.ts langsung akurat.
+    _reconcileTsFromTime();
+    // ── Sync filter Riwayat & Anggaran ke bulan item yang berubah ──
+    _syncFiltersAfterRTDBUpdate(_oldSnapshot);
   }
   // notifications TIDAK disync dari RTDB — hanya lokal per-device
   if(Array.isArray(data.tagihan)){
@@ -211,6 +186,150 @@ function _applyStateFromDB(data){
     else              document.body.classList.remove('dk');
   }
   refreshAllUI();
+}
+
+// ── Sync filter Riwayat & Anggaran setelah RTDB update ──
+// Dipanggil SEBELUM historyItems diupdate, lalu lagi setelah update.
+// Cara kerja:
+//   1. Simpan snapshot lama (sebelum update)
+//   2. Setelah historyItems diupdate dari RTDB, bandingkan tiap item
+//   3. Jika ada item yang ts-nya berubah, arahkan filter ke bulan ts baru
+//   4. Dengan begitu Riwayat & Anggaran langsung loncat ke bulan yang relevan
+function _syncFiltersAfterRTDBUpdate(oldSnapshot){
+  if(!historyItems || historyItems.length === 0) return;
+  // Jika tidak ada snapshot lama (login pertama), tidak perlu sync
+  if(!oldSnapshot || oldSnapshot.length === 0) return;
+
+  // Bandingkan tiap item secara menyeluruh (bukan hanya ts).
+  // User bisa mengubah field apapun di RTDB (time, ts, cat, dll).
+  // Deteksi: jika JSON item berbeda, item itu yang berubah.
+  // Ambil ts dari item yang berubah untuk menentukan bulan tujuan filter.
+  let changedTs = null;
+  const len = Math.max(historyItems.length, oldSnapshot.length);
+  for(let i = 0; i < len; i++){
+    const newItem = historyItems[i];
+    const oldItem = oldSnapshot[i];
+    // Item baru ditambahkan atau dihapus
+    if(!newItem || !oldItem){ changedTs = newItem ? (newItem.ts||0) : null; break; }
+    // Bandingkan JSON seluruh item (cara paling andal mendeteksi perubahan apapun)
+    if(JSON.stringify(newItem) !== JSON.stringify(oldItem)){
+      changedTs = newItem.ts || 0;
+      break;
+    }
+  }
+
+  if(changedTs !== null && changedTs > 0){
+    const d = new Date(changedTs);
+    histFilterYear  = d.getFullYear();
+    histFilterMonth = d.getMonth();
+    anggaranYear    = d.getFullYear();
+    anggaranMonth   = d.getMonth();
+  }
+}
+
+// ── Parse h.time string → timestamp ms ──────────────────────────────────────
+// Saat user mengubah h.time di RTDB (lebih mudah dari mengubah ts integer),
+// kita perlu parse string itu menjadi timestamp agar semua filter (renderHistory,
+// calcAnggaranSpent) yang bergantung pada h.ts tetap akurat.
+//
+// Format yang didukung (sesuai yang dihasilkan aplikasi):
+//   "Hari ini, 10:30"   / "Today, 10:30"
+//   "Kemarin, 10:30"    / "Yesterday, 10:30"
+//   "25 Jun 2026, 10:30"              (format id-ID: dd Mon yyyy)
+//   "Jun 25 2026, 10:30" / "25 Jun, 2026 10:30" (berbagai variasi)
+//   "2026-06-25"         (format ISO)
+//   "25/06/2026"         (format numerik)
+function _parseTimeStringToTs(timeStr, existingTs){
+  if(!timeStr || typeof timeStr !== 'string') return existingTs || 0;
+  const s = timeStr.trim();
+  const now = new Date();
+
+  // ── "Hari ini" / "Today" ──
+  if(/^(hari\s*ini|today)/i.test(s)){
+    const timePart = s.replace(/^(hari\s*ini|today)[,\s]*/i,'');
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [hh,mm] = (timePart.match(/(\d{1,2}):(\d{2})/)||[0,now.getHours(),now.getMinutes()]).slice(1);
+    base.setHours(parseInt(hh)||now.getHours(), parseInt(mm)||0, 0, 0);
+    return base.getTime();
+  }
+
+  // ── "Kemarin" / "Yesterday" ──
+  if(/^(kemarin|yesterday)/i.test(s)){
+    const timePart = s.replace(/^(kemarin|yesterday)[,\s]*/i,'');
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate()-1);
+    const [hh,mm] = (timePart.match(/(\d{1,2}):(\d{2})/)||[0,now.getHours(),now.getMinutes()]).slice(1);
+    base.setHours(parseInt(hh)||0, parseInt(mm)||0, 0, 0);
+    return base.getTime();
+  }
+
+  // ── Map nama bulan → index 0-based ──
+  const MONTH_MAP = {
+    jan:0,feb:1,mar:2,apr:3,mei:4,may:4,jun:5,jul:6,
+    agu:7,aug:7,sep:8,okt:9,oct:9,nov:10,des:11,dec:11
+  };
+
+  // ── Format: "25 Jun 2026, 10:30" atau "25 Jun 2026" ──
+  const m1 = s.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/);
+  if(m1){
+    const day=parseInt(m1[1]), monKey=m1[2].substring(0,3).toLowerCase(), yr=parseInt(m1[3]);
+    const mon = MONTH_MAP[monKey];
+    if(mon !== undefined){
+      const d = new Date(yr, mon, day, parseInt(m1[4]||0), parseInt(m1[5]||0), 0, 0);
+      return d.getTime();
+    }
+  }
+
+  // ── Format: "Jun 25, 2026, 10:30" atau "Jun 25 2026" (en-US style) ──
+  const m2 = s.match(/^([A-Za-z]{3,})\s+(\d{1,2})[,\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/);
+  if(m2){
+    const monKey=m2[1].substring(0,3).toLowerCase(), day=parseInt(m2[2]), yr=parseInt(m2[3]);
+    const mon = MONTH_MAP[monKey];
+    if(mon !== undefined){
+      const d = new Date(yr, mon, day, parseInt(m2[4]||0), parseInt(m2[5]||0), 0, 0);
+      return d.getTime();
+    }
+  }
+
+  // ── Format ISO: "2026-06-25" atau "2026-06-25T10:30:00" ──
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+    const d = new Date(s);
+    if(!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // ── Format numerik: "25/06/2026" atau "25-06-2026" ──
+  const m3 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/);
+  if(m3){
+    const d = new Date(parseInt(m3[3]), parseInt(m3[2])-1, parseInt(m3[1]),
+                       parseInt(m3[4]||0), parseInt(m3[5]||0), 0, 0);
+    if(!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // Fallback: gunakan ts yang ada
+  return existingTs || 0;
+}
+
+// ── Rekonsiliasi h.ts dari h.time untuk semua historyItems ──
+// Dipanggil setelah historyItems diupdate dari RTDB.
+// Jika h.time berubah (user edit di RTDB), update h.ts agar filter bulan tetap akurat.
+function _reconcileTsFromTime(){
+  if(!historyItems) return;
+  historyItems.forEach(h => {
+    if(!h.time) return;
+    const parsedTs = _parseTimeStringToTs(h.time, h.ts);
+    // Hanya update jika hasil parse valid DAN berbeda dari ts yang ada
+    // Toleransi 60 detik: jika selisih < 60 detik anggap sama (jam masih akurat)
+    if(parsedTs > 0){
+      const diff = Math.abs(parsedTs - (h.ts||0));
+      // Jika beda bulan atau beda hari → update ts (user mengubah tanggal)
+      const oldD = new Date(h.ts||0);
+      const newD = new Date(parsedTs);
+      const monthChanged = oldD.getFullYear()!==newD.getFullYear() || oldD.getMonth()!==newD.getMonth();
+      const dayChanged   = oldD.getDate() !== newD.getDate();
+      if(monthChanged || dayChanged){
+        h.ts = parsedTs;
+      }
+    }
+  });
 }
 
 // Debounced auto-save (hindari terlalu banyak write)
@@ -1400,15 +1519,13 @@ body{background:var(--bg);transition:background .35s;}
     <textarea class="noteinput" id="noteInput" rows="2" placeholder="What was this for?"></textarea>
 
     <!-- TANGGAL TRANSAKSI -->
-    <div class="albl" id="m-date-lbl" style="margin-top:4px;">TANGGAL TRANSAKSI</div>
-    <div style="display:flex;align-items:center;background:var(--surface2);border-radius:13px;border:1.5px solid transparent;transition:border-color .2s;margin-bottom:16px;" id="txDateWrap">
-      <span style="padding:0 0 0 14px;flex-shrink:0;display:flex;align-items:center;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      </span>
-      <input type="datetime-local" id="txDateInput"
-        style="flex:1;min-width:0;padding:12px 12px;background:transparent;border:none;outline:none;font-family:var(--f2);font-size:13px;color:var(--navy);-webkit-appearance:none;appearance:none;box-sizing:border-box;"
-        onfocus="document.getElementById('txDateWrap').style.borderColor='var(--blue2)'"
-        onblur="document.getElementById('txDateWrap').style.borderColor='transparent'">
+    <div class="albl" id="m-date" style="margin-top:8px;">TANGGAL TRANSAKSI</div>
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:14px;padding:12px 16px;margin-bottom:16px;border:2px solid transparent;transition:border-color .2s;" id="dateWrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="date" id="txDateInput"
+        style="flex:1;font-family:var(--f);font-size:15px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;"
+        onfocus="document.getElementById('dateWrap').style.borderColor='var(--blue2)'"
+        onblur="document.getElementById('dateWrap').style.borderColor='transparent'">
     </div>
 
     <!-- SUMMARY PREVIEW -->
@@ -2195,6 +2312,23 @@ let histFilterMonth = new Date().getMonth(); // 0-based
 
 function monthName(m){ return lang==='id' ? MONTH_NAMES_ID[m] : MONTH_NAMES_EN[m]; }
 
+// ── Format label waktu dari ts (timestamp) — lebih akurat dari h.time yang bisa stale ──
+// Jika ts tersedia, generate ulang string tanggal dari ts.
+// Ini memastikan item yang diubah bulannya dari RTDB menampilkan tanggal yang benar.
+function fmtItemTime(h){
+  if(h.ts && h.ts > 0){
+    const d = new Date(h.ts);
+    const now = new Date();
+    const isToday = d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+    const isYesterday = (()=>{ const y=new Date(now); y.setDate(y.getDate()-1); return d.getFullYear()===y.getFullYear()&&d.getMonth()===y.getMonth()&&d.getDate()===y.getDate(); })();
+    const timeStr = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    if(isToday)     return `${lang==='id'?'Hari ini':'Today'}, ${timeStr}`;
+    if(isYesterday) return `${lang==='id'?'Kemarin':'Yesterday'}, ${timeStr}`;
+    return d.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'}) + ', ' + timeStr;
+  }
+  return h.time || '';
+}
+
 function updateHistNavbarLabel(){
   const el = document.getElementById('hist-bulan-label');
   if(el) el.textContent = `${monthName(histFilterMonth)} ${histFilterYear}`;
@@ -2300,7 +2434,7 @@ function renderHistory(){
       <div class="h-ico">${icon}</div>
       <div style="flex:1;">
         <div class="h-nm">${nm}${catBadge}</div>
-        <div class="h-t">${h.time}${srcInfo}</div>
+        <div class="h-t">${fmtItemTime(h)}${srcInfo}</div>
       </div>
       <div class="h-a ${h.pos?'pos':'neg'}">${h.pos?'+':'-'}${fmt(Math.abs(h.amt))}</div>
     </div>`;
@@ -2978,7 +3112,7 @@ function updateAllAmounts(){
 // LANGUAGE
 // ============================================================
 const TR={
-  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','m-date-lbl':'TRANSACTION DATE','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
+  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
 'tg-tab-goals':'Goals','tg-tab-bills':'Bills',
 'tg-upcoming-total':'UPCOMING BILLS TOTAL','tg-need-attention':'bill(s) need attention','tg-pay-all':'Pay All',
 'tg-monthly-spending':'Monthly Spending','tg-of-budget':'% of budget','tg-due-soon':'Due Soon',
@@ -3023,7 +3157,7 @@ const TR={
     'pw-nomatch':'Passwords do not match',
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
-  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','m-date-lbl':'TANGGAL TRANSAKSI','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
+  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',
@@ -3435,15 +3569,18 @@ function openAddModal(){
   selCat='';selCatIco='';selCatColor='';
   const t=document.getElementById('catSelTxt');t.textContent=lang==='id'?'Pilih kategori':'Choose a category';t.classList.remove('sel');
   document.querySelectorAll('.cat-c').forEach(c=>c.classList.remove('sel'));
-  // Set date to today (datetime-local format: YYYY-MM-DDTHH:mm)
-  const nowDt = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const dtVal = `${nowDt.getFullYear()}-${pad(nowDt.getMonth()+1)}-${pad(nowDt.getDate())}T${pad(nowDt.getHours())}:${pad(nowDt.getMinutes())}`;
-  const dtEl = document.getElementById('txDateInput');
-  if(dtEl) dtEl.value = dtVal;
   // Set type buttons
   document.querySelectorAll('.tx-type-btn').forEach(b=>b.classList.remove('on','income-type','transfer-type'));
   document.getElementById('txtype-expense')?.classList.add('on');
+  // Set default tanggal ke hari ini
+  const todayInput = document.getElementById('txDateInput');
+  if(todayInput){
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const dd = String(now.getDate()).padStart(2,'0');
+    todayInput.value = `${yyyy}-${mm}-${dd}`;
+  }
   buildSourceGrid();
   setTimeout(()=>document.getElementById('amountRaw').focus(), 200);
 }
@@ -3477,9 +3614,17 @@ function completeTx(){
   const isIncome   = txType === 'income';
   const isTransfer = txType === 'transfer';
   const isExpense  = txType === 'expense';
-  // Gunakan tanggal dari input field (bisa diganti user), fallback ke now
-  const dtInput = document.getElementById('txDateInput');
-  const now = dtInput && dtInput.value ? new Date(dtInput.value) : new Date();
+  // Gunakan tanggal yang dipilih user, jam tetap sekarang
+  const realNow = new Date();
+  const txDateVal = document.getElementById('txDateInput')?.value;
+  let now;
+  if(txDateVal){
+    const parts = txDateVal.split('-');
+    now = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]),
+      realNow.getHours(), realNow.getMinutes(), realNow.getSeconds());
+  } else {
+    now = realNow;
+  }
   const dateStr = now.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'});
   const timeStr = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 
@@ -3535,6 +3680,9 @@ function completeTx(){
     ts:     now.getTime()
   };
   historyItems.unshift(hItem);
+  // Reset filter ke bulan transaksi yang baru ditambahkan agar langsung terlihat
+  histFilterYear  = now.getFullYear();
+  histFilterMonth = now.getMonth();
   renderHistory();
   renderRecentTxList();  // refresh home list
 
@@ -3584,7 +3732,7 @@ function renderRecentTxList(){
       : '<svg viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>');
     const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
     item.innerHTML = `<div class="tx-ico" style="background:${catColor};">${catIco}</div>
-      <div style="flex:1"><div class="tx-name">${nm}</div><div class="tx-meta">${h.time||''}</div></div>
+      <div style="flex:1"><div class="tx-name">${nm}</div><div class="tx-meta">${fmtItemTime(h)}</div></div>
       <div class="tx-amt ${amtClass}">${amtSign}${fmt(Math.abs(h.amt||0))}</div>`;
     list.appendChild(item);
   });
@@ -4148,14 +4296,16 @@ function refreshAllUI(){
   renderGoals();
   updateSavingsTotal();
   renderWallets();
+  // Update label navbar bulan Riwayat (penting saat filter berubah dari RTDB sync)
+  updateHistNavbarLabel();
   renderHistory();
   renderRecentTxList();
   initChart();
   updateNotifBadge();
   recalcTotalBalance();
-  // Refresh anggaran panel if it's currently visible
-  const angPanel = document.getElementById('sv-anggaran-panel');
-  if(angPanel && angPanel.style.display !== 'none'){ renderAnggaranList(); }
+  // Selalu refresh anggaran agar data berubah dari RTDB langsung terrefleksi
+  updateAnggaranBulanLabel();
+  renderAnggaranList();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4722,14 +4872,7 @@ function updateTagihanSummary(list) {
   // Pengeluaran bulan ini dari historyItems
   const now2 = new Date();
   const monthExpense = historyItems
-    .filter(h => {
-      if(h.pos) return false;
-      let d;
-      if(h.ts && h.ts > 0){ d = new Date(h.ts); }
-      else if(h.time){ d = _parseTimeString(h.time); }
-      if(!d || isNaN(d.getTime())) return false;
-      return d.getFullYear()===now2.getFullYear() && d.getMonth()===now2.getMonth();
-    })
+    .filter(h => !h.pos && h.ts && new Date(h.ts).getFullYear()===now2.getFullYear() && new Date(h.ts).getMonth()===now2.getMonth())
     .reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const elExp = document.getElementById('tagihan-expense-amt');
   if (elExp) elExp.textContent = 'Rp '+Math.round(monthExpense).toLocaleString('id-ID');
@@ -5185,14 +5328,7 @@ function calcAnggaranSpent(){
   const spent = {};
   historyItems.forEach(h => {
     if(h.pos) return;
-    // Gunakan h.ts jika ada; fallback parse dari h.time string (misal "25 Jun 2026, 10:00")
-    let d;
-    if(h.ts && h.ts > 0){
-      d = new Date(h.ts);
-    } else if(h.time){
-      d = _parseTimeString(h.time);
-    }
-    if(!d || isNaN(d.getTime())) return;
+    const d = new Date(h.ts || 0);
     const hKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     if(hKey !== key) return;
     const cid = matchAnggaranCatId(h);

@@ -73,6 +73,7 @@ async function fbSaveState(){
     historyItems,
     tagihan: (typeof tagihan !== 'undefined') ? tagihan : [],
     tagihanBudget: (typeof tagihanBudget !== 'undefined') ? tagihanBudget : 8000000,
+    budgets: (typeof budgets !== 'undefined') ? budgets : [],
     // notifications SENGAJA tidak disimpan ke RTDB — hanya lokal per-device
     savedPin,
     lang,
@@ -1064,7 +1065,7 @@ body{background:var(--bg);transition:background .35s;}
     <div class="tp" id="tab-savings">
       <div class="sv-tabs">
         <button class="sv-tab on" id="svt-goals" onclick="switchSvTab('goals')" data-i18n="svt-goals">Goals & Bills</button>
-        <button class="sv-tab" id="svt-wallets" onclick="switchSvTab('wallets')">Wallets & Cards</button>
+        <button class="sv-tab" id="svt-wallets" onclick="switchSvTab('wallets')">Kartu &amp; Anggaran</button>
         <button class="sv-tab" id="svt-history" onclick="switchSvTab('history')">History</button>
       </div>
       <!-- Goals/Tagihan Content -->
@@ -1138,14 +1139,68 @@ body{background:var(--bg);transition:background .35s;}
           </button>
         </div>
       </div>
-      <!-- Wallets — SWIPEABLE -->
+      <!-- Kartu & Anggaran — SWIPEABLE -->
       <div id="sv-wallets-content" style="display:none;">
-        <div style="padding:0 16px;margin-bottom:12px;">
-          <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px;" id="wlt-ttl">My Wallets & Cards</div>
-          <div style="font-size:12px;color:var(--t3);" id="wlt-sub">Swipe to view · Tap ⋮ to manage</div>
+        <!-- Sub-navbar: Kartu | Anggaran -->
+        <div style="display:flex;margin:0 16px 16px;background:var(--surface2);border-radius:12px;padding:4px;gap:0;">
+          <button class="sv-subtab on" id="svsubt-kartu" onclick="switchWalletSubTab('kartu')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;">Kartu</button>
+          <button class="sv-subtab" id="svsubt-anggaran" onclick="switchWalletSubTab('anggaran')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;">Anggaran</button>
         </div>
-        <div class="wallet-scroll" id="walletsContainer"></div>
-        <div style="padding:0 16px;"><div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;" id="wlt-summary">Total Across All Cards</div><div id="walletSummary"></div></div>
+
+        <!-- KARTU PANEL -->
+        <div id="sv-kartu-panel">
+          <div style="padding:0 16px;margin-bottom:12px;">
+            <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px;" id="wlt-ttl">My Wallets &amp; Cards</div>
+            <div style="font-size:12px;color:var(--t3);" id="wlt-sub">Swipe to view · Tap ⋮ to manage</div>
+          </div>
+          <div class="wallet-scroll" id="walletsContainer"></div>
+          <div style="padding:0 16px;"><div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;" id="wlt-summary">Total Across All Cards</div><div id="walletSummary"></div></div>
+        </div>
+
+        <!-- ANGGARAN PANEL -->
+        <div id="sv-anggaran-panel" style="display:none;">
+          <!-- Header: navigasi bulan -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 14px;">
+            <button onclick="anggaranPrevMonth()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+            </button>
+            <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);" id="anggaran-bulan-label">Januari 2024</div>
+            <button onclick="anggaranNextMonth()" style="width:32px;height:32px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="9,6 15,12 9,18"/></svg>
+            </button>
+          </div>
+
+          <!-- Summary Card -->
+          <div style="margin:0 16px 16px;background:var(--surface);border-radius:20px;padding:20px;box-shadow:var(--sh);">
+            <div style="font-size:12px;color:var(--t3);margin-bottom:4px;" id="anggaran-summary-lbl">Total Anggaran (Bulan ini)</div>
+            <div style="font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;color:var(--blue2);letter-spacing:-1px;margin-bottom:14px;" id="anggaran-total-amt">Rp 0</div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+              <div>
+                <div style="font-size:12px;color:var(--t3);">Terpakai</div>
+                <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);" id="anggaran-terpakai-amt">Rp 0</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:12px;color:var(--t3);">Sisa</div>
+                <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--teal2);" id="anggaran-sisa-amt">Rp 0</div>
+              </div>
+            </div>
+            <div style="background:#E8EEF8;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px;">
+              <div id="anggaran-progress-bar" style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue),var(--blue2));transition:width .6s ease;width:0%;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--t3);text-align:right;" id="anggaran-pct-label">0% Terpakai</div>
+          </div>
+
+          <!-- Kategori Anggaran List -->
+          <div style="padding:0 16px 6px;display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+            <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);">Kategori Anggaran</div>
+            <button onclick="openTambahAnggaran()" style="display:flex;align-items:center;gap:5px;background:var(--navy);color:white;border:none;border-radius:20px;padding:7px 14px;font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah
+            </button>
+          </div>
+          <div id="anggaran-list" style="padding:0 16px;"></div>
+          <div style="height:80px;"></div>
+        </div>
       </div>
       <!-- History -->
       <div id="sv-history-content" style="display:none;">
@@ -2207,8 +2262,29 @@ function switchSvTab(t){
   // Sembunyikan FAB tagihan jika tidak di goals tab
   const fab = document.getElementById('fab-tambah-tagihan');
   if(fab) fab.style.display='none';
-  if(t==='wallets') renderWallets();
+  if(t==='wallets'){ switchWalletSubTab('kartu'); }
   if(t==='history'){ updateHistNavbarLabel(); renderHistory(); }
+}
+
+// KARTU / ANGGARAN SUB TABS
+function switchWalletSubTab(t){
+  const kartuBtn = document.getElementById('svsubt-kartu');
+  const anggaranBtn = document.getElementById('svsubt-anggaran');
+  const kartuPanel = document.getElementById('sv-kartu-panel');
+  const anggaranPanel = document.getElementById('sv-anggaran-panel');
+  if(!kartuBtn) return;
+  if(t==='kartu'){
+    kartuBtn.style.background='var(--surface)'; kartuBtn.style.color='var(--navy)'; kartuBtn.style.boxShadow='var(--sh2)';
+    anggaranBtn.style.background='transparent'; anggaranBtn.style.color='var(--t3)'; anggaranBtn.style.boxShadow='none';
+    kartuPanel.style.display='block'; anggaranPanel.style.display='none';
+    renderWallets();
+  } else {
+    anggaranBtn.style.background='var(--surface)'; anggaranBtn.style.color='var(--navy)'; anggaranBtn.style.boxShadow='var(--sh2)';
+    kartuBtn.style.background='transparent'; kartuBtn.style.color='var(--t3)'; kartuBtn.style.boxShadow='none';
+    kartuPanel.style.display='none'; anggaranPanel.style.display='block';
+    updateAnggaranBulanLabel();
+    renderAnggaranList();
+  }
 }
 
 // ============================================================
@@ -2871,7 +2947,7 @@ const TR={
 'tg-err-name':'Bill name is required','tg-err-date':'Due date is required',
 'tg-remind-custom':'Remind how many days before? (e.g. 7)',
 'tg-remind-days-label':'days','tg-added-notif':'Bill Added',
-'cat-rent-sub':'BILLS & HOUSING','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE',
+'cat-rent-sub':'BILLS & HOUSING','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE','cat-saving':'Saving','cat-saving-sub':'SAVE & GROW',
     'tx-income':'Income','tx-expense':'Expense','tx-transfer':'Transfer',
     'tx-topup':'Top Up','tx-recorded':'recorded','tx-from':'from','tx-to':'to',
     'tx-insufficient':'Insufficient balance! Available',
@@ -2916,7 +2992,7 @@ const TR={
 'tg-err-name':'Nama tagihan wajib diisi','tg-err-date':'Tanggal jatuh tempo wajib diisi',
 'tg-remind-custom':'Ingatkan berapa hari sebelumnya? (contoh: 7)',
 'tg-remind-days-label':'hari','tg-added-notif':'Tagihan Ditambahkan',
-'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS',
+'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS','cat-saving':'Saving','cat-saving-sub':'TABUNG & TUMBUH',
     'tx-income':'Pemasukan','tx-expense':'Pengeluaran','tx-transfer':'Transfer',
     'tx-topup':'Isi Saldo','tx-recorded':'tercatat','tx-from':'dari','tx-to':'ke',
     'tx-insufficient':'Saldo tidak cukup! Tersedia',
@@ -3078,6 +3154,7 @@ const cats=[
   {id:'investasi',stroke:'#F59E0B',bg:'#FEF3EB',svg:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>'},
   {id:'tarik',stroke:'#6B7280',bg:'#F4F6FC',svg:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/>'},
   {id:'gaji',stroke:'#0B7A63',bg:'#EBFEF3',svg:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>'},
+  {id:'saving',stroke:'#0FA884',bg:'#E8FBF5',svg:'<path d="M19 5H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2z"/><path d="M16 14a2 2 0 100-4 2 2 0 000 4z"/><path d="M6 10h4"/><path d="M6 13h2"/>'},
 ];
 
 // Money source definitions — ID maps to wallet ID (null = main balance)
@@ -3414,6 +3491,9 @@ function completeTx(){
   closeAddModal(); switchTab('home');
   toast(isIncome ? `✅ +${fmt(rp)} ${T('tx-recorded')}` : isTransfer ? `✅ ${T('tx-transfer')} ${fmt(rp)}` : `✅ -${fmt(rp)} ${T('tx-recorded')}`);
   fbAutoSave();
+  // Refresh anggaran panel if visible
+  const angPanel = document.getElementById('sv-anggaran-panel');
+  if(angPanel && angPanel.style.display !== 'none'){ renderAnggaranList(); }
 }
 
 // ── Render transaksi terbaru di home (maks 5) ──
@@ -4010,6 +4090,9 @@ function refreshAllUI(){
   initChart();
   updateNotifBadge();
   recalcTotalBalance();
+  // Refresh anggaran panel if it's currently visible
+  const angPanel = document.getElementById('sv-anggaran-panel');
+  if(angPanel && angPanel.style.display !== 'none'){ renderAnggaranList(); }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4965,6 +5048,281 @@ window.addNotif = function(type, title, msg){
     } catch(e){}
   }
 };
+
+// ============================================================
+// ANGGARAN — Budget per kategori per bulan
+// ============================================================
+// Uses the same `cats` array as the transaction form for full consistency
+
+// budgets: array of { id, catId, nominal, periode (YYYY-MM), catatan }
+let budgets = [];
+let budgetIdCtr = 1;
+
+// Current month navigation for Anggaran
+let anggaranYear  = new Date().getFullYear();
+let anggaranMonth = new Date().getMonth(); // 0-based
+
+const MONTH_NAMES_ID_ANG = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function updateAnggaranBulanLabel(){
+  const el = document.getElementById('anggaran-bulan-label');
+  if(el) el.textContent = `${MONTH_NAMES_ID_ANG[anggaranMonth]} ${anggaranYear}`;
+  const sumLbl = document.getElementById('anggaran-summary-lbl');
+  if(sumLbl) sumLbl.textContent = `Total Anggaran (${MONTH_NAMES_ID_ANG[anggaranMonth]})`;
+}
+
+function anggaranPrevMonth(){
+  anggaranMonth--;
+  if(anggaranMonth < 0){ anggaranMonth = 11; anggaranYear--; }
+  updateAnggaranBulanLabel();
+  renderAnggaranList();
+}
+function anggaranNextMonth(){
+  anggaranMonth++;
+  if(anggaranMonth > 11){ anggaranMonth = 0; anggaranYear++; }
+  updateAnggaranBulanLabel();
+  renderAnggaranList();
+}
+
+function _anggaranPeriodeKey(){ return `${anggaranYear}-${String(anggaranMonth+1).padStart(2,'0')}`; }
+
+// Get budgets for current Anggaran month
+function getBudgetsForMonth(){
+  const key = _anggaranPeriodeKey();
+  return budgets.filter(b => b.periode === key);
+}
+
+// Match a historyItem expense to a cat ID from the shared `cats` array
+// Primary: direct cat ID match
+// Fallback: compare first 60 chars of catIco SVG inner content
+function matchAnggaranCatId(histItem){
+  if(!histItem || histItem.pos) return null;
+  const catId = histItem.cat || '';
+  if(catId && cats.find(c => c.id === catId)) return catId;
+  // Fallback: icon fingerprint
+  const ico = (histItem.catIco || '').replace(/<svg[^>]*>|<\/svg>/g,'').trim();
+  if(ico){
+    for(const c of cats){
+      if(c.svg.substring(0,60) === ico.substring(0,60)) return c.id;
+    }
+  }
+  return null;
+}
+
+// Calculate total spent per cat ID for the selected month
+function calcAnggaranSpent(){
+  const key = _anggaranPeriodeKey();
+  const spent = {};
+  historyItems.forEach(h => {
+    if(h.pos) return;
+    const d = new Date(h.ts || 0);
+    const hKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if(hKey !== key) return;
+    const cid = matchAnggaranCatId(h);
+    if(cid) spent[cid] = (spent[cid]||0) + Math.abs(h.amt||0);
+  });
+  return spent;
+}
+
+function renderAnggaranList(){
+  updateAnggaranBulanLabel();
+  const monthBudgets = getBudgetsForMonth();
+  const spent = calcAnggaranSpent();
+  const list = document.getElementById('anggaran-list');
+  if(!list) return;
+
+  // Summary card totals
+  const totalNominal = monthBudgets.reduce((s,b) => s + b.nominal, 0);
+  const totalSpent   = monthBudgets.reduce((s,b) => s + (spent[b.catId]||0), 0);
+  const totalSisa    = totalNominal - totalSpent;
+  const pct          = totalNominal > 0 ? Math.min(100, Math.round((totalSpent/totalNominal)*100)) : 0;
+  const barColor     = pct >= 80 ? 'linear-gradient(90deg,var(--orange),var(--red))' : pct >= 60 ? 'linear-gradient(90deg,var(--orange),#fbbf24)' : 'linear-gradient(90deg,var(--blue),var(--blue2))';
+
+  const totalEl = document.getElementById('anggaran-total-amt');
+  const terEl   = document.getElementById('anggaran-terpakai-amt');
+  const sisaEl  = document.getElementById('anggaran-sisa-amt');
+  const barEl   = document.getElementById('anggaran-progress-bar');
+  const pctEl   = document.getElementById('anggaran-pct-label');
+  if(totalEl) totalEl.textContent = fmt(totalNominal);
+  if(terEl)   terEl.textContent   = fmt(totalSpent);
+  if(sisaEl)  { sisaEl.textContent = fmt(Math.max(0,totalSisa)); sisaEl.style.color = totalSisa < 0 ? 'var(--red)' : 'var(--teal2)'; }
+  if(barEl)   { barEl.style.width = pct+'%'; barEl.style.background = barColor; }
+  if(pctEl)   pctEl.textContent   = pct+'% Terpakai';
+
+  if(!monthBudgets.length){
+    list.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--t3);font-size:13px;">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      Belum ada anggaran untuk ${MONTH_NAMES_ID_ANG[anggaranMonth]}.<br>Ketuk <strong>Tambah</strong> untuk membuat anggaran.
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = monthBudgets.map(b => {
+    const c = cats.find(x => x.id === b.catId);
+    if(!c) return '';
+    const catName = T('cat-'+c.id) || c.id;
+    const spentAmt = spent[b.catId] || 0;
+    const sisa = b.nominal - spentAmt;
+    const bpct = b.nominal > 0 ? Math.min(100, Math.round((spentAmt/b.nominal)*100)) : 0;
+    const bBarColor = bpct >= 80 ? 'linear-gradient(90deg,var(--orange),var(--red))' : bpct >= 60 ? 'linear-gradient(90deg,var(--orange),#fbbf24)' : 'var(--green)';
+    const statusTxt = bpct >= 80 ? 'Waspada' : 'Aman';
+    const statusClr = bpct >= 80 ? 'var(--orange)' : 'var(--green)';
+    return `<div style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);cursor:pointer;" onclick="editAnggaran(${b.id})">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>
+        </div>
+        <div>
+          <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">${catName}</div>
+          <div style="font-size:11px;color:var(--t3);">Anggaran: ${fmt(b.nominal)}</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--t3);">Terpakai</span>
+        <span style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);">${fmt(spentAmt)}</span>
+      </div>
+      <div style="background:#E8EEF8;border-radius:4px;height:6px;overflow:hidden;margin-bottom:7px;">
+        <div style="height:100%;border-radius:4px;background:${bBarColor};width:${bpct}%;transition:width .5s ease;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--t3);">Sisa: <strong>${fmt(Math.max(0,sisa))}</strong></span>
+        <span style="font-size:11px;font-weight:700;color:${statusClr};">${statusTxt}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Open tambah anggaran modal
+let selAnggaranCat = '';
+function openTambahAnggaran(){
+  document.getElementById('anggaran-modal-title').textContent = 'Tambah Anggaran';
+  document.getElementById('anggaran-nominal-input').value = '';
+  document.getElementById('anggaran-catatan').value = '';
+  document.getElementById('anggaran-edit-id').value = '';
+  document.getElementById('anggaran-delete-btn').style.display = 'none';
+  selAnggaranCat = '';
+  const pd = document.getElementById('anggaran-periode');
+  if(pd) pd.value = `${anggaranYear}-${String(anggaranMonth+1).padStart(2,'0')}`;
+  buildAnggaranCatGrid();
+  document.getElementById('anggaranModal').classList.add('on');
+}
+
+function closeAnggaranModal(){
+  document.getElementById('anggaranModal').classList.remove('on');
+  selAnggaranCat = '';
+}
+
+// Build cat grid using EXACTLY the same cats array + cat-c CSS as the transaction form
+function buildAnggaranCatGrid(){
+  const g = document.getElementById('anggaran-cat-grid');
+  if(!g) return;
+  g.innerHTML = '';
+  cats.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cat-c' + (selAnggaranCat === c.id ? ' sel' : '');
+    d.onclick = () => selectAnggaranCat(d, c);
+    d.innerHTML = `<div class="cico-w"><div class="cico" style="background:${c.bg};"><svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg></div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${T('cat-'+c.id)}</div><div class="csub">${T('cat-'+c.id+'-sub')}</div>`;
+    g.appendChild(d);
+  });
+}
+
+function selectAnggaranCat(el, c){
+  document.querySelectorAll('#anggaran-cat-grid .cat-c').forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  selAnggaranCat = c.id;
+}
+
+function formatAnggaranInput(el){
+  let raw = el.value.replace(/[^0-9]/g,'');
+  const num = parseInt(raw)||0;
+  if(raw===''){el.value='';return;}
+  el.value = num.toLocaleString('id-ID');
+}
+
+function getAnggaranNominal(){
+  const v = (document.getElementById('anggaran-nominal-input').value||'').replace(/[^0-9]/g,'');
+  return parseInt(v)||0;
+}
+
+function simpanAnggaran(){
+  if(!selAnggaranCat){ toast('⚠️ Pilih kategori anggaran dahulu'); return; }
+  const nominal = getAnggaranNominal();
+  if(!nominal){ toast('⚠️ Masukkan nominal anggaran'); return; }
+  const periodeRaw = (document.getElementById('anggaran-periode').value||'').trim() || _anggaranPeriodeKey();
+  const catatan = document.getElementById('anggaran-catatan').value.trim();
+  const editId  = parseInt(document.getElementById('anggaran-edit-id').value)||0;
+
+  if(editId){
+    const b = budgets.find(x => x.id === editId);
+    if(b){ b.catId=selAnggaranCat; b.nominal=nominal; b.periode=periodeRaw; b.catatan=catatan; }
+    toast('✅ Anggaran diperbarui');
+  } else {
+    const existing = budgets.find(b => b.catId===selAnggaranCat && b.periode===periodeRaw);
+    if(existing){ toast('⚠️ Anggaran untuk kategori ini sudah ada di bulan ini'); return; }
+    budgets.push({ id:budgetIdCtr++, catId:selAnggaranCat, nominal, periode:periodeRaw, catatan });
+    toast('✅ Anggaran ditambahkan');
+  }
+  closeAnggaranModal();
+  renderAnggaranList();
+  fbAutoSave();
+}
+
+function editAnggaran(id){
+  const b = budgets.find(x => x.id === id);
+  if(!b) return;
+  selAnggaranCat = b.catId;
+  document.getElementById('anggaran-modal-title').textContent = 'Edit Anggaran';
+  document.getElementById('anggaran-nominal-input').value = b.nominal.toLocaleString('id-ID');
+  document.getElementById('anggaran-catatan').value = b.catatan||'';
+  document.getElementById('anggaran-edit-id').value = b.id;
+  document.getElementById('anggaran-delete-btn').style.display = 'block';
+  const pd = document.getElementById('anggaran-periode');
+  if(pd) pd.value = b.periode;
+  buildAnggaranCatGrid();
+  document.getElementById('anggaranModal').classList.add('on');
+}
+
+function hapusAnggaran(){
+  const id = parseInt(document.getElementById('anggaran-edit-id').value)||0;
+  if(!id) return;
+  budgets = budgets.filter(b => b.id !== id);
+  closeAnggaranModal();
+  renderAnggaranList();
+  toast('🗑️ Anggaran dihapus');
+  fbAutoSave();
+}
+
+// Hook into fbSaveState / fbLoadState — budgets included via updated fbSaveState and _applyStateFromDB below
+
+// fbSaveState and _applyStateFromDB already updated above to include budgets
+function _applyStateFromDB(data){
+  if(data.balance     !== undefined) balance       = data.balance;
+  if(Array.isArray(data.wallets)){
+    wallets = data.wallets;
+    if(wallets.length>0) window.walletIdCtr = Math.max(...wallets.map(w=>w.id||0))+1;
+  }
+  if(Array.isArray(data.goals))        goals         = data.goals;
+  if(Array.isArray(data.historyItems)) historyItems  = data.historyItems;
+  if(Array.isArray(data.tagihan)){
+    tagihan = data.tagihan;
+    if(tagihan.length>0) window.tagihanIdCtr = Math.max(...data.tagihan.map(t=>t.id||0))+1;
+  }
+  if(data.tagihanBudget !== undefined) tagihanBudget = data.tagihanBudget;
+  if(Array.isArray(data.budgets)){
+    budgets = data.budgets;
+    if(budgets.length>0) budgetIdCtr = Math.max(...budgets.map(b=>b.id||0))+1;
+  }
+  if(data.savedPin    !== undefined) savedPin      = data.savedPin || '';
+  if(data.lang)   { lang = data.lang; }
+  if(data.darkMode !== undefined){
+    if(data.darkMode) document.body.classList.add('dk');
+    else              document.body.classList.remove('dk');
+  }
+  refreshAllUI();
+}
+
+// Hook into completeTx to auto-refresh anggaran panel if visible - handled in completeTx directly
+// Also hook refreshAllUI - handled inline above
 </script>
 <!-- ══════════════════════════════════════════
      TAMBAH / EDIT TAGIHAN OVERLAY
@@ -5142,6 +5500,52 @@ window.addNotif = function(type, title, msg){
     Download Sekarang
   </button>
   <button onclick="closeDlConfirm()" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--t3);border:1.5px solid var(--border);font-family:var(--f);font-size:14px;font-weight:600;cursor:pointer;">Batal</button>
+</div>
+
+<!-- TAMBAH / EDIT ANGGARAN MODAL -->
+<div class="moverlay" id="anggaranModal">
+  <div class="msheet" style="padding:16px 20px calc(var(--safe-bot) + 28px);">
+    <div class="mhandle"></div>
+    <div class="mhdr">
+      <div class="mttl" id="anggaran-modal-title">Tambah Anggaran</div>
+      <button class="mcls" onclick="closeAnggaranModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <!-- Nominal -->
+    <div style="background:var(--surface2);border-radius:16px;padding:16px 18px;margin-bottom:20px;border:2px solid var(--blue2);">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1px;margin-bottom:8px;text-align:center;">Nominal Anggaran</div>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:center;">
+        <span style="font-family:var(--f);font-size:20px;font-weight:700;color:var(--blue2);">Rp</span>
+        <input type="text" id="anggaran-nominal-input" inputmode="numeric" placeholder="0"
+          style="font-family:var(--f);font-size:32px;font-weight:800;color:var(--navy);border:none;outline:none;background:transparent;width:180px;letter-spacing:-1px;text-align:center;"
+          oninput="formatAnggaranInput(this)">
+      </div>
+    </div>
+
+    <!-- Pilih Kategori -->
+    <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);margin-bottom:12px;">Pilih Kategori</div>
+    <div id="anggaran-cat-grid" class="cat-grid" style="margin-bottom:20px;"></div>
+
+    <!-- Periode Bulan -->
+    <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;">Periode Bulan</div>
+    <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="month" id="anggaran-periode" style="flex:1;border:none;outline:none;background:transparent;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);">
+    </div>
+
+    <!-- Catatan opsional -->
+    <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;">Catatan (Opsional)</div>
+    <textarea id="anggaran-catatan" rows="2" placeholder="Tambahkan rincian anggaran..."
+      style="width:100%;background:var(--surface2);border:1.5px solid transparent;border-radius:12px;padding:12px 14px;font-family:var(--f2);font-size:13px;color:var(--navy);outline:none;resize:none;margin-bottom:20px;"
+      onfocus="this.style.borderColor='var(--blue2)'" onblur="this.style.borderColor='transparent'"></textarea>
+
+    <input type="hidden" id="anggaran-edit-id" value="">
+    <button onclick="simpanAnggaran()" style="width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,196,.3);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/></svg>
+      Simpan Anggaran
+    </button>
+    <button id="anggaran-delete-btn" onclick="hapusAnggaran()" style="display:none;width:100%;padding:13px;border-radius:14px;background:rgba(239,68,68,.08);color:var(--red);border:1.5px solid rgba(239,68,68,.15);font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;">Hapus Anggaran</button>
+  </div>
 </div>
 
 </body>

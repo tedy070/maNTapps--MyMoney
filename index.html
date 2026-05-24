@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.png">
-<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.png">
-<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.png">
+<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
+<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
+<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.PNG">
 <meta name="apple-mobile-web-app-title" content="MyMoney">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -156,9 +156,9 @@ function _applyStateFromDB(data){
   }
   if(Array.isArray(data.goals))        goals         = data.goals;
   if(Array.isArray(data.historyItems)){
-    // ── Simpan snapshot lama untuk perbandingan (deteksi item yang berubah) ──
-    // Harus dilakukan SEBELUM historyItems dioverwrite agar bisa dibandingkan
-    const _oldSnapshot = historyItems ? historyItems.map(h => ({ ts: h.ts })) : null;
+    // ── Simpan snapshot lama (full copy) sebelum historyItems ditimpa ──
+    // Diperlukan untuk mendeteksi field apapun yang berubah (bukan hanya ts)
+    const _oldSnapshot = historyItems ? historyItems.map(h => Object.assign({}, h)) : null;
     historyItems = data.historyItems;
     // ── Sync filter ke bulan item yang berubah ──
     _syncFiltersAfterRTDBUpdate(_oldSnapshot);
@@ -192,23 +192,28 @@ function _applyStateFromDB(data){
 //   4. Dengan begitu Riwayat & Anggaran langsung loncat ke bulan yang relevan
 function _syncFiltersAfterRTDBUpdate(oldSnapshot){
   if(!historyItems || historyItems.length === 0) return;
-
   // Jika tidak ada snapshot lama (login pertama), tidak perlu sync
   if(!oldSnapshot || oldSnapshot.length === 0) return;
 
-  // Bandingkan setiap item: cari item yang ts-nya berubah
+  // Bandingkan tiap item secara menyeluruh (bukan hanya ts).
+  // User bisa mengubah field apapun di RTDB (time, ts, cat, dll).
+  // Deteksi: jika JSON item berbeda, item itu yang berubah.
+  // Ambil ts dari item yang berubah untuk menentukan bulan tujuan filter.
   let changedTs = null;
-  for(let i = 0; i < historyItems.length; i++){
-    const newTs = historyItems[i].ts || 0;
-    const oldTs = oldSnapshot[i] ? (oldSnapshot[i].ts || 0) : -1;
-    if(newTs !== oldTs && newTs > 0){
-      // Item ke-i berubah ts-nya — arahkan filter ke bulan ts BARU
-      changedTs = newTs;
+  const len = Math.max(historyItems.length, oldSnapshot.length);
+  for(let i = 0; i < len; i++){
+    const newItem = historyItems[i];
+    const oldItem = oldSnapshot[i];
+    // Item baru ditambahkan atau dihapus
+    if(!newItem || !oldItem){ changedTs = newItem ? (newItem.ts||0) : null; break; }
+    // Bandingkan JSON seluruh item (cara paling andal mendeteksi perubahan apapun)
+    if(JSON.stringify(newItem) !== JSON.stringify(oldItem)){
+      changedTs = newItem.ts || 0;
       break;
     }
   }
 
-  if(changedTs !== null){
+  if(changedTs !== null && changedTs > 0){
     const d = new Date(changedTs);
     histFilterYear  = d.getFullYear();
     histFilterMonth = d.getMonth();
@@ -2197,6 +2202,23 @@ let histFilterMonth = new Date().getMonth(); // 0-based
 
 function monthName(m){ return lang==='id' ? MONTH_NAMES_ID[m] : MONTH_NAMES_EN[m]; }
 
+// ── Format label waktu dari ts (timestamp) — lebih akurat dari h.time yang bisa stale ──
+// Jika ts tersedia, generate ulang string tanggal dari ts.
+// Ini memastikan item yang diubah bulannya dari RTDB menampilkan tanggal yang benar.
+function fmtItemTime(h){
+  if(h.ts && h.ts > 0){
+    const d = new Date(h.ts);
+    const now = new Date();
+    const isToday = d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+    const isYesterday = (()=>{ const y=new Date(now); y.setDate(y.getDate()-1); return d.getFullYear()===y.getFullYear()&&d.getMonth()===y.getMonth()&&d.getDate()===y.getDate(); })();
+    const timeStr = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    if(isToday)     return `${lang==='id'?'Hari ini':'Today'}, ${timeStr}`;
+    if(isYesterday) return `${lang==='id'?'Kemarin':'Yesterday'}, ${timeStr}`;
+    return d.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'}) + ', ' + timeStr;
+  }
+  return h.time || '';
+}
+
 function updateHistNavbarLabel(){
   const el = document.getElementById('hist-bulan-label');
   if(el) el.textContent = `${monthName(histFilterMonth)} ${histFilterYear}`;
@@ -2302,7 +2324,7 @@ function renderHistory(){
       <div class="h-ico">${icon}</div>
       <div style="flex:1;">
         <div class="h-nm">${nm}${catBadge}</div>
-        <div class="h-t">${h.time}${srcInfo}</div>
+        <div class="h-t">${fmtItemTime(h)}${srcInfo}</div>
       </div>
       <div class="h-a ${h.pos?'pos':'neg'}">${h.pos?'+':'-'}${fmt(Math.abs(h.amt))}</div>
     </div>`;
@@ -3600,7 +3622,7 @@ function renderRecentTxList(){
       : '<svg viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>');
     const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
     item.innerHTML = `<div class="tx-ico" style="background:${catColor};">${catIco}</div>
-      <div style="flex:1"><div class="tx-name">${nm}</div><div class="tx-meta">${h.time||''}</div></div>
+      <div style="flex:1"><div class="tx-name">${nm}</div><div class="tx-meta">${fmtItemTime(h)}</div></div>
       <div class="tx-amt ${amtClass}">${amtSign}${fmt(Math.abs(h.amt||0))}</div>`;
     list.appendChild(item);
   });

@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
-<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
-<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.PNG">
+<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.png">
+<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.png">
+<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.png">
 <meta name="apple-mobile-web-app-title" content="MyMoney">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -157,10 +157,15 @@ function _applyStateFromDB(data){
   if(Array.isArray(data.goals))        goals         = data.goals;
   if(Array.isArray(data.historyItems)){
     // ── Simpan snapshot lama (full copy) sebelum historyItems ditimpa ──
-    // Diperlukan untuk mendeteksi field apapun yang berubah (bukan hanya ts)
     const _oldSnapshot = historyItems ? historyItems.map(h => Object.assign({}, h)) : null;
     historyItems = data.historyItems;
-    // ── Sync filter ke bulan item yang berubah ──
+    // ── KUNCI FIX: rekonsiliasi h.ts dari h.time ──────────────────────────────
+    // User lebih mudah mengubah h.time (string seperti "25 Mei 2026, 10:30") di RTDB
+    // daripada mengubah h.ts (integer Unix ms). Setelah rekonsiliasi, h.ts akan
+    // mencerminkan tanggal di h.time sehingga semua filter (renderHistory,
+    // calcAnggaranSpent) yang bergantung pada h.ts langsung akurat.
+    _reconcileTsFromTime();
+    // ── Sync filter Riwayat & Anggaran ke bulan item yang berubah ──
     _syncFiltersAfterRTDBUpdate(_oldSnapshot);
   }
   // notifications TIDAK disync dari RTDB — hanya lokal per-device
@@ -220,6 +225,111 @@ function _syncFiltersAfterRTDBUpdate(oldSnapshot){
     anggaranYear    = d.getFullYear();
     anggaranMonth   = d.getMonth();
   }
+}
+
+// ── Parse h.time string → timestamp ms ──────────────────────────────────────
+// Saat user mengubah h.time di RTDB (lebih mudah dari mengubah ts integer),
+// kita perlu parse string itu menjadi timestamp agar semua filter (renderHistory,
+// calcAnggaranSpent) yang bergantung pada h.ts tetap akurat.
+//
+// Format yang didukung (sesuai yang dihasilkan aplikasi):
+//   "Hari ini, 10:30"   / "Today, 10:30"
+//   "Kemarin, 10:30"    / "Yesterday, 10:30"
+//   "25 Jun 2026, 10:30"              (format id-ID: dd Mon yyyy)
+//   "Jun 25 2026, 10:30" / "25 Jun, 2026 10:30" (berbagai variasi)
+//   "2026-06-25"         (format ISO)
+//   "25/06/2026"         (format numerik)
+function _parseTimeStringToTs(timeStr, existingTs){
+  if(!timeStr || typeof timeStr !== 'string') return existingTs || 0;
+  const s = timeStr.trim();
+  const now = new Date();
+
+  // ── "Hari ini" / "Today" ──
+  if(/^(hari\s*ini|today)/i.test(s)){
+    const timePart = s.replace(/^(hari\s*ini|today)[,\s]*/i,'');
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [hh,mm] = (timePart.match(/(\d{1,2}):(\d{2})/)||[0,now.getHours(),now.getMinutes()]).slice(1);
+    base.setHours(parseInt(hh)||now.getHours(), parseInt(mm)||0, 0, 0);
+    return base.getTime();
+  }
+
+  // ── "Kemarin" / "Yesterday" ──
+  if(/^(kemarin|yesterday)/i.test(s)){
+    const timePart = s.replace(/^(kemarin|yesterday)[,\s]*/i,'');
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate()-1);
+    const [hh,mm] = (timePart.match(/(\d{1,2}):(\d{2})/)||[0,now.getHours(),now.getMinutes()]).slice(1);
+    base.setHours(parseInt(hh)||0, parseInt(mm)||0, 0, 0);
+    return base.getTime();
+  }
+
+  // ── Map nama bulan → index 0-based ──
+  const MONTH_MAP = {
+    jan:0,feb:1,mar:2,apr:3,mei:4,may:4,jun:5,jul:6,
+    agu:7,aug:7,sep:8,okt:9,oct:9,nov:10,des:11,dec:11
+  };
+
+  // ── Format: "25 Jun 2026, 10:30" atau "25 Jun 2026" ──
+  const m1 = s.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/);
+  if(m1){
+    const day=parseInt(m1[1]), monKey=m1[2].substring(0,3).toLowerCase(), yr=parseInt(m1[3]);
+    const mon = MONTH_MAP[monKey];
+    if(mon !== undefined){
+      const d = new Date(yr, mon, day, parseInt(m1[4]||0), parseInt(m1[5]||0), 0, 0);
+      return d.getTime();
+    }
+  }
+
+  // ── Format: "Jun 25, 2026, 10:30" atau "Jun 25 2026" (en-US style) ──
+  const m2 = s.match(/^([A-Za-z]{3,})\s+(\d{1,2})[,\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/);
+  if(m2){
+    const monKey=m2[1].substring(0,3).toLowerCase(), day=parseInt(m2[2]), yr=parseInt(m2[3]);
+    const mon = MONTH_MAP[monKey];
+    if(mon !== undefined){
+      const d = new Date(yr, mon, day, parseInt(m2[4]||0), parseInt(m2[5]||0), 0, 0);
+      return d.getTime();
+    }
+  }
+
+  // ── Format ISO: "2026-06-25" atau "2026-06-25T10:30:00" ──
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+    const d = new Date(s);
+    if(!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // ── Format numerik: "25/06/2026" atau "25-06-2026" ──
+  const m3 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/);
+  if(m3){
+    const d = new Date(parseInt(m3[3]), parseInt(m3[2])-1, parseInt(m3[1]),
+                       parseInt(m3[4]||0), parseInt(m3[5]||0), 0, 0);
+    if(!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // Fallback: gunakan ts yang ada
+  return existingTs || 0;
+}
+
+// ── Rekonsiliasi h.ts dari h.time untuk semua historyItems ──
+// Dipanggil setelah historyItems diupdate dari RTDB.
+// Jika h.time berubah (user edit di RTDB), update h.ts agar filter bulan tetap akurat.
+function _reconcileTsFromTime(){
+  if(!historyItems) return;
+  historyItems.forEach(h => {
+    if(!h.time) return;
+    const parsedTs = _parseTimeStringToTs(h.time, h.ts);
+    // Hanya update jika hasil parse valid DAN berbeda dari ts yang ada
+    // Toleransi 60 detik: jika selisih < 60 detik anggap sama (jam masih akurat)
+    if(parsedTs > 0){
+      const diff = Math.abs(parsedTs - (h.ts||0));
+      // Jika beda bulan atau beda hari → update ts (user mengubah tanggal)
+      const oldD = new Date(h.ts||0);
+      const newD = new Date(parsedTs);
+      const monthChanged = oldD.getFullYear()!==newD.getFullYear() || oldD.getMonth()!==newD.getMonth();
+      const dayChanged   = oldD.getDate() !== newD.getDate();
+      if(monthChanged || dayChanged){
+        h.ts = parsedTs;
+      }
+    }
+  });
 }
 
 // Debounced auto-save (hindari terlalu banyak write)

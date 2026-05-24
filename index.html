@@ -30,9 +30,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
-<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
-<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.PNG">
+<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.png">
+<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.png">
+<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.png">
 <meta name="apple-mobile-web-app-title" content="MyMoney">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -152,16 +152,25 @@ async function fbSaveState(){
 }
 
 // — REALTIME DB: baca seluruh state
+// Sentinel: bedakan "user baru (null di DB)" vs "timeout/error (tidak bisa load)"
+const LOAD_FAILED = Symbol('LOAD_FAILED');
+
 async function fbLoadState(){
   const uid = fbUID(); if(!uid) return null;
   try {
     const snap = await withTimeout(
       fbDB.ref(`users/${uid}/state`).once('value'),
-      8000  // timeout 8 detik
+      10000  // timeout 10 detik
     );
-    if(!snap) return null; // timeout
-    return snap.val();
-  } catch(e){ console.warn('RTDB load error:', e); return null; }
+    if(!snap) {
+      console.warn('RTDB load timeout — melanjutkan dengan state lokal');
+      return LOAD_FAILED; // timeout: jangan reset data
+    }
+    return snap.val(); // null = user baru, object = data ada
+  } catch(e){
+    console.warn('RTDB load error:', e);
+    return LOAD_FAILED; // error: jangan reset data
+  }
 }
 
 // — FIRESTORE: simpan profil user
@@ -4341,23 +4350,69 @@ async function doRegister(){
 // ════════════════════════════════════════════════════════════
 async function enterApp(initialState){
   // ① Terapkan state dari DB kalau ada
-  if(initialState){
-    if(initialState.balance     !== undefined) balance       = initialState.balance;
-    if(Array.isArray(initialState.wallets))      wallets       = initialState.wallets;
-    if(Array.isArray(initialState.goals))        goals         = initialState.goals;
-    if(Array.isArray(initialState.historyItems)) historyItems  = initialState.historyItems;
-    // notifications TIDAK dimuat dari RTDB — hanya lokal per-device
+  // LOAD_FAILED = timeout/error — jangan reset data yang sudah ada di memori
+  if(initialState === LOAD_FAILED){
+    console.warn('enterApp: load gagal, lanjut dengan state lokal saat ini');
+    // Lanjut ke render UI dengan data yang ada, jangan reset apapun
+  } else if(initialState){
+    if(initialState.balance !== undefined) balance = initialState.balance;
+
+    // wallets — sync idCtr agar ID tidak dobel saat tambah kartu baru
+    if(Array.isArray(initialState.wallets)){
+      wallets = initialState.wallets;
+      if(wallets.length > 0) walletIdCtr = Math.max(...wallets.map(w => w.id||0)) + 1;
+    }
+
+    // goals
+    if(Array.isArray(initialState.goals)){
+      goals = initialState.goals;
+      if(goals.length > 0) goalIdCtr = Math.max(...goals.map(g => g.id||0)) + 1;
+    }
+
+    // historyItems — rekonsiliasi ts dari time string
+    if(Array.isArray(initialState.historyItems)){
+      historyItems = initialState.historyItems;
+      // Sync ts dari h.time jika tidak ada atau tidak sinkron
+      let needResave = false;
+      historyItems.forEach(h => {
+        if(h.time){
+          const parsed = _parseTimeString(h.time);
+          if(parsed && !isNaN(parsed.getTime())){
+            const tsFromTime = parsed.getTime();
+            if(!h.ts || Math.abs(h.ts - tsFromTime) > 60000){
+              h.ts = tsFromTime;
+              needResave = true;
+            }
+          }
+        }
+      });
+      if(needResave) fbAutoSave();
+    }
+
+    // tagihan — sync idCtr
     if(Array.isArray(initialState.tagihan)){
       tagihan = initialState.tagihan;
-      if(tagihan.length>0) tagihanIdCtr = Math.max(...tagihan.map(t=>t.id||0))+1;
+      if(tagihan.length > 0) tagihanIdCtr = Math.max(...tagihan.map(t => t.id||0)) + 1;
     }
+
+    // budgets / Anggaran — sync idCtr (sebelumnya hilang!)
+    if(Array.isArray(initialState.budgets)){
+      budgets = initialState.budgets;
+      if(budgets.length > 0) budgetIdCtr = Math.max(...budgets.map(b => b.id||0)) + 1;
+    }
+
     if(initialState.tagihanBudget !== undefined) tagihanBudget = initialState.tagihanBudget;
     if(initialState.savedPin)   savedPin = initialState.savedPin;
-    if(initialState.lang)       lang     = initialState.lang;
-    if(initialState.darkMode)   document.body.classList.add('dk');
+    if(initialState.lang)       { lang = initialState.lang; applyLang(); }
+    if(initialState.darkMode !== undefined){
+      if(initialState.darkMode) document.body.classList.add('dk');
+      else document.body.classList.remove('dk');
+    }
   } else {
-    // State baru (user baru)
-    historyItems=[]; goals=[]; wallets=[]; notifications=[]; balance=0;
+    // null = user baru — reset semua ke kondisi bersih
+    balance=0; wallets=[]; goals=[]; historyItems=[];
+    tagihan=[]; budgets=[]; notifications=[];
+    walletIdCtr=1; goalIdCtr=1; tagihanIdCtr=1; budgetIdCtr=1;
   }
 
   // ② Update UI profil
@@ -4435,7 +4490,9 @@ async function doLogout(){
   user=null;
   _clearNotifLocal(); // hapus notifikasi dari localStorage user ini
   notifications=[]; historyItems=[]; goals=[]; wallets=[];
+  tagihan=[]; budgets=[];
   balance=0; savedPin=''; lockPinBuf='';
+  walletIdCtr=1; goalIdCtr=1; tagihanIdCtr=1; budgetIdCtr=1;
 
   updateNotifBadge();
   hidePinLock();

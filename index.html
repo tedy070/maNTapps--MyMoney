@@ -155,7 +155,14 @@ function _applyStateFromDB(data){
     if(wallets.length>0) walletIdCtr = Math.max(...wallets.map(w=>w.id||0))+1;
   }
   if(Array.isArray(data.goals))        goals         = data.goals;
-  if(Array.isArray(data.historyItems)) historyItems  = data.historyItems;
+  if(Array.isArray(data.historyItems)){
+    // ── Simpan snapshot lama untuk perbandingan (deteksi item yang berubah) ──
+    // Harus dilakukan SEBELUM historyItems dioverwrite agar bisa dibandingkan
+    const _oldSnapshot = historyItems ? historyItems.map(h => ({ ts: h.ts })) : null;
+    historyItems = data.historyItems;
+    // ── Sync filter ke bulan item yang berubah ──
+    _syncFiltersAfterRTDBUpdate(_oldSnapshot);
+  }
   // notifications TIDAK disync dari RTDB — hanya lokal per-device
   if(Array.isArray(data.tagihan)){
     tagihan = data.tagihan;
@@ -174,6 +181,40 @@ function _applyStateFromDB(data){
     else              document.body.classList.remove('dk');
   }
   refreshAllUI();
+}
+
+// ── Sync filter Riwayat & Anggaran setelah RTDB update ──
+// Dipanggil SEBELUM historyItems diupdate, lalu lagi setelah update.
+// Cara kerja:
+//   1. Simpan snapshot lama (sebelum update)
+//   2. Setelah historyItems diupdate dari RTDB, bandingkan tiap item
+//   3. Jika ada item yang ts-nya berubah, arahkan filter ke bulan ts baru
+//   4. Dengan begitu Riwayat & Anggaran langsung loncat ke bulan yang relevan
+function _syncFiltersAfterRTDBUpdate(oldSnapshot){
+  if(!historyItems || historyItems.length === 0) return;
+
+  // Jika tidak ada snapshot lama (login pertama), tidak perlu sync
+  if(!oldSnapshot || oldSnapshot.length === 0) return;
+
+  // Bandingkan setiap item: cari item yang ts-nya berubah
+  let changedTs = null;
+  for(let i = 0; i < historyItems.length; i++){
+    const newTs = historyItems[i].ts || 0;
+    const oldTs = oldSnapshot[i] ? (oldSnapshot[i].ts || 0) : -1;
+    if(newTs !== oldTs && newTs > 0){
+      // Item ke-i berubah ts-nya — arahkan filter ke bulan ts BARU
+      changedTs = newTs;
+      break;
+    }
+  }
+
+  if(changedTs !== null){
+    const d = new Date(changedTs);
+    histFilterYear  = d.getFullYear();
+    histFilterMonth = d.getMonth();
+    anggaranYear    = d.getFullYear();
+    anggaranMonth   = d.getMonth();
+  }
 }
 
 // Debounced auto-save (hindari terlalu banyak write)
@@ -4123,12 +4164,15 @@ function refreshAllUI(){
   renderGoals();
   updateSavingsTotal();
   renderWallets();
+  // Update label navbar bulan Riwayat (penting saat filter berubah dari RTDB sync)
+  updateHistNavbarLabel();
   renderHistory();
   renderRecentTxList();
   initChart();
   updateNotifBadge();
   recalcTotalBalance();
-  // Selalu refresh anggaran (data sudah berubah dari RTDB)
+  // Selalu refresh anggaran agar data berubah dari RTDB langsung terrefleksi
+  updateAnggaranBulanLabel();
   renderAnggaranList();
 }
 

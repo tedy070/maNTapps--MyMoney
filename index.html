@@ -3,36 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<!-- ══ CONTENT SECURITY POLICY ══════════════════════════════════════
-     Mencegah eksekusi script dari sumber yang tidak dikenal (XSS).
-     ════════════════════════════════════════════════════════════════ -->
-<meta http-equiv="Content-Security-Policy"
-  content="
-    default-src 'self';
-    script-src 'self' 'unsafe-inline'
-      https://www.gstatic.com
-      https://apis.google.com
-      https://accounts.google.com;
-    style-src 'self' 'unsafe-inline'
-      https://fonts.googleapis.com;
-    font-src https://fonts.gstatic.com;
-    connect-src 'self'
-      https://*.firebaseio.com
-      https://*.googleapis.com
-      https://*.firebase.com
-      wss://*.firebaseio.com;
-    img-src 'self' data: https: blob:;
-    frame-src https://accounts.google.com
-      https://*.firebaseapp.com;
-  ">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.png">
-<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.png">
-<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.png">
+<link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
+<link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
+<link rel="icon" type="image/png" sizes="512x512" href="MyMoney_splash.PNG">
 <meta name="apple-mobile-web-app-title" content="MyMoney">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -74,50 +52,6 @@ const fbAuth = firebase.auth();
 const fbDB   = firebase.database();    // Realtime Database
 const fsDB   = firebase.firestore();   // Firestore
 
-// ╔══════════════════════════════════════════════════════════╗
-// ║   SECURITY HELPERS                                       ║
-// ╚══════════════════════════════════════════════════════════╝
-
-// ── XSS SANITIZER ───────────────────────────────────────────
-// Escape string dari input user sebelum dirender ke innerHTML.
-// Mencegah injeksi script berbahaya (XSS).
-function esc(str){
-  if(str === null || str === undefined) return '';
-  const div = document.createElement('div');
-  div.textContent = String(str);
-  return div.innerHTML;
-}
-
-// ── PIN HASHING (SHA-256 + Salt) ────────────────────────────
-// PIN di-hash sebelum disimpan ke Firebase.
-// Salt mencegah serangan rainbow table.
-const PIN_SALT = 'MyMoney_mantapps_2024_s3cur3';
-async function hashPin(pin){
-  const encoder = new TextEncoder();
-  const data = encoder.encode(String(pin) + PIN_SALT);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray  = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
-}
-async function verifyPin(input, storedHash){
-  // Dukung PIN lama (plaintext 4 digit) — migrasi otomatis ke hash saat login
-  if(storedHash && storedHash.length === 4) return input === storedHash;
-  const inputHash = await hashPin(input);
-  return inputHash === storedHash;
-}
-
-// ── Timeout wrapper ──────────────────────────────────────────
-// Mencegah Firebase call hang selamanya (mis. jaringan lambat)
-// Jika melebihi ms milidetik, resolve dengan nilai fallback
-function withTimeout(promise, ms, fallback=null){
-  return Promise.race([
-    promise,
-    new Promise(resolve => setTimeout(()=>resolve(fallback), ms))
-  ]);
-}
-
-
-
 // ═══════════════════════════════════════════════════════
 // FIREBASE HELPER — simpan/baca data per-user
 // Struktur Realtime DB : /users/{uid}/state
@@ -152,25 +86,12 @@ async function fbSaveState(){
 }
 
 // — REALTIME DB: baca seluruh state
-// Sentinel: bedakan "user baru (null di DB)" vs "timeout/error (tidak bisa load)"
-const LOAD_FAILED = Symbol('LOAD_FAILED');
-
 async function fbLoadState(){
   const uid = fbUID(); if(!uid) return null;
   try {
-    const snap = await withTimeout(
-      fbDB.ref(`users/${uid}/state`).once('value'),
-      10000  // timeout 10 detik
-    );
-    if(!snap) {
-      console.warn('RTDB load timeout — melanjutkan dengan state lokal');
-      return LOAD_FAILED; // timeout: jangan reset data
-    }
-    return snap.val(); // null = user baru, object = data ada
-  } catch(e){
-    console.warn('RTDB load error:', e);
-    return LOAD_FAILED; // error: jangan reset data
-  }
+    const snap = await fbDB.ref(`users/${uid}/state`).once('value');
+    return snap.val();
+  } catch(e){ console.warn('RTDB load error:', e); return null; }
 }
 
 // — FIRESTORE: simpan profil user
@@ -191,11 +112,7 @@ async function fsSaveProfile(data){
 async function fsLoadProfile(){
   const uid = fbUID(); if(!uid) return null;
   try {
-    const doc = await withTimeout(
-      fsDB.collection('users').doc(uid).get(),
-      8000  // timeout 8 detik
-    );
-    if(!doc) return null; // timeout
+    const doc = await fsDB.collection('users').doc(uid).get();
     return doc.exists ? doc.data() : null;
   } catch(e){ console.warn('Firestore profile read error:', e); return null; }
 }
@@ -1992,7 +1909,7 @@ function renderGoals(){
     const isTeal=g.color==='#0B7A63';
     const div=document.createElement('div');div.className='goal-card';div.id='goal-'+g.id;
     div.innerHTML=`<div class="goal-h"><div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div><button class="goal-more" onclick="toggleGoalMenu(event,${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg><div class="ctx-menu" id="gctx-${g.id}" style="display:none;"><div class="ctx-item" onclick="openEditGoal(${g.id})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Goal</div><div class="ctx-item" onclick="quickAdd(${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Add Funds</div><div class="ctx-item danger" onclick="openEditGoal(${g.id})"><svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Delete</div></div></button></div>
-    <div class="goal-nm">${esc(g.name)}</div><div class="goal-sub">${esc(g.desc)}</div>
+    <div class="goal-nm">${g.name}</div><div class="goal-sub">${g.desc}</div>
     <div class="goal-ams"><span class="goal-cur">${fmt(g.current)}</span><span class="goal-tgt">of ${fmt(g.target)}</span></div>
     <div class="prog-w"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
     <button class="goal-btn ${isTeal?'tl':''}" onclick="quickAdd(${g.id})"><svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>${isTeal?'Quick Add':'Add Funds'}</button>`;
@@ -2155,7 +2072,7 @@ function renderWallets(){
       const typeLabel = lang==='id'?'Logam Mulia · Realtime':'Precious Metal · Realtime';
       div.innerHTML=`
         <div class="wc-top">
-          <div class="wc-bank">${esc(w.bank)}</div>
+          <div class="wc-bank">${w.bank}</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:18px;line-height:1;">🥇</span>
             <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
@@ -2170,7 +2087,7 @@ function renderWallets(){
     } else {
       div.innerHTML=`
         <div class="wc-top">
-          <div class="wc-bank">${esc(w.bank)}</div>
+          <div class="wc-bank">${w.bank}</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="wc-chip"></div>
             <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
@@ -2186,7 +2103,7 @@ function renderWallets(){
   c.appendChild(ab);renderWalletSummary();
 }
 function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);w.balance+=rp;addNotif('wallet',T('notif-topup'),`${fmt(rp)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,rp,true);toast(`✅ ${fmt(rp)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
-function renderWalletSummary(){const t=wallets.reduce((s,w)=>s+w.balance,0);const e=document.getElementById('walletSummary');if(!e)return;e.innerHTML=`<div style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${wallets.length} cards</div></div>${wallets.map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,${w.color.split(',')[0]},${w.color.split(',')[1]});"></div><span style="font-size:13px;color:var(--t2);">${esc(w.bank)} ••••${esc(w.num)}</span></div><span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${fmt(w.balance)}</span></div>`).join('')}</div>`;}
+function renderWalletSummary(){const t=wallets.reduce((s,w)=>s+w.balance,0);const e=document.getElementById('walletSummary');if(!e)return;e.innerHTML=`<div style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${wallets.length} cards</div></div>${wallets.map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,${w.color.split(',')[0]},${w.color.split(',')[1]});"></div><span style="font-size:13px;color:var(--t2);">${w.bank} ••••${w.num}</span></div><span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${fmt(w.balance)}</span></div>`).join('')}</div>`;}
 function openWalletModal(){document.getElementById('walletBank').value='';document.getElementById('walletNum').value='';document.getElementById('walletBal').value='';walletColorSel='#1A56C4,#2A6FD6';walletTypeSel='Debit';updateWCP();updateWtypeBtns();document.getElementById('walletModal').classList.add('on');}
 function closeWalletModal(){document.getElementById('walletModal').classList.remove('on');}
 function selectWalletColor(el){walletColorSel=el.getAttribute('data-color');updateWCP();}
@@ -2377,13 +2294,13 @@ function renderHistory(){
     const icon = h.pos
       ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
       : '<svg viewBox="0 0 24 24" stroke="var(--red)"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>';
-    const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:#1A56C4;border-radius:6px;padding:2px 6px;margin-left:6px;">${esc(T('cat-'+h.cat)||h.cat)}</span>` : '';
-    const srcInfo  = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${esc(h.src)}</span>` : '';
+    const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:#1A56C4;border-radius:6px;padding:2px 6px;margin-left:6px;">${T('cat-'+h.cat)||h.cat}</span>` : '';
+    const srcInfo  = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${h.src}</span>` : '';
     return `<div class="h-item">
       <div class="h-ico">${icon}</div>
       <div style="flex:1;">
-        <div class="h-nm">${esc(nm)}${catBadge}</div>
-        <div class="h-t">${esc(h.time)}${srcInfo}</div>
+        <div class="h-nm">${nm}${catBadge}</div>
+        <div class="h-t">${h.time}${srcInfo}</div>
       </div>
       <div class="h-a ${h.pos?'pos':'neg'}">${h.pos?'+':'-'}${fmt(Math.abs(h.amt))}</div>
     </div>`;
@@ -3275,7 +3192,7 @@ async function requestPushPermission(){
 function showPinChange(){document.getElementById('secMain').style.display='none';document.getElementById('pinChangeView').style.display='block';pinBuf='';pinStp=0;newPinSaved='';updatePinDisplay();document.getElementById('pin-instruction').textContent='Enter New PIN';}
 function hidePinChange(){document.getElementById('secMain').style.display='block';document.getElementById('pinChangeView').style.display='none';pinBuf='';pinStp=0;newPinSaved='';}
 function updatePinDisplay(){for(let i=0;i<4;i++)document.getElementById('pd'+i)?.classList.toggle('fill',i<pinBuf.length);}
-function pinKey(k){if(pinBuf.length>=4)return;pinBuf+=k;updatePinDisplay();if(pinBuf.length===4){setTimeout(()=>{if(pinStp===0){newPinSaved=pinBuf;pinBuf='';pinStp=1;document.getElementById('pin-instruction').textContent='Konfirmasi PIN Baru';updatePinDisplay();}else{if(pinBuf===newPinSaved){hashPin(pinBuf).then(hashed=>{savedPin=hashed;addNotif('security','PIN Diubah','PIN login Anda telah berhasil diperbarui.');toast('✅ PIN tersimpan!');hidePinChange();fbAutoSave();});}else{pinBuf='';pinStp=0;newPinSaved='';document.getElementById('pin-instruction').textContent='PIN Tidak Cocok, Coba Lagi';updatePinDisplay();setTimeout(()=>{document.getElementById('pin-instruction').textContent='Masukkan PIN Baru';},1500);}}},200);}}
+function pinKey(k){if(pinBuf.length>=4)return;pinBuf+=k;updatePinDisplay();if(pinBuf.length===4){setTimeout(()=>{if(pinStp===0){newPinSaved=pinBuf;pinBuf='';pinStp=1;document.getElementById('pin-instruction').textContent='Konfirmasi PIN Baru';updatePinDisplay();}else{if(pinBuf===newPinSaved){addNotif('security','PIN Diubah','PIN login Anda telah berhasil diperbarui.');toast('✅ PIN tersimpan!');hidePinChange();fbAutoSave();}else{pinBuf='';pinStp=0;newPinSaved='';document.getElementById('pin-instruction').textContent='PIN Tidak Cocok, Coba Lagi';updatePinDisplay();setTimeout(()=>{document.getElementById('pin-instruction').textContent='Masukkan PIN Baru';},1500);}}},200);}}
 function pinDel(){if(pinBuf.length>0){pinBuf=pinBuf.slice(0,-1);updatePinDisplay();}}
 
 // ============================================================
@@ -3986,22 +3903,13 @@ function _fbErrMsg(code){
 // ============================================================
 // FIREBASE AUTH STATE OBSERVER — auto-login jika sesi aktif
 // ============================================================
-// Flag: mencegah onAuthStateChanged double-load saat doLogin() sudah handle sendiri
-let _manualLoginInProgress = false;
-
 fbAuth.onAuthStateChanged(async (fu) => {
-  // Jika login sedang ditangani oleh doLogin()/doGoogleLogin(), skip di sini
-  if(_manualLoginInProgress) return;
-
   if(fu && !document.getElementById('app').classList.contains('on')){
-    // Sesi aktif (refresh halaman / session restore)
+    // Sesi aktif, restore langsung
     document.getElementById('fbLoadingOverlay').style.display='flex';
     document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
     try {
-      const [prof, state] = await Promise.all([
-        fsLoadProfile().catch(()=>null),
-        fbLoadState().catch(()=>null)
-      ]);
+      const prof = await fsLoadProfile();
       user = {
         email:  fu.email,
         name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
@@ -4009,12 +3917,12 @@ fbAuth.onAuthStateChanged(async (fu) => {
         photo:  prof?.photo  || null,
         uid:    fu.uid
       };
+      const state = await fbLoadState();
       document.getElementById('fbLoadingOverlay').style.display='none';
       await enterApp(state);
     } catch(e){
       document.getElementById('fbLoadingOverlay').style.display='none';
       console.warn('Auto-login restore error:', e);
-      goTo('login');
     }
   }
 });
@@ -4264,21 +4172,11 @@ async function doLogin(){
   const setBtn = (t,dis=false)=>{ if(btn){ btn.textContent=t; btn.disabled=dis; } };
   setBtn('🔄 Masuk...', true);
   document.getElementById('fbLoadingOverlay').style.display='flex';
-  document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
-
-  // Tandai agar onAuthStateChanged tidak ikut handle alur ini
-  _manualLoginInProgress = true;
 
   try {
     const cred = await fbAuth.signInWithEmailAndPassword(em, pw);
     const fu   = cred.user;
-
-    // Load profil & state secara paralel (lebih cepat)
-    const [prof, state] = await Promise.all([
-      fsLoadProfile().catch(()=>null),
-      fbLoadState().catch(()=>null)
-    ]);
-
+    const prof = await fsLoadProfile();
     user = {
       email:  fu.email,
       name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
@@ -4286,13 +4184,11 @@ async function doLogin(){
       photo:  prof?.photo  || null,
       uid:    fu.uid
     };
-
+    const state = await fbLoadState();
     setBtn(T('l-btn'), false);
     document.getElementById('fbLoadingOverlay').style.display='none';
-    _manualLoginInProgress = false;
     await enterApp(state);
   } catch(e){
-    _manualLoginInProgress = false;
     document.getElementById('fbLoadingOverlay').style.display='none';
     setBtn(T('l-btn'), false);
     const msg = _fbErrMsg(e.code);
@@ -4350,69 +4246,23 @@ async function doRegister(){
 // ════════════════════════════════════════════════════════════
 async function enterApp(initialState){
   // ① Terapkan state dari DB kalau ada
-  // LOAD_FAILED = timeout/error — jangan reset data yang sudah ada di memori
-  if(initialState === LOAD_FAILED){
-    console.warn('enterApp: load gagal, lanjut dengan state lokal saat ini');
-    // Lanjut ke render UI dengan data yang ada, jangan reset apapun
-  } else if(initialState){
-    if(initialState.balance !== undefined) balance = initialState.balance;
-
-    // wallets — sync idCtr agar ID tidak dobel saat tambah kartu baru
-    if(Array.isArray(initialState.wallets)){
-      wallets = initialState.wallets;
-      if(wallets.length > 0) walletIdCtr = Math.max(...wallets.map(w => w.id||0)) + 1;
-    }
-
-    // goals
-    if(Array.isArray(initialState.goals)){
-      goals = initialState.goals;
-      if(goals.length > 0) goalIdCtr = Math.max(...goals.map(g => g.id||0)) + 1;
-    }
-
-    // historyItems — rekonsiliasi ts dari time string
-    if(Array.isArray(initialState.historyItems)){
-      historyItems = initialState.historyItems;
-      // Sync ts dari h.time jika tidak ada atau tidak sinkron
-      let needResave = false;
-      historyItems.forEach(h => {
-        if(h.time){
-          const parsed = _parseTimeString(h.time);
-          if(parsed && !isNaN(parsed.getTime())){
-            const tsFromTime = parsed.getTime();
-            if(!h.ts || Math.abs(h.ts - tsFromTime) > 60000){
-              h.ts = tsFromTime;
-              needResave = true;
-            }
-          }
-        }
-      });
-      if(needResave) fbAutoSave();
-    }
-
-    // tagihan — sync idCtr
+  if(initialState){
+    if(initialState.balance     !== undefined) balance       = initialState.balance;
+    if(Array.isArray(initialState.wallets))      wallets       = initialState.wallets;
+    if(Array.isArray(initialState.goals))        goals         = initialState.goals;
+    if(Array.isArray(initialState.historyItems)) historyItems  = initialState.historyItems;
+    // notifications TIDAK dimuat dari RTDB — hanya lokal per-device
     if(Array.isArray(initialState.tagihan)){
       tagihan = initialState.tagihan;
-      if(tagihan.length > 0) tagihanIdCtr = Math.max(...tagihan.map(t => t.id||0)) + 1;
+      if(tagihan.length>0) tagihanIdCtr = Math.max(...tagihan.map(t=>t.id||0))+1;
     }
-
-    // budgets / Anggaran — sync idCtr (sebelumnya hilang!)
-    if(Array.isArray(initialState.budgets)){
-      budgets = initialState.budgets;
-      if(budgets.length > 0) budgetIdCtr = Math.max(...budgets.map(b => b.id||0)) + 1;
-    }
-
     if(initialState.tagihanBudget !== undefined) tagihanBudget = initialState.tagihanBudget;
     if(initialState.savedPin)   savedPin = initialState.savedPin;
-    if(initialState.lang)       { lang = initialState.lang; applyLang(); }
-    if(initialState.darkMode !== undefined){
-      if(initialState.darkMode) document.body.classList.add('dk');
-      else document.body.classList.remove('dk');
-    }
+    if(initialState.lang)       lang     = initialState.lang;
+    if(initialState.darkMode)   document.body.classList.add('dk');
   } else {
-    // null = user baru — reset semua ke kondisi bersih
-    balance=0; wallets=[]; goals=[]; historyItems=[];
-    tagihan=[]; budgets=[]; notifications=[];
-    walletIdCtr=1; goalIdCtr=1; tagihanIdCtr=1; budgetIdCtr=1;
+    // State baru (user baru)
+    historyItems=[]; goals=[]; wallets=[]; notifications=[]; balance=0;
   }
 
   // ② Update UI profil
@@ -4490,9 +4340,7 @@ async function doLogout(){
   user=null;
   _clearNotifLocal(); // hapus notifikasi dari localStorage user ini
   notifications=[]; historyItems=[]; goals=[]; wallets=[];
-  tagihan=[]; budgets=[];
   balance=0; savedPin=''; lockPinBuf='';
-  walletIdCtr=1; goalIdCtr=1; tagihanIdCtr=1; budgetIdCtr=1;
 
   updateNotifBadge();
   hidePinLock();
@@ -4505,21 +4353,14 @@ async function doLogout(){
 
 // Login dengan Google — Firebase
 async function socialLogin(){
-  _manualLoginInProgress = true;
-  document.getElementById('fbLoadingOverlay').style.display='flex';
-  document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
   try {
     const provider = new firebase.auth.GoogleAuthProvider();
     const cred = await fbAuth.signInWithPopup(provider);
     const fu   = cred.user;
+    // Cek apakah user baru
     const isNewUser = cred.additionalUserInfo?.isNewUser;
-
-    // Load profil & state secara paralel
-    const [prof, state] = await Promise.all([
-      fsLoadProfile().catch(()=>null),
-      fbLoadState().catch(()=>null)
-    ]);
-
+    // Muat / buat profil
+    let prof = await fsLoadProfile();
     user = {
       email:  fu.email,
       name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
@@ -4528,16 +4369,13 @@ async function socialLogin(){
       uid:    fu.uid
     };
     if(isNewUser || !prof){
-      await fsSaveProfile(user).catch(()=>{});
+      await fsSaveProfile(user);
       balance=0; goals=[]; wallets=[]; historyItems=[]; notifications=[];
-      await fbSaveState().catch(()=>{});
+      await fbSaveState();
     }
-    document.getElementById('fbLoadingOverlay').style.display='none';
-    _manualLoginInProgress = false;
+    const state = await fbLoadState();
     await enterApp(isNewUser ? null : state);
   } catch(e){
-    _manualLoginInProgress = false;
-    document.getElementById('fbLoadingOverlay').style.display='none';
     if(e.code !== 'auth/popup-closed-by-user'){
       toast('❌ Google login gagal: ' + _fbErrMsg(e.code));
     }
@@ -4554,20 +4392,13 @@ function lockPinKey(k){
   if(lockPinBuf.length>=4) return;
   lockPinBuf+=k; updateLockPinDisplay();
   if(lockPinBuf.length===4){
-    // Gunakan verifyPin (async) agar mendukung PIN lama & PIN ter-hash
-    setTimeout(async ()=>{
-      const ok = await verifyPin(lockPinBuf, savedPin);
-      if(ok){
-        // Migrasi otomatis: jika PIN lama masih plaintext, hash sekarang
-        if(savedPin && savedPin.length === 4){
-          savedPin = await hashPin(lockPinBuf);
-          fbAutoSave();
-        }
+    setTimeout(()=>{
+      if(lockPinBuf===savedPin){
         hidePinLock();
         document.getElementById('pinLockError').textContent='';
         lockPinBuf='';
       } else {
-        document.getElementById('pinLockError').textContent='❌ PIN salah. Coba lagi.';
+        document.getElementById('pinLockError').textContent='❌ Incorrect PIN. Try again.';
         // Shake dots
         const dotsEl = document.getElementById('pinLockDots');
         if(dotsEl){ dotsEl.style.animation='pinShake .4s ease'; setTimeout(()=>dotsEl.style.animation='',500); }
@@ -4618,14 +4449,11 @@ function pinKey(k){
       if(pinStp===0){ newPinSaved=pinBuf;pinBuf='';pinStp=1; document.getElementById('pin-instruction').textContent='Confirm New PIN'; updatePinDisplay(); }
       else{
         if(pinBuf===newPinSaved){
-          // Hash PIN sebelum disimpan ke Firebase
-          hashPin(pinBuf).then(hashed => {
-            savedPin = hashed;
-            const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN aktif · ketuk untuk ubah';
-            addNotif('security','PIN Lock Aktif','Aplikasi akan terkunci saat Anda meninggalkan tab.');
-            toast('✅ PIN aktif! App akan terkunci saat Anda pergi.'); hidePinChange();
-            fbAutoSave();
-          });
+          savedPin=newPinSaved;
+          const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
+          addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
+          toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
+          fbAutoSave();
         } else {
           pinBuf='';pinStp=0;newPinSaved='';
           document.getElementById('pin-instruction').textContent='PIN Mismatch — Try Again';

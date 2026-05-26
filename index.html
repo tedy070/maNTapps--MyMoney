@@ -16,7 +16,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#061a0e">
 <meta http-equiv="Content-Security-Policy"
-  content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://open.er-api.com https://cdn.jsdelivr.net https://latest.currency-api.pages.dev https://api.coinbase.com https://corsproxy.io; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:;">
+  content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.google.com https://www.gstatic.com/recaptcha/; connect-src https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://www.google.com https://recaptcha.google.com https://open.er-api.com https://cdn.jsdelivr.net https://latest.currency-api.pages.dev https://api.coinbase.com https://corsproxy.io; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:;">
 
 <!-- Chart.js — dimuat di head agar buildDonut() selalu tersedia -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -170,13 +170,25 @@ async function fsSaveProfile(data){
   } catch(e){ console.warn('Firestore profile error:', e); }
 }
 
-// — FIRESTORE: baca profil user
+// — FIRESTORE: baca profil user (dengan fallback cache jika offline)
 async function fsLoadProfile(){
   const uid = fbUID(); if(!uid) return null;
   try {
-    const doc = await fsDB.collection('users').doc(uid).get();
+    // Coba dari server dulu; jika offline gunakan cache lokal Firestore
+    const doc = await fsDB.collection('users').doc(uid).get({ source: 'default' });
     return doc.exists ? doc.data() : null;
-  } catch(e){ console.warn('Firestore profile read error:', e); return null; }
+  } catch(e){
+    // Jika gagal karena offline, coba baca dari cache lokal
+    if(e.code === 'unavailable' || e.message?.includes('offline') || e.message?.includes('backend')){
+      try {
+        const cached = await fsDB.collection('users').doc(uid).get({ source: 'cache' });
+        console.info('Firestore offline — menggunakan data cache lokal');
+        return cached.exists ? cached.data() : null;
+      } catch(ce){ /* tidak ada cache */ }
+    }
+    console.warn('Firestore profile read error:', e);
+    return null;
+  }
 }
 
 // — REALTIME DB: listener realtime (sync lintas device)
@@ -4139,6 +4151,15 @@ document.addEventListener('DOMContentLoaded', function() {
   fbAuth = firebase.auth();
   fbDB   = firebase.database();
   fsDB   = firebase.firestore();
+
+  // Aktifkan Firestore offline persistence — data tersedia meski tanpa internet
+  fsDB.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+    if (err.code === 'failed-precondition') {
+      console.warn('Firestore persistence: beberapa tab terbuka, mode single-tab digunakan');
+    } else if (err.code === 'unimplemented') {
+      console.warn('Firestore persistence: browser tidak mendukung IndexedDB');
+    }
+  });
 
   // Auth State Observer — auto-login jika sesi aktif
   fbAuth.onAuthStateChanged(async (fu) => {

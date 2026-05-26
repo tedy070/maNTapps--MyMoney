@@ -58,25 +58,11 @@ const firebaseConfig = {
   measurementId: "G-LFGDMVR92Q"
 };
 
-// Inisialisasi Firebase
+// Inisialisasi Firebase — hanya initializeApp di sini (body belum ada)
 firebase.initializeApp(firebaseConfig);
 
-// ── App Check — wajib diaktifkan SEBELUM fbAuth / fbDB / fsDB ──
-// reCAPTCHA v3 invisible: tidak mengganggu user, berjalan di background.
-// Site key terdaftar untuk domain: tedy070.github.io
-// Debug token otomatis aktif jika dijalankan di localhost
-if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-}
-var _appCheck = firebase.appCheck();
-_appCheck.activate(
-  '6Le6yPssAAAAADepAX85Cn9jOfAJp9WBqgS47_zn',
-  true  // isTokenAutoRefreshEnabled — token diperbarui otomatis
-);
-
-var fbAuth = firebase.auth();
-var fbDB   = firebase.database();    // Realtime Database
-var fsDB   = firebase.firestore();   // Firestore
+// Deklarasi global — akan diisi setelah DOM siap (lihat DOMContentLoaded di bawah)
+var _appCheck, fbAuth, fbDB, fsDB;
 
 // ═══════════════════════════════════════════════════════
 // FIREBASE HELPER — simpan/baca data per-user
@@ -4134,39 +4120,58 @@ function _fbErrMsg(code){
 }
 
 // ============================================================
-// FIREBASE AUTH STATE OBSERVER — auto-login jika sesi aktif
+// FIREBASE INIT + AUTH OBSERVER + INIT APP
+// Dijalankan setelah DOM siap agar reCAPTCHA bisa appendChild ke body
 // ============================================================
-fbAuth.onAuthStateChanged(async (fu) => {
-  if(fu && !document.getElementById('app').classList.contains('on')){
-    // Sesi aktif, restore langsung
-    document.getElementById('fbLoadingOverlay').style.display='flex';
-    document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
-    try {
-      const prof = await fsLoadProfile();
-      user = {
-        email:  fu.email,
-        name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
-        avatar: prof?.avatar || 'default',
-        photo:  prof?.photo  || null,
-        uid:    fu.uid
-      };
-      const state = await fbLoadState();
-      document.getElementById('fbLoadingOverlay').style.display='none';
-      await enterApp(state);
-    } catch(e){
-      document.getElementById('fbLoadingOverlay').style.display='none';
-      console.warn('Auto-login restore error:', e);
-    }
-  }
-});
+document.addEventListener('DOMContentLoaded', function() {
 
-// ============================================================
-// INIT
-// ============================================================
-buildCatGrid();
-applyLang();
-recalcTotalBalance();
-goTo('splash');
+  // App Check — aktifkan SEBELUM fbAuth/fbDB/fsDB
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+  _appCheck = firebase.appCheck();
+  _appCheck.activate(
+    '6Le6yPssAAAAADepAX85Cn9jOfAJp9WBqgS47_zn',
+    true  // isTokenAutoRefreshEnabled — token diperbarui otomatis
+  );
+
+  // Assign Firebase services ke global var
+  fbAuth = firebase.auth();
+  fbDB   = firebase.database();
+  fsDB   = firebase.firestore();
+
+  // Auth State Observer — auto-login jika sesi aktif
+  fbAuth.onAuthStateChanged(async (fu) => {
+    if(fu && !document.getElementById('app').classList.contains('on')){
+      // Sesi aktif, restore langsung
+      document.getElementById('fbLoadingOverlay').style.display='flex';
+      document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
+      try {
+        const prof = await fsLoadProfile();
+        user = {
+          email:  fu.email,
+          name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
+          avatar: prof?.avatar || 'default',
+          photo:  prof?.photo  || null,
+          uid:    fu.uid
+        };
+        const state = await fbLoadState();
+        document.getElementById('fbLoadingOverlay').style.display='none';
+        await enterApp(state);
+      } catch(e){
+        document.getElementById('fbLoadingOverlay').style.display='none';
+        console.warn('Auto-login restore error:', e);
+      }
+    }
+  });
+
+  // INIT — DOM sudah siap, aman untuk memanipulasi elemen
+  buildCatGrid();
+  applyLang();
+  recalcTotalBalance();
+  goTo('splash');
+
+}); // end DOMContentLoaded
 </script>
 
 <!-- ===== CALCULATOR OVERLAY ===== -->

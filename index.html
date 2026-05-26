@@ -15,7 +15,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#061a0e">
-     
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://open.er-api.com https://cdn.jsdelivr.net https://latest.currency-api.pages.dev https://api.coinbase.com https://corsproxy.io; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:;">
+
+<!-- Chart.js — dimuat di head agar buildDonut() selalu tersedia -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <!-- ══════════════════════════════════════════════════════
      FIREBASE v9 COMPAT — Authentication + Firestore + RTDB
      ════════════════════════════════════════════════════════
@@ -30,11 +35,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <script>
-// ╔══════════════════════════════════════════════════════════╗
-// ║   GANTI KONFIGURASI INI DENGAN CONFIG FIREBASE KAMU      ║
-// ╚══════════════════════════════════════════════════════════╝
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║   GANTI KONFIGURASI INI DENGAN CONFIG FIREBASE KAMU             ║
+// ║                                                                  ║
+// ║   CHECKLIST KEAMANAN (wajib sebelum produksi):                  ║
+// ║   ① Aktifkan Firebase App Check (reCAPTCHA v3) di Console       ║
+// ║      → Build → App Check → Register your app                    ║
+// ║   ② Batasi domain di Firebase Console → Authentication          ║
+// ║      → Settings → Authorized domains                            ║
+// ║   ③ Pasang RTDB rules & Firestore rules dari file yg disediakan ║
+// ╚══════════════════════════════════════════════════════════════════╝
 const firebaseConfig = {
   apiKey: "AIzaSyBYsGhC-xyOA6oHB8q-8MYI0Ym09QsiTGI",
   authDomain: "mantapps-aplikasi-bca7b.firebaseapp.com",
@@ -48,9 +60,23 @@ const firebaseConfig = {
 
 // Inisialisasi Firebase
 firebase.initializeApp(firebaseConfig);
-const fbAuth = firebase.auth();
-const fbDB   = firebase.database();    // Realtime Database
-const fsDB   = firebase.firestore();   // Firestore
+
+// ── App Check — wajib diaktifkan SEBELUM fbAuth / fbDB / fsDB ──
+// reCAPTCHA v3 invisible: tidak mengganggu user, berjalan di background.
+// Site key terdaftar untuk domain: tedy070.github.io
+// Debug token otomatis aktif jika dijalankan di localhost
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+var _appCheck = firebase.appCheck();
+_appCheck.activate(
+  '6Le6yPssAAAAADepAX85Cn9jOfAJp9WBqgS47_zn',
+  true  // isTokenAutoRefreshEnabled — token diperbarui otomatis
+);
+
+var fbAuth = firebase.auth();
+var fbDB   = firebase.database();    // Realtime Database
+var fsDB   = firebase.firestore();   // Firestore
 
 // ═══════════════════════════════════════════════════════
 // FIREBASE HELPER — simpan/baca data per-user
@@ -60,6 +86,54 @@ const fsDB   = firebase.firestore();   // Firestore
 
 // Ambil UID user yang sedang login
 function fbUID(){ return fbAuth.currentUser?.uid || null; }
+
+// ═══════════════════════════════════════════════════════════════
+// SECURITY HELPERS — PIN Hashing (SHA-256 via Web Crypto API)
+// PIN tidak pernah disimpan plaintext; selalu dalam bentuk hash.
+// Format di RTDB: "sha256:<hex>" agar bisa dibedakan dari PIN lama.
+// ═══════════════════════════════════════════════════════════════
+async function _hashPin(pin, uid) {
+  try {
+    const salt = 'mantapps-pin-v2-' + (uid || fbUID() || 'guest');
+    const encoded = new TextEncoder().encode(pin + salt);
+    const buf = await crypto.subtle.digest('SHA-256', encoded);
+    return 'sha256:' + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e) {
+    // Fallback jika crypto.subtle tidak tersedia (non-HTTPS dev)
+    console.warn('[PIN] crypto.subtle unavailable, using legacy plain compare');
+    return pin;
+  }
+}
+
+async function _verifyPin(inputPin, storedHash, uid) {
+  if (!storedHash) return false;
+  // Hash baru: bandingkan hash
+  if (storedHash.startsWith('sha256:')) {
+    const inputHash = await _hashPin(inputPin, uid);
+    return inputHash === storedHash;
+  }
+  // Hash lama (plaintext) — masih cocok, akan di-upgrade saat user set PIN berikutnya
+  return inputPin === storedHash;
+}
+
+// PIN brute-force protection
+let _pinFailCount = 0;
+let _pinLockedUntil = 0;
+function _isPinLocked() {
+  if (_pinLockedUntil > Date.now()) return true;
+  return false;
+}
+function _recordPinFail() {
+  _pinFailCount++;
+  if (_pinFailCount >= 5) {
+    const lockMs = Math.min(30000 * Math.pow(2, _pinFailCount - 5), 300000); // max 5 menit
+    _pinLockedUntil = Date.now() + lockMs;
+    const secs = Math.ceil(lockMs / 1000);
+    return secs;
+  }
+  return 0;
+}
+function _resetPinFail() { _pinFailCount = 0; _pinLockedUntil = 0; }
 
 // — REALTIME DB: simpan seluruh state
 async function fbSaveState(){
@@ -97,11 +171,13 @@ async function fbLoadState(){
 // — FIRESTORE: simpan profil user
 async function fsSaveProfile(data){
   const uid = fbUID(); if(!uid) return;
+  // Sanitasi: potong panjang & strip tag HTML sederhana
+  const clean = (s, maxLen=100) => String(s||'').replace(/<[^>]*>/g,'').trim().substring(0, maxLen);
   try {
     await fsDB.collection('users').doc(uid).set({
-      name:      data.name  || '',
-      email:     data.email || '',
-      avatar:    data.avatar || 'default',
+      name:      clean(data.name, 80)  || '',
+      email:     clean(data.email, 120) || '',
+      avatar:    clean(data.avatar, 30) || 'default',
       photo:     data.photo  || null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
@@ -1051,14 +1127,10 @@ body{background:var(--bg);transition:background .35s;}
     </div>
     <button class="btn btn-p" onclick="doLogin()" id="l-btn">Login</button>
     <div class="divider"><span id="l-or">OR CONTINUE WITH</span></div>
-    <div class="social-btns">
+    <div class="social-btns" style="grid-template-columns:1fr;">
       <div class="social-btn" onclick="socialLogin()">
         <svg viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-        Google
-      </div>
-      <div class="social-btn" onclick="socialLogin()">
-        <svg viewBox="0 0 24 24" fill="var(--navy)"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.22.15-2.18 1.27-2.16 3.8.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.37 2.68zM13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Apple
+        Lanjutkan dengan Google
       </div>
     </div>
     <p class="alink"><span id="l-new">New to the platform?</span> <a onclick="goTo('register')" id="l-create">Create Account</a></p>
@@ -1811,7 +1883,6 @@ body{background:var(--bg);transition:background .35s;}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // ============================================================
 // STATE
@@ -1820,7 +1891,7 @@ let lang='id', darkMode=false;
 let selCat='',selCatIco='',selCatColor='',selCatStroke='';
 // SISTEM BARU: Semua nilai internal disimpan dalam RUPIAH
 // exRate = kurs 1 USD → IDR (untuk konversi tampilan USD saja)
-let balance=196842640, exRate=15800; // contoh: ~Rp 196jt (setara $12.450)
+let balance=0, exRate=16200; // balance diisi dari Firebase; exRate=fallback kurs USD→IDR
 let curAv='default', editAvData='default';
 let photoDataUrl=null, editPhotoDataUrl=null;
 let pinBuf='',pinStp=0,newPinSaved='';
@@ -1880,6 +1951,17 @@ function addNotif(type,title,msg){
   updateNotifBadge();
   _saveNotifLocal();
   // fbAutoSave() TIDAK dipanggil — notifikasi hanya lokal, tidak ke RTDB
+  // Push notification native untuk event transaksi
+  if((type==='tx'||type==='neg') && typeof _notifPermission !== 'undefined' && _notifPermission==='granted'){
+    try{
+      const icon = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#0D2152"/><text y=".9em" font-size="90" x="5">💰</text></svg>');
+      if(typeof _swReg !== 'undefined' && _swReg){
+        _swReg.showNotification(title, { body: msg, tag: 'tx-'+Date.now(), renotify: true, icon, vibrate: [200, 100, 200] });
+      } else if(typeof Notification !== 'undefined' && Notification.permission==='granted'){
+        new Notification(title, {body: msg});
+      }
+    } catch(e){}
+  }
 }
 
 function updateNotifBadge(){
@@ -3326,7 +3408,7 @@ async function requestPushPermission(){
 function showPinChange(){document.getElementById('secMain').style.display='none';document.getElementById('pinChangeView').style.display='block';pinBuf='';pinStp=0;newPinSaved='';updatePinDisplay();document.getElementById('pin-instruction').textContent='Enter New PIN';}
 function hidePinChange(){document.getElementById('secMain').style.display='block';document.getElementById('pinChangeView').style.display='none';pinBuf='';pinStp=0;newPinSaved='';}
 function updatePinDisplay(){for(let i=0;i<4;i++)document.getElementById('pd'+i)?.classList.toggle('fill',i<pinBuf.length);}
-function pinKey(k){if(pinBuf.length>=4)return;pinBuf+=k;updatePinDisplay();if(pinBuf.length===4){setTimeout(()=>{if(pinStp===0){newPinSaved=pinBuf;pinBuf='';pinStp=1;document.getElementById('pin-instruction').textContent='Konfirmasi PIN Baru';updatePinDisplay();}else{if(pinBuf===newPinSaved){addNotif('security','PIN Diubah','PIN login Anda telah berhasil diperbarui.');toast('✅ PIN tersimpan!');hidePinChange();fbAutoSave();}else{pinBuf='';pinStp=0;newPinSaved='';document.getElementById('pin-instruction').textContent='PIN Tidak Cocok, Coba Lagi';updatePinDisplay();setTimeout(()=>{document.getElementById('pin-instruction').textContent='Masukkan PIN Baru';},1500);}}},200);}}
+// pinKey — versi aman dengan hashing ada di bagian bawah (FIX 8)
 function pinDel(){if(pinBuf.length>0){pinBuf=pinBuf.slice(0,-1);updatePinDisplay();}}
 
 // ============================================================
@@ -3740,8 +3822,11 @@ function renderRecentTxList(){
 
 
 function recalcTotalBalance() {
-  // balance utama = total semua wallet
-  balance = wallets.reduce((s, w) => s + (w.balance || 0), 0);
+  // Jika ada wallet, balance = total semua wallet.
+  // Jika tidak ada wallet, balance tetap sebagaimana adanya (dari RTDB / transaksi).
+  if(wallets.length > 0) {
+    balance = wallets.reduce((s, w) => s + (w.balance || 0), 0);
+  }
   const el = document.getElementById('displayBalance');
   if (el) el.textContent = fmt(balance);
   const el2 = document.getElementById('displayBalanceAlt');
@@ -4153,6 +4238,23 @@ goTo('splash');
   <button onclick="showPinLockForgot()" style="margin-top:14px;background:none;border:none;color:var(--blue2);font-size:13px;font-weight:600;cursor:pointer;padding:8px;">Forgot PIN? Use password</button>
 </div>
 
+<!-- ===== MODAL: Lupa PIN — input password custom (mengganti prompt()) ===== -->
+<div id="pinForgotOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9500;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:var(--surface,#fff);border-radius:22px;padding:28px 24px;width:320px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="font-size:16px;font-weight:700;color:var(--navy,#0D2152);margin-bottom:6px;">Masukkan Password</div>
+    <div style="font-size:13px;color:var(--t2,#666);margin-bottom:18px;">Verifikasi identitas Anda untuk membuka aplikasi</div>
+    <input type="password" id="pinForgotPwInput" autocomplete="current-password"
+      style="width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--border,#e0e0e0);font-size:15px;outline:none;background:var(--surface2,#f5f5f5);color:var(--navy,#0D2152);box-sizing:border-box;"
+      placeholder="Password akun"
+      onkeydown="if(event.key==='Enter') _pinForgotSubmit()">
+    <div id="pinForgotErr" style="color:var(--red,#e53e3e);font-size:12px;min-height:18px;margin-top:8px;font-weight:600;"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="_pinForgotCancel()" style="flex:1;padding:13px;border-radius:12px;background:var(--surface2,#f0f0f0);border:1.5px solid var(--border,#e0e0e0);font-weight:600;cursor:pointer;color:var(--navy,#0D2152);font-size:14px;">Batal</button>
+      <button onclick="_pinForgotSubmit()" style="flex:1;padding:13px;border-radius:12px;background:var(--navy,#0D2152);border:none;color:white;font-weight:700;cursor:pointer;font-size:14px;">Buka Kunci</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ===== SECURITY OVERLAY: Password Change View ===== -->
 <div id="pwChangeOverlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:6000;flex-direction:column;overflow-y:auto;transition:background .35s;">
@@ -4407,7 +4509,18 @@ async function enterApp(initialState){
       if(tagihan.length>0) tagihanIdCtr = Math.max(...tagihan.map(t=>t.id||0))+1;
     }
     if(initialState.tagihanBudget !== undefined) tagihanBudget = initialState.tagihanBudget;
-    if(initialState.savedPin)   savedPin = initialState.savedPin;
+    if(initialState.savedPin){
+      savedPin = initialState.savedPin;
+      // Auto-upgrade PIN plaintext lama → SHA-256 hash
+      if(savedPin && !savedPin.startsWith('sha256:')){
+        const uid = fbUID();
+        const upgraded = await _hashPin(savedPin, uid);
+        savedPin = upgraded;
+        // Simpan hash baru ke RTDB diam-diam
+        try { await fbDB.ref(`users/${uid}/state/savedPin`).set(savedPin); } catch(e){}
+        console.log('[PIN] Upgraded plaintext PIN to SHA-256 hash.');
+      }
+    }
     if(initialState.lang)       lang     = initialState.lang;
     if(initialState.darkMode)   document.body.classList.add('dk');
   } else {
@@ -4539,20 +4652,32 @@ function updateLockPinDisplay(){
   for(let i=0;i<4;i++){ const d=document.getElementById('lp'+i); if(d) d.classList.toggle('fill', i<lockPinBuf.length); }
 }
 function lockPinKey(k){
+  if(_isPinLocked()){
+    const secs = Math.ceil((_pinLockedUntil - Date.now()) / 1000);
+    document.getElementById('pinLockError').textContent = `❌ Terlalu banyak percobaan. Tunggu ${secs} detik.`;
+    return;
+  }
   if(lockPinBuf.length>=4) return;
   lockPinBuf+=k; updateLockPinDisplay();
   if(lockPinBuf.length===4){
-    setTimeout(()=>{
-      if(lockPinBuf===savedPin){
+    setTimeout(async ()=>{
+      const uid = fbUID();
+      const ok = await _verifyPin(lockPinBuf, savedPin, uid);
+      if(ok){
+        _resetPinFail();
         hidePinLock();
         document.getElementById('pinLockError').textContent='';
         lockPinBuf='';
       } else {
-        document.getElementById('pinLockError').textContent='❌ Incorrect PIN. Try again.';
-        // Shake dots
+        const lockSecs = _recordPinFail();
         const dotsEl = document.getElementById('pinLockDots');
         if(dotsEl){ dotsEl.style.animation='pinShake .4s ease'; setTimeout(()=>dotsEl.style.animation='',500); }
         lockPinBuf=''; updateLockPinDisplay();
+        if(lockSecs > 0){
+          document.getElementById('pinLockError').textContent=`❌ Terlalu banyak percobaan. Tunggu ${lockSecs} detik.`;
+        } else {
+          document.getElementById('pinLockError').textContent=`❌ PIN salah. Sisa ${5-_pinFailCount} percobaan.`;
+        }
       }
     },150);
   }
@@ -4569,14 +4694,56 @@ function showPinLock(){
 }
 function hidePinLock(){ const s=document.getElementById('pinLockScreen'); s.style.display='none'; lockPinBuf=''; }
 async function showPinLockForgot(){
-  const pw=prompt('Enter your password to unlock:','');
+  // Tampilkan modal input password custom (tidak pakai prompt() bawaan browser)
+  const overlay = document.getElementById('pinForgotOverlay');
+  if(overlay){ overlay.style.display='flex'; document.getElementById('pinForgotPwInput').value=''; document.getElementById('pinForgotErr').textContent=''; return; }
+  // Fallback jika elemen tidak ada (seharusnya selalu ada)
+  const pw = await new Promise(resolve => {
+    const modal = document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML=`<div style="background:var(--surface);border-radius:20px;padding:28px 24px;width:300px;max-width:90vw;">
+      <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:12px;">Masukkan Password</div>
+      <input type="password" id="_tmpPwInput" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);font-size:14px;outline:none;background:var(--surface2);color:var(--navy);" placeholder="Password akun">
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button onclick="this.closest('div[style]').remove();document.body._pinResolve(null);" style="flex:1;padding:12px;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);font-weight:600;cursor:pointer;color:var(--navy);">Batal</button>
+        <button onclick="const v=document.getElementById('_tmpPwInput').value;this.closest('div[style]').remove();document.body._pinResolve(v);" style="flex:1;padding:12px;border-radius:10px;background:var(--navy);border:none;color:white;font-weight:700;cursor:pointer;">Buka</button>
+      </div>
+    </div>`;
+    document.body._pinResolve = resolve;
+    document.body.appendChild(modal);
+    setTimeout(()=>document.getElementById('_tmpPwInput')?.focus(), 100);
+  });
   if(!pw) return;
   try {
     const fu = fbAuth.currentUser;
     const credential = firebase.auth.EmailAuthProvider.credential(fu.email, pw);
     await fu.reauthenticateWithCredential(credential);
-    hidePinLock(); toast('✅ Unlocked!');
-  } catch(e){ toast('❌ Incorrect password'); }
+    _resetPinFail();
+    hidePinLock(); toast('✅ Berhasil dibuka!');
+  } catch(e){ toast('❌ ' + _fbErrMsg(e.code)); }
+}
+
+function _pinForgotCancel(){
+  const o = document.getElementById('pinForgotOverlay');
+  if(o) o.style.display='none';
+}
+async function _pinForgotSubmit(){
+  const input = document.getElementById('pinForgotPwInput');
+  const errEl = document.getElementById('pinForgotErr');
+  const pw = input ? input.value : '';
+  if(!pw){ if(errEl) errEl.textContent='Masukkan password terlebih dahulu.'; return; }
+  try {
+    const fu = fbAuth.currentUser;
+    if(!fu){ if(errEl) errEl.textContent='Sesi tidak aktif. Silakan login ulang.'; return; }
+    const credential = firebase.auth.EmailAuthProvider.credential(fu.email, pw);
+    await fu.reauthenticateWithCredential(credential);
+    _resetPinFail();
+    _pinForgotCancel();
+    hidePinLock();
+    toast('✅ Berhasil dibuka!');
+  } catch(e){
+    if(errEl) errEl.textContent = '❌ ' + _fbErrMsg(e.code);
+  }
 }
 
 // Visibility API for auto PIN lock
@@ -4589,17 +4756,22 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 // ============================================================
-// PIN SETUP (override existing pinKey)
+// PIN SETUP — hash PIN sebelum disimpan ke RTDB
 // ============================================================
 function pinKey(k){
   if(pinBuf.length>=4)return;
   pinBuf+=k; updatePinDisplay();
   if(pinBuf.length===4){
-    setTimeout(()=>{
-      if(pinStp===0){ newPinSaved=pinBuf;pinBuf='';pinStp=1; document.getElementById('pin-instruction').textContent='Confirm New PIN'; updatePinDisplay(); }
-      else{
+    setTimeout(async ()=>{
+      if(pinStp===0){
+        newPinSaved=pinBuf; pinBuf=''; pinStp=1;
+        document.getElementById('pin-instruction').textContent='Confirm New PIN';
+        updatePinDisplay();
+      } else {
         if(pinBuf===newPinSaved){
-          savedPin=newPinSaved;
+          // Hash PIN sebelum disimpan
+          const uid = fbUID();
+          savedPin = await _hashPin(newPinSaved, uid);
           const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
           addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
           toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
@@ -5240,27 +5412,8 @@ function initTagihanScheduler() {
 
 
 
-// Override addNotif to also send push notification for transactions
-const _origAddNotif = window.addNotif;
-window.addNotif = function(type, title, msg){
-  if(typeof _origAddNotif === 'function') _origAddNotif(type, title, msg);
-  // Send native push for transaction events
-  if((type==='tx'||type==='neg') && _notifPermission==='granted'){
-    try{
-      if(_swReg){
-        _swReg.showNotification(title, {
-          body: msg,
-          tag: 'tx-'+Date.now(),
-          renotify: true,
-          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%230D2152"/><text y=".9em" font-size="90" x="5">💰</text></svg>',
-          vibrate: [200, 100, 200]
-        });
-      } else if(typeof Notification !== 'undefined' && Notification.permission==='granted'){
-        new Notification(title, {body: msg});
-      }
-    } catch(e){}
-  }
-};
+// addNotif: sudah terintegrasi push notification langsung (tidak perlu override terpisah)
+// Override lama dihapus untuk menghindari race condition saat _origAddNotif belum terdefinisi.
 
 // ============================================================
 // ANGGARAN — Budget per kategori per bulan

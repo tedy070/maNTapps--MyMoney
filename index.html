@@ -1267,7 +1267,7 @@ body{background:var(--bg);transition:background .35s;}
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 <span id="tagihan-alert-count">0 bills need attention</span>
               </div>
-              <button onclick="bayarSemuaTagihan()" style="background:white;color:#0D2152;border:none;padding:7px 14px;border-radius:10px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;" data-i18n="tg-pay-all">Bayar Semua</button>
+              <button onclick="openBayarModal()" style="background:white;color:#0D2152;border:none;padding:7px 18px;border-radius:10px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0D2152" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Bayar</button>
             </div>
           </div>
 
@@ -2755,7 +2755,42 @@ function _pdfDownload(items, periodLabel, filename){
     +'<tbody>'+rows+'</tbody></table>'
     +'<div class="footer">maNTapps Financial App &nbsp;·&nbsp; Digenerate otomatis &nbsp;·&nbsp; '+printDate+'</div>'
     +'<script>window.onload=function(){window.print();};<\/script>'
-    +'</body></html>';
+    +'
+<!-- ══ MODAL BAYAR TAGIHAN ══ -->
+<div id="bayar-modal-overlay" onclick="closeBayarModal()" style="display:none;position:fixed;inset:0;z-index:1050;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);"></div>
+<div id="bayar-modal" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:1051;max-width:480px;margin:0 auto;background:var(--surface);border-radius:26px 26px 0 0;box-shadow:0 -8px 48px rgba(13,33,82,.22);max-height:88vh;display:none;flex-direction:column;">
+  <!-- Handle -->
+  <div style="flex-shrink:0;padding:14px 20px 0;">
+    <div style="width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px;"></div>
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div>
+        <div style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);">Pembayaran Tagihan</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:2px;" id="bayar-modal-subtitle">0 tagihan aktif</div>
+      </div>
+      <button onclick="closeBayarModal()" style="width:34px;height:34px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- List tagihan (scrollable) -->
+  <div id="bayar-modal-list" style="flex:1;overflow-y:auto;padding:14px 20px 8px;scrollbar-width:none;"></div>
+
+  <!-- Footer: total + bayar semua -->
+  <div style="flex-shrink:0;padding:12px 20px calc(var(--safe-bot) + 20px);border-top:1px solid var(--border);background:var(--surface);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--t3);">Total belum dibayar</div>
+      <div style="font-family:var(--f);font-size:16px;font-weight:800;color:var(--navy);" id="bayar-modal-total">Rp 0</div>
+    </div>
+    <button onclick="bayarSemuaDariModal()" style="width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,#16A34A,#22C55E);color:white;border:none;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(34,197,94,.35);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+      Bayar Semua
+    </button>
+  </div>
+</div>
+
+</body></html>';
 
   const w = window.open('','_blank');
   if(w){
@@ -4914,12 +4949,6 @@ function renderTagihanList() {
           <div style="margin-top:3px;">${statusBadge}</div>
         </div>
       </div>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-        <button onclick="tandaiTagihanLunas(${t.id})" style="width:100%;padding:9px 14px;border-radius:10px;background:linear-gradient(135deg,#16A34A,#22C55E);color:white;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 3px 10px rgba(34,197,94,0.3);">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8"><polyline points="20,6 9,17 4,12"/></svg>
-          Sudah Bayar
-        </button>
-      </div>
     </div>`;
   }).join('');
 
@@ -5270,6 +5299,161 @@ function bayarSemuaTagihan() {
   });
   renderTagihanList();
   toast(`\uD83D\uDCB3 Semua tagihan sudah dibayar! Rp ${total.toLocaleString('id-ID')}`);
+  fbAutoSave();
+}
+
+
+// ══════════════════════════════════════════════
+// MODAL BAYAR TAGIHAN
+// ══════════════════════════════════════════════
+function openBayarModal() {
+  const aktif = tagihan.filter(t => !t.lunas);
+  if (!aktif.length) { toast('✅ Semua tagihan sudah dibayar!'); return; }
+  renderBayarModalList();
+  document.getElementById('bayar-modal-overlay').style.display = 'block';
+  const modal = document.getElementById('bayar-modal');
+  modal.style.display = 'flex';
+}
+
+function closeBayarModal() {
+  document.getElementById('bayar-modal-overlay').style.display = 'none';
+  document.getElementById('bayar-modal').style.display = 'none';
+}
+
+function renderBayarModalList() {
+  const c = document.getElementById('bayar-modal-list'); if (!c) return;
+  const now = new Date();
+  const aktif = tagihan
+    .filter(t => !t.lunas)
+    .sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+  const total = aktif.reduce((s,t) => s + (t.nominal||0), 0);
+  const sub = document.getElementById('bayar-modal-subtitle');
+  if (sub) sub.textContent = aktif.length + ' tagihan aktif';
+  const tot = document.getElementById('bayar-modal-total');
+  if (tot) tot.textContent = 'Rp ' + total.toLocaleString('id-ID');
+
+  if (!aktif.length) {
+    c.innerHTML = `<div style="text-align:center;padding:32px 0;color:var(--t3);font-size:13px;">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" style="display:block;margin:0 auto 12px"><polyline points="20,6 9,17 4,12"/></svg>
+      Semua tagihan sudah dibayar 🎉
+    </div>`;
+    const btn = document.querySelector('#bayar-modal > div:last-child button');
+    if (btn) btn.disabled = true;
+    return;
+  }
+
+  c.innerHTML = aktif.map(t => {
+    const due = new Date(t.tanggal);
+    const diffDays = Math.ceil((due - now) / 86400000);
+    let urgencyDot = '#22C55E';
+    let urgencyLabel = '';
+    if (diffDays < 0) { urgencyDot = '#EF4444'; urgencyLabel = `<span style="color:#EF4444;font-size:10px;font-weight:700;">Terlambat ${Math.abs(diffDays)}h</span>`; }
+    else if (diffDays === 0) { urgencyDot = '#F59E0B'; urgencyLabel = `<span style="color:#D97706;font-size:10px;font-weight:700;">Hari ini</span>`; }
+    else if (diffDays <= 3) { urgencyDot = '#F59E0B'; urgencyLabel = `<span style="color:#D97706;font-size:10px;font-weight:600;">${diffDays} hari lagi</span>`; }
+    else { urgencyLabel = `<span style="color:var(--t3);font-size:10px;">${due.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short'})}</span>`; }
+
+    const freqTag = t.frekuensi === 'bulanan'
+      ? `<span style="background:#EEF3FF;color:var(--blue);border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;">🔄</span>` : '';
+    const catBg  = t.catColor || '#EBF3FE';
+    const catIco = t.catIco  || `<svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+
+    return `<div id="bayar-row-${t.id}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:14px;margin-bottom:10px;border:1.5px solid var(--border);transition:all .25s;">
+      <!-- Ikon kategori -->
+      <div style="width:40px;height:40px;border-radius:11px;background:${catBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="width:18px;height:18px;">${catIco}</div>
+      </div>
+      <!-- Info -->
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px;display:flex;align-items:center;gap:5px;">${t.nama} ${freqTag}</div>
+        <div style="display:flex;align-items:center;gap:5px;">${urgencyLabel}</div>
+      </div>
+      <!-- Nominal + tombol bayar -->
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+        <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);">Rp ${Number(t.nominal||0).toLocaleString('id-ID')}</div>
+        <button id="bayar-btn-${t.id}" onclick="bayarDariModal(${t.id})"
+          style="background:linear-gradient(135deg,#16A34A,#22C55E);color:white;border:none;border-radius:9px;padding:6px 14px;font-family:var(--f);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 3px 10px rgba(34,197,94,.3);transition:all .25s;">
+          Bayar
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function bayarDariModal(id) {
+  const t = tagihan.find(x=>x.id===id); if (!t) return;
+  const isBulanan = t.frekuensi === 'bulanan';
+
+  // Animasi card di modal → lunas
+  const row = document.getElementById('bayar-row-'+id);
+  const btn = document.getElementById('bayar-btn-'+id);
+  if (row) {
+    row.style.background = '#F0FDF4';
+    row.style.borderColor = 'rgba(34,197,94,0.4)';
+    row.style.opacity = '0.7';
+  }
+  if (btn) {
+    btn.textContent = '✓ Lunas';
+    btn.style.background = '#dcfce7';
+    btn.style.color = '#16A34A';
+    btn.style.boxShadow = 'none';
+    btn.disabled = true;
+  }
+
+  // Terapkan logika bayar
+  if (isBulanan) {
+    t.tanggal = _nextMonthDate(t.tanggal);
+    // Untuk bulanan: hapus dari modal list karena sudah digeser ke bulan depan
+    setTimeout(() => { if (row) row.remove(); _refreshBayarModalFooter(); renderTagihanList(); }, 400);
+    toast(`✅ "${t.nama}" lunas! Diperbarui ke bulan depan 🔄`);
+  } else {
+    t.lunas = true;
+    t.tanggalLunas = new Date().toISOString();
+    setTimeout(() => { if (row) row.remove(); _refreshBayarModalFooter(); renderTagihanList(); }, 400);
+    toast(`✅ "${t.nama}" sudah dibayar!`);
+  }
+  fbAutoSave();
+}
+
+function _refreshBayarModalFooter() {
+  const aktif = tagihan.filter(t => !t.lunas);
+  const total = aktif.reduce((s,t) => s + (t.nominal||0), 0);
+  const sub = document.getElementById('bayar-modal-subtitle');
+  if (sub) sub.textContent = aktif.length + ' tagihan aktif';
+  const tot = document.getElementById('bayar-modal-total');
+  if (tot) tot.textContent = 'Rp ' + total.toLocaleString('id-ID');
+  if (!aktif.length) {
+    const c = document.getElementById('bayar-modal-list');
+    if (c) c.innerHTML = `<div style="text-align:center;padding:32px 0;color:var(--t3);font-size:13px;">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" style="display:block;margin:0 auto 12px"><polyline points="20,6 9,17 4,12"/></svg>
+      Semua tagihan sudah dibayar 🎉
+    </div>`;
+  }
+}
+
+function bayarSemuaDariModal() {
+  const belumBayar = tagihan.filter(t => !t.lunas);
+  if (!belumBayar.length) { toast('✅ Semua sudah dibayar!'); return; }
+  // Animasi semua row
+  belumBayar.forEach(t => {
+    const row = document.getElementById('bayar-row-'+t.id);
+    const btn = document.getElementById('bayar-btn-'+t.id);
+    if (row) { row.style.background='#F0FDF4'; row.style.borderColor='rgba(34,197,94,0.4)'; row.style.opacity='0.7'; }
+    if (btn) { btn.textContent='✓ Lunas'; btn.style.background='#dcfce7'; btn.style.color='#16A34A'; btn.style.boxShadow='none'; btn.disabled=true; }
+    // Terapkan
+    if (t.frekuensi === 'bulanan') {
+      t.tanggal = _nextMonthDate(t.tanggal);
+    } else {
+      t.lunas = true;
+      t.tanggalLunas = new Date().toISOString();
+    }
+  });
+  const total = belumBayar.reduce((s,t)=>s+(t.nominal||0),0);
+  setTimeout(() => {
+    renderTagihanList();
+    closeBayarModal();
+    toast(`💳 Semua tagihan dibayar! Rp ${total.toLocaleString('id-ID')}`);
+  }, 500);
   fbAutoSave();
 }
 

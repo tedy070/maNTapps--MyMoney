@@ -1287,10 +1287,28 @@ body{background:var(--bg);transition:background .35s;}
             <div style="font-size:11px;color:var(--t3);text-align:right;" id="tagihan-expense-pct">0% of budget</div>
           </div>
 
-          <!-- Due Soon -->
-          <div style="padding:0 16px 8px;">
-            <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:12px;" data-i18n="tg-due-soon">Segera Jatuh Tempo</div>
+          <!-- Tab Navbar: Segera Jatuh Tempo | Riwayat -->
+          <div style="margin:0 16px 14px;background:var(--surface2);border-radius:14px;padding:4px;display:flex;gap:0;">
+            <button id="tg-tab-aktif" onclick="switchTagihanTab('aktif')"
+              style="flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Jatuh Tempo
+            </button>
+            <button id="tg-tab-riwayat" onclick="switchTagihanTab('riwayat')"
+              style="flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12,8 12,12 14,14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3,3 3,8 8,8"/></svg>
+              Riwayat
+            </button>
+          </div>
+
+          <!-- Panel: Segera Jatuh Tempo -->
+          <div id="tg-panel-aktif" style="padding:0 16px 8px;">
             <div id="tagihan-list"></div>
+          </div>
+
+          <!-- Panel: Riwayat (tagihan sekali bayar yang sudah lunas) -->
+          <div id="tg-panel-riwayat" style="padding:0 16px 8px;display:none;">
+            <div id="tagihan-riwayat-list"></div>
           </div>
 
           <!-- FAB Add Bill -->
@@ -4801,55 +4819,63 @@ function switchGoalsSubTab(tab) {
   }
 }
 
+// ── State tab tagihan ──
+let _tagihanTab = 'aktif'; // 'aktif' | 'riwayat'
+
+function switchTagihanTab(tab) {
+  _tagihanTab = tab;
+  const tabAktif   = document.getElementById('tg-tab-aktif');
+  const tabRiwayat = document.getElementById('tg-tab-riwayat');
+  const panelAktif   = document.getElementById('tg-panel-aktif');
+  const panelRiwayat = document.getElementById('tg-panel-riwayat');
+  if (!tabAktif) return;
+  if (tab === 'aktif') {
+    tabAktif.style.cssText   = 'flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;';
+    tabRiwayat.style.cssText = 'flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;';
+    panelAktif.style.display   = 'block';
+    panelRiwayat.style.display = 'none';
+  } else {
+    tabRiwayat.style.cssText = 'flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;';
+    tabAktif.style.cssText   = 'flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;';
+    panelAktif.style.display   = 'none';
+    panelRiwayat.style.display = 'block';
+    renderTagihanRiwayat();
+  }
+}
+
+// ── Helper: maju tanggal 1 bulan ──
+function _nextMonthDate(tanggalStr) {
+  const d = new Date(tanggalStr);
+  d.setMonth(d.getMonth() + 1);
+  // Jaga agar tanggal tidak overflow (mis. 31 Jan → 28/29 Feb)
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2,'0');
+  const dd   = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function renderTagihanList() {
   const c = document.getElementById('tagihan-list'); if (!c) return;
   const now = new Date();
-  // Sort: lunas ke bawah, lalu terdekat dulu
-  const sorted = [...tagihan].sort((a,b) => {
-    if (!!a.lunas !== !!b.lunas) return a.lunas ? 1 : -1;
-    return new Date(a.tanggal) - new Date(b.tanggal);
-  });
 
-  if (!sorted.length) {
+  // Hanya tampilkan tagihan yang AKTIF (belum lunas) di tab kiri
+  const aktif = tagihan
+    .filter(t => !t.lunas)
+    .sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+  if (!aktif.length) {
     c.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--t3);font-size:13px;">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      ${T('tg-no-bills')}
+      Semua tagihan sudah dibayar 🎉
     </div>`;
-    updateTagihanSummary([]);
+    updateTagihanSummary(tagihan);
     return;
   }
 
-  c.innerHTML = sorted.map(t => {
+  c.innerHTML = aktif.map(t => {
     const due = new Date(t.tanggal);
     const diffMs = due - now;
     const diffDays = Math.ceil(diffMs / 86400000);
-
-    // === LUNAS STATE ===
-    if (t.lunas) {
-      const catBg = t.catColor || '#EBF3FE';
-      const catIco = t.catIco || `<svg viewBox="0 0 24 24" stroke="#22C55E"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
-      return `<div style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh2);opacity:0.72;border:1.5px solid rgba(34,197,94,0.25);">
-        <div style="width:42px;height:42px;border-radius:12px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;">
-          <div style="width:20px;height:20px;">${catIco}</div>
-          <div style="position:absolute;bottom:-4px;right:-4px;width:16px;height:16px;background:#22C55E;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);">
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20,6 9,17 4,12"/></svg>
-          </div>
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--t3);margin-bottom:2px;text-decoration:line-through;">${t.nama}</div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span style="background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;">✓ Lunas</span>
-            <span style="color:var(--t3);font-size:11px;">${due.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short'})}</span>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
-          <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--t3);">Rp ${Number(t.nominal||0).toLocaleString('id-ID')}</div>
-          <button onclick="event.stopPropagation();tandaiTagihanBelumBayar(${t.id})" style="background:var(--surface2);color:var(--t3);border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:var(--f);font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;">Batalkan</button>
-        </div>
-      </div>`;
-    }
-
-    // === BELUM BAYAR STATE ===
     let statusBadge = '';
     let statusText = '';
     let cardBorderStyle = '';
@@ -4869,16 +4895,19 @@ function renderTagihanList() {
     } else {
       statusText = `<span style="color:var(--t3);font-size:11px;">📅 ${due.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short'})}</span>`;
     }
-    const catBg = t.catColor || '#EBF3FE';
-    const catIco = t.catIco || `<svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+    const freqBadge = t.frekuensi === 'bulanan'
+      ? `<span style="background:#EEF3FF;color:var(--blue);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:600;">🔄 Bulanan</span>`
+      : '';
+    const catBg  = t.catColor || '#EBF3FE';
+    const catIco = t.catIco  || `<svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
     return `<div style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;box-shadow:var(--sh2);${cardBorderStyle}">
       <div style="display:flex;align-items:center;gap:12px;" onclick="openEditTagihan(${t.id})">
         <div style="width:42px;height:42px;border-radius:12px;background:${catBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <div style="width:20px;height:20px;">${catIco}</div>
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:2px;">${t.nama}</div>
-          <div style="display:flex;align-items:center;gap:6px;">${statusText}</div>
+          <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:3px;">${t.nama}</div>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${statusText}${freqBadge}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
           <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Rp ${Number(t.nominal||0).toLocaleString('id-ID')}</div>
@@ -4894,7 +4923,67 @@ function renderTagihanList() {
     </div>`;
   }).join('');
 
-  updateTagihanSummary(sorted);
+  updateTagihanSummary(tagihan);
+}
+
+function renderTagihanRiwayat() {
+  const c = document.getElementById('tagihan-riwayat-list'); if (!c) return;
+  // Riwayat = tagihan sekali pakai yang sudah lunas
+  const riwayat = tagihan
+    .filter(t => t.lunas && (t.frekuensi === 'sekali' || !t.frekuensi))
+    .sort((a,b) => new Date(b.tanggalLunas||b.tanggal) - new Date(a.tanggalLunas||a.tanggal));
+
+  if (!riwayat.length) {
+    c.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--t3);font-size:13px;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px"><polyline points="12,8 12,12 14,14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3,3 3,8 8,8"/></svg>
+      Belum ada riwayat pembayaran
+    </div>`;
+    return;
+  }
+
+  // Kelompokkan per bulan lunas
+  const grouped = {};
+  riwayat.forEach(t => {
+    const d = new Date(t.tanggalLunas || t.tanggal);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString(lang==='id'?'id-ID':'en-US',{month:'long',year:'numeric'});
+    if (!grouped[key]) grouped[key] = { label, items: [] };
+    grouped[key].items.push(t);
+  });
+
+  c.innerHTML = Object.keys(grouped).sort((a,b)=>b.localeCompare(a)).map(key => {
+    const { label, items } = grouped[key];
+    const totalGrp = items.reduce((s,t)=>s+(t.nominal||0),0);
+    const cards = items.map(t => {
+      const lunasDate = t.tanggalLunas ? new Date(t.tanggalLunas).toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'}) : '-';
+      const catBg  = t.catColor || '#EBF3FE';
+      const catIco = t.catIco  || `<svg viewBox="0 0 24 24" stroke="#22C55E"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+      return `<div style="background:var(--surface);border-radius:13px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:11px;box-shadow:var(--sh2);border:1.5px solid rgba(34,197,94,0.2);opacity:0.85;">
+        <div style="width:40px;height:40px;border-radius:11px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;">
+          <div style="width:18px;height:18px;">${catIco}</div>
+          <div style="position:absolute;bottom:-3px;right:-3px;width:14px;height:14px;background:#22C55E;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);">
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20,6 9,17 4,12"/></svg>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t2);margin-bottom:2px;text-decoration:line-through;">${t.nama}</div>
+          <div style="font-size:11px;color:var(--t3);">Dibayar ${lunasDate}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t3);">Rp ${Number(t.nominal||0).toLocaleString('id-ID')}</div>
+          <button onclick="hapusRiwayatTagihan(${t.id})" style="margin-top:4px;background:rgba(239,68,68,.08);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-family:var(--f);font-size:10px;font-weight:600;cursor:pointer;">Hapus</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t3);text-transform:capitalize;">${label}</div>
+        <div style="font-size:12px;font-weight:700;color:#16A34A;">Rp ${totalGrp.toLocaleString('id-ID')}</div>
+      </div>
+      ${cards}
+    </div>`;
+  }).join('');
 }
 
 function updateTagihanSummary(list) {
@@ -5130,10 +5219,21 @@ function hapusTagihan() {
 
 function tandaiTagihanLunas(id) {
   const t = tagihan.find(x=>x.id===id); if (!t) return;
-  t.lunas = true;
-  t.tanggalLunas = new Date().toISOString();
-  renderTagihanList();
-  toast(`\u2705 "${t.nama}" sudah dibayar!`);
+  const isBulanan = t.frekuensi === 'bulanan';
+
+  if (isBulanan) {
+    // Tandai lunas sementara (tidak disimpan ke array riwayat), lalu geser tanggal ke bulan berikutnya
+    t.tanggal = _nextMonthDate(t.tanggal);
+    // t.lunas tetap false — tagihan direset langsung aktif untuk bulan berikutnya
+    renderTagihanList();
+    toast(`\u2705 "${t.nama}" lunas! Tagihan diperbarui ke bulan depan \uD83D\uDD04`);
+  } else {
+    // Tagihan sekali pakai → tandai lunas & pindah ke riwayat
+    t.lunas = true;
+    t.tanggalLunas = new Date().toISOString();
+    renderTagihanList();
+    toast(`\u2705 "${t.nama}" sudah dibayar!`);
+  }
   fbAutoSave();
 }
 
@@ -5146,13 +5246,27 @@ function tandaiTagihanBelumBayar(id) {
   fbAutoSave();
 }
 
+function hapusRiwayatTagihan(id) {
+  const t = tagihan.find(x=>x.id===id);
+  tagihan = tagihan.filter(x=>x.id!==id);
+  renderTagihanList();
+  if (_tagihanTab === 'riwayat') renderTagihanRiwayat();
+  toast(`\uD83D\uDDD1\uFE0F ${t?.nama||'Tagihan'} dihapus dari riwayat`);
+  fbAutoSave();
+}
+
 function bayarSemuaTagihan() {
   const belumBayar = tagihan.filter(t => !t.lunas);
   if (!belumBayar.length) { toast(T('tg-toast-no-bills')); return; }
   const total = belumBayar.reduce((s,t)=>s+(t.nominal||0),0);
   belumBayar.forEach(t => {
-    t.lunas = true;
-    t.tanggalLunas = new Date().toISOString();
+    if (t.frekuensi === 'bulanan') {
+      // Reset ke bulan depan
+      t.tanggal = _nextMonthDate(t.tanggal);
+    } else {
+      t.lunas = true;
+      t.tanggalLunas = new Date().toISOString();
+    }
   });
   renderTagihanList();
   toast(`\uD83D\uDCB3 Semua tagihan sudah dibayar! Rp ${total.toLocaleString('id-ID')}`);

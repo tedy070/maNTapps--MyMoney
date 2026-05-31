@@ -4903,6 +4903,35 @@ function renderTagihanList() {
       : '';
     const catBg  = t.catColor || '#EBF3FE';
     const catIco = t.catIco  || `<svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+
+    // ── Warning bar below nominal ──
+    let warnBg='', warnColor='', warnIcon='', warnMsg='';
+    if (diffDays < 0) {
+      warnBg='rgba(239,68,68,.08)'; warnColor='#DC2626';
+      warnIcon=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+      warnMsg = `Tagihan terlambat ${Math.abs(diffDays)} hari! Segera bayar.`;
+    } else if (diffDays === 0) {
+      warnBg='rgba(245,158,11,.09)'; warnColor='#B45309';
+      warnIcon=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      warnMsg = 'Jatuh tempo hari ini — bayar sekarang!';
+    } else if (diffDays <= 3) {
+      warnBg='rgba(245,158,11,.07)'; warnColor='#92400E';
+      warnIcon=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>`;
+      warnMsg = `Jatuh tempo dalam ${diffDays} hari — jangan sampai terlewat.`;
+    } else if (diffDays <= 7) {
+      warnBg='rgba(59,130,246,.07)'; warnColor='#1D4ED8';
+      warnIcon=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>`;
+      warnMsg = `Jatuh tempo ${due.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short'})} — ${diffDays} hari lagi.`;
+    } else {
+      warnBg='rgba(16,185,129,.07)'; warnColor='#065F46';
+      warnIcon=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#065F46" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>`;
+      warnMsg = `Jatuh tempo ${due.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'})}.`;
+    }
+    const warningBar = `<div style="display:flex;align-items:center;gap:7px;background:${warnBg};border-radius:8px;padding:7px 10px;margin-top:10px;">
+      ${warnIcon}
+      <span style="font-size:11px;font-weight:600;color:${warnColor};flex:1;">${warnMsg}</span>
+    </div>`;
+
     return `<div style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;box-shadow:var(--sh2);${cardBorderStyle}">
       <div style="display:flex;align-items:center;gap:12px;" onclick="openEditTagihan(${t.id})">
         <div style="width:42px;height:42px;border-radius:12px;background:${catBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -4917,6 +4946,7 @@ function renderTagihanList() {
           <div style="margin-top:3px;">${statusBadge}</div>
         </div>
       </div>
+      ${warningBar}
     </div>`;
   }).join('');
 

@@ -2563,6 +2563,7 @@ function deleteWallet(){
   renderWallets();
   buildSourceGrid();
   recalcTotalBalance();
+  addNotif('wallet', T('notif-card-deleted'), `${nama} ••••${w.num}`);
   toast(`🗑️ ${nama} ${lang==='id'?'dihapus':'removed'}`);
   fbAutoSave();
 }
@@ -3425,7 +3426,7 @@ const TR={
     'notif-welcome-title':'Welcome to maNTapps! 👋',
     'notif-welcome-body':'Data saved automatically. Sync across all devices.',
     'notif-topup':'Top Up Successful','notif-card-added':'New Card Added',
-    'notif-card-updated':'Card Updated',
+    'notif-card-updated':'Card Updated','notif-card-deleted':'Card Removed',
     'hist-topup':'Top Up',
     'goal-added':'Goal added!','wallet-added':'Card added!',
     'pw-changed':'Password changed!','pw-wrong':'Current password incorrect',
@@ -3470,7 +3471,7 @@ const TR={
     'notif-welcome-title':'Selamat datang di maNTapps! 👋',
     'notif-welcome-body':'Data tersimpan otomatis. Sinkron di semua perangkat.',
     'notif-topup':'Isi Saldo Berhasil','notif-card-added':'Kartu Baru Ditambahkan',
-    'notif-card-updated':'Kartu Diperbarui',
+    'notif-card-updated':'Kartu Diperbarui','notif-card-deleted':'Kartu Dihapus',
     'hist-topup':'Isi Saldo',
     'goal-added':'Tujuan ditambahkan!','wallet-added':'Kartu ditambahkan!',
     'pw-changed':'Password berhasil diubah!','pw-wrong':'Password saat ini salah',

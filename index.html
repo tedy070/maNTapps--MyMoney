@@ -2192,21 +2192,167 @@ function _goldCardBadge(w){
     </div>`;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// BANK / E-WALLET BRAND SYSTEM — SVG logo + gradient + deco
+// ═══════════════════════════════════════════════════════════════
+const BANK_BRANDS = {
+  bca:{
+    grad:'linear-gradient(135deg,#005596,#0070B8 55%,#009EDB)',chip:true,
+    logo:`<svg viewBox="0 0 160 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="34" font-family="Arial Black,Arial" font-weight="900" font-size="36" fill="white" letter-spacing="-1">BCA</text></svg>`,
+    sub:'BANK CENTRAL ASIA',
+    deco:`<svg style="position:absolute;right:-18px;top:-18px;opacity:.1;pointer-events:none" width="140" height="140" viewBox="0 0 140 140"><circle cx="70" cy="70" r="65" fill="none" stroke="white" stroke-width="22"/><circle cx="70" cy="70" r="38" fill="none" stroke="white" stroke-width="12"/></svg>`
+  },
+  mandiri:{
+    grad:'linear-gradient(135deg,#002C85,#003FA5 50%,#0055B3)',chip:true,
+    logo:`<svg viewBox="0 0 180 44" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="8" width="9" height="22" rx="2.5" fill="#F5A623"/><rect x="13" y="2" width="9" height="36" rx="2.5" fill="#F5A623"/><rect x="26" y="8" width="9" height="22" rx="2.5" fill="#F5A623"/><text x="44" y="32" font-family="Arial,sans-serif" font-weight="800" font-size="20" fill="white" letter-spacing=".5">mandiri</text></svg>`,
+    sub:'BANK MANDIRI',
+    deco:`<svg style="position:absolute;right:-8px;bottom:-22px;opacity:.08;pointer-events:none" width="130" height="130" viewBox="0 0 130 130"><rect x="8" y="8" width="40" height="114" rx="6" fill="white"/><rect x="28" y="0" width="40" height="114" rx="6" fill="white"/><rect x="48" y="8" width="40" height="114" rx="6" fill="white"/></svg>`
+  },
+  bni:{
+    grad:'linear-gradient(135deg,#E05000,#F06000 50%,#FF7010)',chip:true,
+    logo:`<svg viewBox="0 0 130 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="36" font-family="Arial Black,Arial" font-weight="900" font-size="38" fill="white" letter-spacing="-2">BNI</text><text x="4" y="44" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,.7)" letter-spacing="1">46</text></svg>`,
+    sub:'BANK NEGARA INDONESIA',
+    deco:`<svg style="position:absolute;right:-18px;top:50%;transform:translateY(-50%);opacity:.1;pointer-events:none" width="120" height="120" viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="55" ry="55" fill="none" stroke="white" stroke-width="20"/></svg>`
+  },
+  bri:{
+    grad:'linear-gradient(135deg,#003E7E,#00509E 50%,#1266B8)',chip:true,
+    logo:`<svg viewBox="0 0 130 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="36" font-family="Arial Black,Arial" font-weight="900" font-size="36" fill="white">BRI</text></svg>`,
+    sub:'BANK RAKYAT INDONESIA',
+    deco:`<svg style="position:absolute;right:-22px;bottom:-22px;opacity:.09;pointer-events:none" width="140" height="140" viewBox="0 0 140 140"><polygon points="70,6 134,112 6,112" fill="none" stroke="white" stroke-width="20"/><polygon points="70,30 116,106 24,106" fill="none" stroke="white" stroke-width="8"/></svg>`
+  },
+  btn:{
+    grad:'linear-gradient(135deg,#006233,#007A3D 50%,#009A4E)',chip:true,
+    logo:`<svg viewBox="0 0 130 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="36" font-family="Arial Black,Arial" font-weight="900" font-size="34" fill="white">BTN</text></svg>`,
+    sub:'BANK TABUNGAN NEGARA',deco:''
+  },
+  cimb:{
+    grad:'linear-gradient(135deg,#B0001A,#CC001E 50%,#E0001F)',chip:true,
+    logo:`<svg viewBox="0 0 160 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="32" font-family="Arial Black,Arial" font-weight="900" font-size="28" fill="white">CIMB</text><text x="4" y="44" font-family="Arial,sans-serif" font-size="10" fill="rgba(255,255,255,.75)" letter-spacing=".5">NIAGA</text></svg>`,
+    sub:'CIMB NIAGA',
+    deco:`<svg style="position:absolute;right:-12px;top:-12px;opacity:.1;pointer-events:none" width="110" height="110" viewBox="0 0 110 110"><path d="M10,55 Q55,-12 100,55 Q55,122 10,55Z" fill="white"/></svg>`
+  },
+  danamon:{
+    grad:'linear-gradient(135deg,#D80008,#EE1010 50%,#FF2222)',chip:true,
+    logo:`<svg viewBox="0 0 180 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="30" font-family="Arial,sans-serif" font-weight="800" font-size="22" fill="white">DANAMON</text></svg>`,
+    sub:'BANK DANAMON',deco:''
+  },
+  permata:{
+    grad:'linear-gradient(135deg,#A6002A,#BB0034 50%,#D0003E)',chip:true,
+    logo:`<svg viewBox="0 0 160 44" xmlns="http://www.w3.org/2000/svg"><polygon points="18,2 34,18 18,34 2,18" fill="none" stroke="white" stroke-width="3"/><polygon points="18,8 28,18 18,28 8,18" fill="white"/><text x="42" y="28" font-family="Arial,sans-serif" font-weight="800" font-size="18" fill="white">Permata</text></svg>`,
+    sub:'BANK PERMATA',deco:''
+  },
+  panin:{
+    grad:'linear-gradient(135deg,#001A60,#00228A 50%,#0033B5)',chip:true,
+    logo:`<svg viewBox="0 0 130 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="32" font-family="Arial Black,Arial" font-weight="900" font-size="26" fill="white">PANIN</text><text x="2" y="44" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,.6)" letter-spacing=".5">BANK</text></svg>`,
+    sub:'PANIN BANK',deco:''
+  },
+  ocbc:{
+    grad:'linear-gradient(135deg,#BB2025,#CC2A30 50%,#DD3035)',chip:true,
+    logo:`<svg viewBox="0 0 130 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="32" font-family="Arial Black,Arial" font-weight="900" font-size="26" fill="white">OCBC</text><text x="2" y="44" font-family="Arial,sans-serif" font-size="9" fill="rgba(255,255,255,.65)">NISP</text></svg>`,
+    sub:'OCBC NISP',deco:''
+  },
+  gopay:{
+    grad:'linear-gradient(135deg,#00A8E0,#00BAD0 50%,#00CDD0)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 160 50" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="25" r="22" fill="white" opacity=".95"/><text x="10" y="32" font-family="Arial Black,Arial" font-weight="900" font-size="17" fill="#00A8E0">Go</text><text x="54" y="35" font-family="Arial Black,Arial" font-weight="900" font-size="26" fill="white">Pay</text></svg>`,
+    sub:'E-WALLET',
+    deco:`<svg style="position:absolute;right:-22px;bottom:-28px;opacity:.12;pointer-events:none" width="140" height="140" viewBox="0 0 140 140"><circle cx="70" cy="70" r="65" fill="white"/></svg>`
+  },
+  ovo:{
+    grad:'linear-gradient(135deg,#452777,#58329A 50%,#6B3DBD)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 140 50" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="9" width="136" height="32" rx="16" fill="white" opacity=".15"/><text x="22" y="35" font-family="Arial Black,Arial" font-weight="900" font-size="26" fill="white" letter-spacing="3">OVO</text></svg>`,
+    sub:'E-WALLET',
+    deco:`<svg style="position:absolute;right:-18px;top:50%;transform:translateY(-50%);opacity:.1;pointer-events:none" width="130" height="130" viewBox="0 0 130 130"><rect x="5" y="25" width="120" height="80" rx="40" fill="white"/></svg>`
+  },
+  dana:{
+    grad:'linear-gradient(135deg,#0E88E8,#1A9FFF 50%,#3AB5FF)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 140 50" xmlns="http://www.w3.org/2000/svg"><text x="4" y="36" font-family="Arial Black,Arial" font-weight="900" font-size="32" fill="white" letter-spacing="-1">DANA</text><circle cx="126" cy="14" r="11" fill="white" opacity=".9"/><text x="120" y="19" font-family="Arial,sans-serif" font-size="12" fill="#0E88E8" font-weight="900">💙</text></svg>`,
+    sub:'E-WALLET',
+    deco:`<svg style="position:absolute;left:-18px;bottom:-22px;opacity:.1;pointer-events:none" width="130" height="130" viewBox="0 0 130 130"><circle cx="65" cy="65" r="60" fill="white"/><circle cx="65" cy="65" r="38" fill="none" stroke="white" stroke-width="9"/></svg>`
+  },
+  linkaja:{
+    grad:'linear-gradient(135deg,#DA0008,#EE1515 50%,#FF2828)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 170 50" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="10" width="36" height="28" rx="14" fill="white" opacity=".9"/><text x="8" y="30" font-family="Arial Black,Arial" font-weight="900" font-size="14" fill="#DA0008">LA</text><text x="46" y="33" font-family="Arial,sans-serif" font-weight="800" font-size="20" fill="white">LinkAja</text></svg>`,
+    sub:'E-WALLET',deco:''
+  },
+  shopeepay:{
+    grad:'linear-gradient(135deg,#EE4D2D,#FF5A38 50%,#FF7055)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 190 50" xmlns="http://www.w3.org/2000/svg"><text x="4" y="33" font-family="Arial,sans-serif" font-weight="800" font-size="22" fill="white">ShopeePay</text></svg>`,
+    sub:'E-WALLET',
+    deco:`<svg style="position:absolute;right:-18px;top:-18px;opacity:.11;pointer-events:none" width="120" height="120" viewBox="0 0 120 120"><path d="M60,5C88,5 115,32 115,60C115,88 88,115 60,115C32,115 5,88 5,60C5,32 32,5 60,5Z" fill="none" stroke="white" stroke-width="18"/></svg>`
+  },
+  jenius:{
+    grad:'linear-gradient(135deg,#009E72,#00B882 50%,#00D295)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 150 50" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="25" r="18" fill="white" opacity=".9"/><text x="11" y="32" font-family="Arial Black,Arial" font-weight="900" font-size="17" fill="#009E72">J</text><text x="46" y="34" font-family="Arial,sans-serif" font-weight="700" font-size="22" fill="white">Jenius</text></svg>`,
+    sub:'BTPN · E-WALLET',
+    deco:`<svg style="position:absolute;right:-14px;bottom:-14px;opacity:.12;pointer-events:none" width="110" height="110" viewBox="0 0 110 110"><circle cx="55" cy="55" r="50" fill="none" stroke="white" stroke-width="16"/><circle cx="55" cy="55" r="28" fill="white"/></svg>`
+  },
+  flip:{
+    grad:'linear-gradient(135deg,#019990,#00B0A4 50%,#00C8BC)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 110 50" xmlns="http://www.w3.org/2000/svg"><text x="4" y="38" font-family="Arial Black,Arial" font-weight="900" font-size="36" fill="white">flip</text></svg>`,
+    sub:'TRANSFER',deco:''
+  },
+  seabank:{
+    grad:'linear-gradient(135deg,#1A3A80,#2248A8 50%,#2D5CC5)',chip:false,hidNum:false,
+    logo:`<svg viewBox="0 0 160 50" xmlns="http://www.w3.org/2000/svg"><text x="4" y="33" font-family="Arial,sans-serif" font-weight="800" font-size="22" fill="white">SeaBank</text></svg>`,
+    sub:'DIGITAL BANK',deco:''
+  },
+  jago:{
+    grad:'linear-gradient(135deg,#E03A00,#F54E10 50%,#FF6228)',chip:false,hidNum:false,
+    logo:`<svg viewBox="0 0 130 50" xmlns="http://www.w3.org/2000/svg"><text x="4" y="36" font-family="Arial Black,Arial" font-weight="900" font-size="30" fill="white">jago</text><circle cx="108" cy="12" r="8" fill="#FFD700"/><text x="104" y="16" font-family="Arial,sans-serif" font-size="9" fill="#E03A00">★</text></svg>`,
+    sub:'BANK JAGO',deco:''
+  },
+  bsi:{
+    grad:'linear-gradient(135deg,#008840,#009A4A 50%,#00B055)',chip:true,
+    logo:`<svg viewBox="0 0 120 44" xmlns="http://www.w3.org/2000/svg"><text x="2" y="34" font-family="Arial Black,Arial" font-weight="900" font-size="34" fill="white">BSI</text></svg>`,
+    sub:'BANK SYARIAH INDONESIA',deco:''
+  },
+  tunai:{
+    grad:'linear-gradient(135deg,#1B5E20,#2E7D32 50%,#388E3C)',chip:false,hidNum:true,
+    logo:`<svg viewBox="0 0 140 50" xmlns="http://www.w3.org/2000/svg"><circle cx="22" cy="25" r="19" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2.5"/><text x="13" y="32" font-family="Arial Black,Arial" font-weight="900" font-size="18" fill="white">Rp</text><text x="50" y="32" font-family="Arial,sans-serif" font-weight="700" font-size="18" fill="white">Tunai</text></svg>`,
+    sub:'KAS / CASH',deco:''
+  },
+};
+
+function _detectBrand(name){
+  const n=(name||'').toLowerCase().replace(/[\s\-_]+/g,'');
+  if(n.includes('bca'))           return BANK_BRANDS.bca;
+  if(n.includes('mandiri'))       return BANK_BRANDS.mandiri;
+  if(n.includes('bni'))           return BANK_BRANDS.bni;
+  if(n.includes('bri'))           return BANK_BRANDS.bri;
+  if(n.includes('btn'))           return BANK_BRANDS.btn;
+  if(n.includes('cimb'))          return BANK_BRANDS.cimb;
+  if(n.includes('danamon'))       return BANK_BRANDS.danamon;
+  if(n.includes('permata'))       return BANK_BRANDS.permata;
+  if(n.includes('panin'))         return BANK_BRANDS.panin;
+  if(n.includes('ocbc'))          return BANK_BRANDS.ocbc;
+  if(n.includes('gopay')||n.includes('gojek')) return BANK_BRANDS.gopay;
+  if(n.includes('ovo'))           return BANK_BRANDS.ovo;
+  if(n.includes('dana'))          return BANK_BRANDS.dana;
+  if(n.includes('linkaja'))       return BANK_BRANDS.linkaja;
+  if(n.includes('shopeepay')||n.includes('spay')) return BANK_BRANDS.shopeepay;
+  if(n.includes('jenius'))        return BANK_BRANDS.jenius;
+  if(n.includes('flip'))          return BANK_BRANDS.flip;
+  if(n.includes('seabank'))       return BANK_BRANDS.seabank;
+  if(n.includes('jago'))          return BANK_BRANDS.jago;
+  if(n.includes('bsi'))           return BANK_BRANDS.bsi;
+  if(n.includes('tunai')||n.includes('cash')||n.includes('kas')) return BANK_BRANDS.tunai;
+  return null;
+}
+
 function renderWallets(){
   _ensureWalletCtxPortal();
   _hideWalletCtx();
   const c=document.getElementById('walletsContainer');if(!c)return;c.innerHTML='';
   wallets.forEach(w=>{
-    const [c1,c2]=w.color.split(',');
-    const div=document.createElement('div');
-    div.className='wallet-card';
-    const isGold=_isGoldCard(w.bank);
-    // Gold cards get special gradient
-    div.style.background=isGold
-      ?`linear-gradient(135deg,#7c3c0e,#c47a1a 45%,#e8a820)`
-      :`linear-gradient(135deg,${c1},${c2})`;
+    const brand = _detectBrand(w.bank);
+    const [c1,c2] = w.color.split(',');
+    const div = document.createElement('div');
+    div.className = 'wallet-card';
+    const isGold = _isGoldCard(w.bank);
 
+    // ── GOLD (emas) ──
     if(isGold){
+      div.style.background = 'linear-gradient(135deg,#7c3c0e,#c47a1a 45%,#e8a820)';
       const typeLabel = lang==='id'?'Logam Mulia · Realtime':'Precious Metal · Realtime';
       div.innerHTML=`
         <div class="wc-top">
@@ -2222,7 +2368,36 @@ function renderWallets(){
             <div class="wc-type" style="color:rgba(255,215,0,.85);font-weight:700;">${typeLabel}</div>
           </div>
         </div>`;
+
+    // ── BRAND DIKENAL ──
+    } else if(brand){
+      div.style.background = brand.grad;
+      const chipHtml  = brand.chip  ? `<div class="wc-chip"></div>` : '';
+      const numHtml   = brand.hidNum? '' : `<div class="wc-num" style="color:${brand.numColor||'rgba(255,255,255,.7)'};letter-spacing:2px;font-size:12px;margin:4px 0;">•••• •••• •••• ${w.num}</div>`;
+      div.innerHTML=`
+        ${brand.deco||''}
+        <div class="wc-top" style="align-items:flex-start;">
+          <div style="width:100%;display:flex;flex-direction:column;gap:3px;">
+            <div style="height:44px;display:flex;align-items:center;">${brand.logo}</div>
+            <div style="font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,.5);font-weight:600;text-transform:uppercase;">${brand.sub||''}</div>
+          </div>
+          <div style="flex-shrink:0;margin-left:8px;margin-top:2px;">
+            ${chipHtml}
+          </div>
+        </div>
+        ${numHtml}
+        <div class="wc-footer" style="justify-content:space-between;align-items:flex-end;">
+          <div>
+            <div style="font-size:9px;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">${lang==='id'?'SALDO':'BALANCE'}</div>
+            <div class="wc-bal">${fmt(w.balance)}</div>
+            <div class="wc-type">${w.type}</div>
+          </div>
+          <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
+        </div>`;
+
+    // ── CUSTOM (warna user) ──
     } else {
+      div.style.background = `linear-gradient(135deg,${c1},${c2})`;
       div.innerHTML=`
         <div class="wc-top">
           <div class="wc-bank">${w.bank}</div>

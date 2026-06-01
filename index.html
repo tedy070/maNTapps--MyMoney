@@ -732,8 +732,8 @@ body{background:var(--bg);transition:background .35s;}
 .add-wallet-btn span{font-size:12px;font-weight:600;color:var(--t3);}
 
 /* CTX MENU */
-.ctx-menu{position:absolute;top:36px;right:0;background:var(--surface);border-radius:13px;box-shadow:0 8px 30px rgba(13,33,82,.2);z-index:500;min-width:170px;overflow:hidden;border:1px solid var(--border);}
-.ctx-item{display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;font-size:13px;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);transition:background .15s;}
+.ctx-menu{position:absolute;top:36px;right:0;background:var(--surface);border-radius:13px;box-shadow:0 8px 30px rgba(13,33,82,.2);z-index:500;overflow:hidden;border:1px solid var(--border);white-space:nowrap;width:max-content;}
+.ctx-item{display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;color:var(--navy);border-bottom:1px solid var(--border);transition:background .15s;}
 .ctx-item:last-child{border-bottom:none;}
 .ctx-item:hover,.ctx-item:active{background:var(--surface2);}
 .ctx-item svg{width:15px;height:15px;fill:none;stroke:var(--t3);stroke-width:1.8;}
@@ -2157,7 +2157,7 @@ function _ensureWalletCtxPortal(){
   const p=document.createElement('div');
   p.id='walletCtxPortal';
   p.className='ctx-menu';
-  p.style.cssText='display:none;position:fixed;z-index:99999;min-width:170px;';
+  p.style.cssText='display:none;position:fixed;z-index:99999;white-space:nowrap;width:max-content;';
   p.innerHTML=`
     <div class="ctx-item" data-action="edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit</div>
     <div class="ctx-item" data-action="topup"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Top Up</div>
@@ -2386,7 +2386,7 @@ function renderWallets(){
 
     // ── GOLD (emas) ──
     if(isGold){
-      div.style.background = 'linear-gradient(135deg,#7c3c0e,#c47a1a 45%,#e8a820)';
+      div.style.background = w.customColor ? `linear-gradient(135deg,${w.customColor.split(',')[0]},${w.customColor.split(',')[1]})` : 'linear-gradient(135deg,#7c3c0e,#c47a1a 45%,#e8a820)';
       const goldLogo=`<svg viewBox="0 0 130 26" xmlns="http://www.w3.org/2000/svg"><text x="1" y="20" font-family="Arial Black,Arial" font-weight="900" font-size="18" fill="white">${w.bank}</text></svg>`;
       const goldSub = lang==='id'?'LOGAM MULIA':'PRECIOUS METAL';
       div.innerHTML=`
@@ -2413,7 +2413,8 @@ function renderWallets(){
 
     // ── BRAND DIKENAL ──
     } else if(brand){
-      div.style.background = brand.grad;
+      // Pakai customColor jika user sudah pilih warna manual, else pakai brand gradient
+      div.style.background = w.customColor ? `linear-gradient(135deg,${w.customColor.split(',')[0]},${w.customColor.split(',')[1]})` : brand.grad;
       const chipHtml  = brand.chip  ? `<div class="wc-chip"></div>` : '';
       const numHtml   = brand.hidNum? '' : `<div class="wc-num">•••• •••• •••• ${w.num}</div>`;
       div.innerHTML=`
@@ -2495,8 +2496,10 @@ function openEditWallet(id){
   document.getElementById('ewNum').value = w.num;
   document.getElementById('ewBal').value = isModeRp() ? Math.round(w.balance) : (w.balance / exRate).toFixed(2);
   document.getElementById('ewCurr').textContent = isModeRp() ? 'Rp' : '$';
-  // Load current color into picker + preview
-  editWalletColorSel = w.color || '#1A56C4,#2A6FD6';
+  // Load color: pakai customColor jika ada, else brand gradient, else w.color
+  const _brand = _detectBrand(w.bank);
+  const _defaultColor = w.customColor || (_brand ? _brand.grad.match(/#[0-9a-fA-F]{3,6}/g)?.slice(0,2).join(',') : null) || w.color || '#1A56C4,#2A6FD6';
+  editWalletColorSel = _defaultColor;
   updateEWColorPicker();
   updateEWPreview();
   document.getElementById('editWalletModal').classList.add('on');
@@ -2539,7 +2542,9 @@ function updateWallet(){
   w.num=document.getElementById('ewNum').value.trim()||w.num;
   const raw=parseFloat(document.getElementById('ewBal').value)||0;
   w.balance=isModeRp()?raw:Math.round(raw*exRate);
-  w.color=editWalletColorSel;
+  // Simpan ke customColor agar brand card bisa di-override warnanya
+  w.color = editWalletColorSel;
+  w.customColor = editWalletColorSel;
   closeEditWalletModal();
   renderWallets();
   buildSourceGrid();

@@ -1662,7 +1662,7 @@ body{background:var(--bg);transition:background .35s;}
 <div class="moverlay" id="editWalletModal">
   <div class="msheet" style="padding:20px 20px 28px;">
     <div class="mhandle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);" id="ewModalTitle">Edit Kartu</div>
       <button onclick="closeEditWalletModal()" style="width:30px;height:30px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1673,22 +1673,52 @@ body{background:var(--bg);transition:background .35s;}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
       <div>
         <div style="font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:6px;">NAMA BANK</div>
-        <div class="iwrap" style="margin:0;"><span class="iico"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><input class="finput" id="ewBank" style="font-size:14px;padding:10px 10px 10px 36px;"></div>
+        <div class="iwrap" style="margin:0;"><span class="iico"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><input class="finput" id="ewBank" oninput="updateEWPreview()" style="font-size:14px;padding:10px 10px 10px 36px;"></div>
       </div>
       <div>
         <div style="font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:6px;">4 DIGIT AKHIR</div>
-        <div class="iwrap" style="margin:0;"><span class="iico"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span><input class="finput" id="ewNum" maxlength="4" style="font-size:14px;padding:10px 10px 10px 36px;"></div>
+        <div class="iwrap" style="margin:0;"><span class="iico"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span><input class="finput" id="ewNum" maxlength="4" oninput="updateEWPreview()" style="font-size:14px;padding:10px 10px 10px 36px;"></div>
       </div>
     </div>
-    <!-- Balance row compact -->
-    <div style="margin-bottom:16px;">
+    <!-- Balance -->
+    <div style="margin-bottom:14px;">
       <div style="font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:6px;">SALDO</div>
       <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:10px 14px;">
         <span style="font-size:13px;font-weight:700;color:var(--blue);" id="ewCurr">Rp</span>
         <input type="number" id="ewBal" style="flex:1;border:none;background:transparent;font-family:var(--f);font-size:18px;font-weight:700;color:var(--navy);outline:none;min-width:0;">
       </div>
     </div>
-    <!-- Action buttons compact -->
+    <!-- Card Color picker -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">WARNA KARTU</div>
+      <!-- Mini card preview -->
+      <div id="ewCardPreview" style="width:100%;height:64px;border-radius:12px;margin-bottom:10px;padding:10px 14px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;transition:background .25s;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div id="ewPreviewBank" style="font-family:var(--f);font-size:11px;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:.5px;text-transform:uppercase;"></div>
+          <div style="width:22px;height:16px;border-radius:4px;background:rgba(255,215,0,.5);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+          <div id="ewPreviewNum" style="font-size:10px;color:rgba(255,255,255,.65);letter-spacing:2px;"></div>
+          <div id="ewPreviewBal" style="font-family:var(--f);font-size:13px;font-weight:800;color:white;"></div>
+        </div>
+        <div style="position:absolute;top:-18px;right:-18px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none;"></div>
+        <div style="position:absolute;bottom:-24px;left:6px;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none;"></div>
+      </div>
+      <!-- Palette -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;" id="ewColorPicker">
+        <div class="ew-col-opt" data-color="#1A56C4,#2A6FD6" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1A56C4,#2A6FD6);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#0B7A63,#0FA884" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#0B7A63,#0FA884);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#7C3AED,#A855F7" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#7C3AED,#A855F7);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#DC2626,#EF4444" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#DC2626,#EF4444);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#1E293B,#334155" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1E293B,#334155);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#D97706,#F59E0B" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#D97706,#F59E0B);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#0E7490,#06B6D4" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#0E7490,#06B6D4);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#BE185D,#EC4899" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#BE185D,#EC4899);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#92400E,#D97706" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#92400E,#D97706);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+        <div class="ew-col-opt" data-color="#064E3B,#10B981" onclick="selectEWColor(this)" style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#064E3B,#10B981);cursor:pointer;flex-shrink:0;border:3px solid transparent;transition:all .15s;"></div>
+      </div>
+    </div>
+    <!-- Action buttons -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <button onclick="deleteWallet()" style="padding:12px;border-radius:12px;border:1.5px solid var(--red);background:transparent;color:var(--red);font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">🗑 Hapus</button>
       <button onclick="updateWallet()" style="padding:12px;border-radius:12px;border:none;background:var(--blue);color:white;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">✓ Simpan</button>
@@ -1849,7 +1879,7 @@ let balance=196842640, exRate=15800; // contoh: ~Rp 196jt (setara $12.450)
 let curAv='default', editAvData='default';
 let photoDataUrl=null, editPhotoDataUrl=null;
 let pinBuf='',pinStp=0,newPinSaved='';
-let goalColor='#1A56C4', walletColorSel='#1A56C4,#2A6FD6', walletTypeSel='Debit';
+let goalColor='#1A56C4', walletColorSel='#1A56C4,#2A6FD6', walletTypeSel='Debit', editWalletColorSel='#1A56C4,#2A6FD6';
 let editingGoalId=null, editingWalletId=null, openMenuId=null;
 let savedPin='', lockPinBuf='', appHidden=false;
 const accounts = {};
@@ -2357,20 +2387,28 @@ function renderWallets(){
     // ── GOLD (emas) ──
     if(isGold){
       div.style.background = 'linear-gradient(135deg,#7c3c0e,#c47a1a 45%,#e8a820)';
-      const typeLabel = lang==='id'?'Logam Mulia · Realtime':'Precious Metal · Realtime';
+      const goldLogo=`<svg viewBox="0 0 130 26" xmlns="http://www.w3.org/2000/svg"><text x="1" y="20" font-family="Arial Black,Arial" font-weight="900" font-size="18" fill="white">${w.bank}</text></svg>`;
+      const goldSub = lang==='id'?'LOGAM MULIA':'PRECIOUS METAL';
       div.innerHTML=`
+        <svg style="position:absolute;right:-18px;top:-18px;opacity:.1;pointer-events:none" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="55" fill="none" stroke="white" stroke-width="18"/><circle cx="60" cy="60" r="32" fill="none" stroke="white" stroke-width="10"/></svg>
         <div class="wc-top">
-          <div class="wc-bank">${w.bank}</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:18px;line-height:1;">🥇</span>
+          <div class="wc-brand-logo">
+            ${goldLogo}
+            <div class="wc-brand-sub">${goldSub}</div>
+          </div>
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:6px;margin-top:1px;">
+            <span style="font-size:16px;line-height:1;">🥇</span>
             <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
           </div>
         </div>
-        <div class="wc-footer" style="align-items:flex-end;justify-content:space-between;">
-          ${_goldCardBadge(w)}
-          <div style="text-align:right;flex-shrink:0;">
-            <div class="wc-type" style="color:rgba(255,215,0,.85);font-weight:700;">${typeLabel}</div>
+        <div class="wc-num">•••• •••• •••• ${w.num}</div>
+        <div class="wc-footer">
+          <div>
+            <div style="font-size:8px;color:rgba(255,215,0,.6);letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">${lang==='id'?'NILAI INVESTASI':'INVESTED'}</div>
+            <div class="wc-bal">${fmt(w.balance)}</div>
+            <div class="wc-type" style="color:rgba(255,215,0,.7);">${lang==='id'?'Logam Mulia':'Precious Metal'}</div>
           </div>
+          <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})" style="display:none">⋮</button>
         </div>`;
 
     // ── BRAND DIKENAL ──
@@ -2457,12 +2495,42 @@ function openEditWallet(id){
   document.getElementById('ewNum').value = w.num;
   document.getElementById('ewBal').value = isModeRp() ? Math.round(w.balance) : (w.balance / exRate).toFixed(2);
   document.getElementById('ewCurr').textContent = isModeRp() ? 'Rp' : '$';
+  // Load current color into picker + preview
+  editWalletColorSel = w.color || '#1A56C4,#2A6FD6';
+  updateEWColorPicker();
+  updateEWPreview();
   document.getElementById('editWalletModal').classList.add('on');
 }
 function confirmDeleteWallet(id){
   openEditWallet(id); // Buka modal edit — tombol Hapus sudah ada di sana
 }
 function closeEditWalletModal(){document.getElementById('editWalletModal').classList.remove('on');editingWalletId=null;}
+function selectEWColor(el){
+  editWalletColorSel=el.getAttribute('data-color');
+  updateEWColorPicker();
+  updateEWPreview();
+}
+function updateEWColorPicker(){
+  document.querySelectorAll('.ew-col-opt').forEach(o=>{
+    const match=o.getAttribute('data-color')===editWalletColorSel;
+    const c=editWalletColorSel.split(',')[0];
+    o.style.border=match?`3px solid ${c}`:'3px solid transparent';
+    o.style.boxShadow=match?'0 0 0 2px white':'none';
+    o.style.transform=match?'scale(1.1)':'scale(1)';
+  });
+}
+function updateEWPreview(){
+  const prev=document.getElementById('ewCardPreview'); if(!prev) return;
+  const bank=document.getElementById('ewBank')?.value||'';
+  const num=document.getElementById('ewNum')?.value||'0000';
+  const bal=parseFloat(document.getElementById('ewBal')?.value)||0;
+  const [c1,c2]=editWalletColorSel.split(',');
+  prev.style.background=`linear-gradient(135deg,${c1},${c2})`;
+  document.getElementById('ewPreviewBank').textContent=bank.toUpperCase();
+  document.getElementById('ewPreviewNum').textContent=`•••• •••• •••• ${num||'0000'}`;
+  const balRp=isModeRp()?bal:Math.round(bal*exRate);
+  document.getElementById('ewPreviewBal').textContent='Rp '+Math.round(balRp).toLocaleString('id-ID');
+}
 function updateWallet(){
   const id=parseInt(document.getElementById('editWalletId').value);
   const w=wallets.find(x=>x.id===id);
@@ -2471,6 +2539,7 @@ function updateWallet(){
   w.num=document.getElementById('ewNum').value.trim()||w.num;
   const raw=parseFloat(document.getElementById('ewBal').value)||0;
   w.balance=isModeRp()?raw:Math.round(raw*exRate);
+  w.color=editWalletColorSel;
   closeEditWalletModal();
   renderWallets();
   buildSourceGrid();

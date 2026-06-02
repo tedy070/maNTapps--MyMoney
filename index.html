@@ -1219,6 +1219,20 @@ body{background:var(--bg);transition:background .35s;}
           <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--teal);display:inline-block;opacity:.9;"></span>Income</span>
         </div>
       </div>
+      <!-- TARIK TUNAI BULANAN -->
+      <div class="cc" id="tarikTunaiCard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div class="cc-ttl">🏧 Tarik Tunai / Cash Withdrawal</div>
+          <div id="tarikTunaiTotal" style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--blue2);"></div>
+        </div>
+        <div class="cc-sub">Jumlah tarik tunai per bulan · tahun ini</div>
+        <div id="tarikTunaiMonthlyBars" style="display:flex;align-items:flex-end;gap:2px;margin-top:14px;height:90px;"></div>
+        <div style="display:flex;gap:4px;margin-top:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;" id="tarikTunaiMonthLabels"></div>
+        <div id="tarikTunaiEmpty" style="display:none;text-align:center;padding:22px 0;color:var(--t3);font-size:13px;">Belum ada tarik tunai tahun ini.</div>
+        <!-- Tabel bulanan -->
+        <div id="tarikTunaiTable" style="margin-top:14px;display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+
       <div class="tip-card">
         <div class="tip-ico-bg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
         <div class="tip-ttl" id="a-stip">Smart Savings Tip</div>
@@ -2702,18 +2716,24 @@ function renderHistory(){
 
   c.innerHTML = filtered.map(h => {
     const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
-    const icon = h.pos
-      ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
-      : '<svg viewBox="0 0 24 24" stroke="var(--red)"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>';
-    const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:#1A56C4;border-radius:6px;padding:2px 6px;margin-left:6px;">${T('cat-'+h.cat)||h.cat}</span>` : '';
+    const isTarik = h.type === 'tarik';
+    const icon = isTarik
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
+      : h.pos
+        ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
+        : '<svg viewBox="0 0 24 24" stroke="var(--red)"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>';
+    const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:${isTarik?'#6B7280':'#1A56C4'};border-radius:6px;padding:2px 6px;margin-left:6px;">${T('cat-'+h.cat)||h.cat}</span>` : '';
     const srcInfo  = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${h.src}</span>` : '';
+    const destInfo = isTarik && h.dest ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">→ ${h.dest}</span>` : '';
+    const amtColor = isTarik ? 'color:#6B7280;' : '';
+    const amtSign  = isTarik ? '🏧 ' : (h.pos ? '+' : '-');
     return `<div class="h-item">
-      <div class="h-ico">${icon}</div>
+      <div class="h-ico" style="${isTarik?'background:#F4F6FC;':''}">${icon}</div>
       <div style="flex:1;">
         <div class="h-nm">${nm}${catBadge}</div>
-        <div class="h-t">${fmtItemTime(h)}${srcInfo}</div>
+        <div class="h-t">${fmtItemTime(h)}${srcInfo}${destInfo}</div>
       </div>
-      <div class="h-a ${h.pos?'pos':'neg'}">${h.pos?'+':'-'}${fmt(Math.abs(h.amt))}</div>
+      <div class="h-a ${h.pos?'pos':'neg'}" style="${amtColor}">${amtSign}${fmt(Math.abs(h.amt))}</div>
     </div>`;
   }).join('');
 }
@@ -3379,7 +3399,7 @@ function updateAllAmounts(){
   const mnData = getAnalyticsData?getAnalyticsData('month'):historyItems;
   cats.forEach(cat=>{
     const cid=chipIds[cat];if(!cid)return;
-    const v=mnData.filter(h=>!h.pos&&h.cat===cat).reduce((s,h)=>s+Math.abs(h.amt||0),0);
+    const v=mnData.filter(h=>!h.pos&&h.cat===cat&&h.type!=='tarik').reduce((s,h)=>s+Math.abs(h.amt||0),0);
     const el=document.getElementById(cid);if(el)el.textContent=fmt(v);
   });
   updateSavingsTotal();
@@ -3905,6 +3925,64 @@ function completeTx(){
   const dateStr = now.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'});
   const timeStr = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 
+  // ══ SPECIAL: Tarik Tunai → transfer ke wallet Cash ══
+  // Jika kategori 'tarik', uang tidak benar-benar keluar — masuk ke wallet Cash
+  const isTarikTunai = (selCat === 'tarik') && isExpense;
+  if (isTarikTunai) {
+    // Cari wallet dengan type 'Cash'
+    const cashWallet = wallets.find(w => (w.type||'').toLowerCase() === 'cash');
+    if (!cashWallet) {
+      toast('⚠️ ' + (lang==='id'
+        ? 'Tambahkan dulu wallet bertipe "Cash" untuk tarik tunai!'
+        : 'Please add a wallet of type "Cash" first for withdrawals!'));
+      return;
+    }
+    // Validasi saldo sumber
+    const availBal = srcWallet ? srcWallet.balance : balance;
+    const availLbl = srcWallet ? `${srcWallet.bank} ••${srcWallet.num}` : (lang==='id'?'Saldo Utama':'Main Balance');
+    if (availBal <= 0) {
+      toast(`❌ ${T('tx-empty')} [${availLbl}]`); return;
+    }
+    if (availBal < rp) {
+      toast(`❌ ${T('tx-insufficient')}: ${fmt(availBal)}`); return;
+    }
+    // Debit sumber, kredit Cash
+    if (srcWallet) srcWallet.balance -= rp; else balance -= rp;
+    cashWallet.balance += rp;
+
+    recalcTotalBalance();
+    updateAllAmounts();
+    renderWallets();
+
+    const hItem = {
+      name:   note || (lang==='id'?'Tarik Tunai':'Cash Withdrawal'),
+      time:   `${dateStr}, ${timeStr}`,
+      amt:    -rp,      // tampil sebagai pengurangan dari bank
+      pos:    false,
+      cat:    'tarik',
+      catColor: '#F4F6FC',
+      catIco: `<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>`,
+      src:    srcLabel,
+      dest:   cashWallet.bank + ' ••••' + cashWallet.num,
+      type:   'tarik',  // tipe khusus — bukan expense, bukan transfer biasa
+      ts:     now.getTime()
+    };
+    historyItems.unshift(hItem);
+    histFilterYear  = now.getFullYear();
+    histFilterMonth = now.getMonth();
+    renderHistory();
+    renderRecentTxList();
+    addNotif('tx', '🏧 ' + (lang==='id'?'Tarik Tunai':'Cash Withdrawal'),
+      `${fmt(rp)} ${srcLabel} → ${cashWallet.bank} ••••${cashWallet.num}`);
+    refreshAnalytics();
+    closeAddModal(); switchTab('home');
+    toast(`✅ 🏧 ${fmt(rp)} → ${cashWallet.bank} ••••${cashWallet.num}`);
+    fbAutoSave();
+    const angPanel = document.getElementById('sv-anggaran-panel');
+    if(angPanel && angPanel.style.display !== 'none'){ renderAnggaranList(); }
+    return;
+  }
+
   // ══ VALIDASI SALDO — cek dulu sebelum proses ══
   if (isExpense || isTransfer) {
     const availBal = srcWallet ? srcWallet.balance : balance;
@@ -4001,16 +4079,20 @@ function renderRecentTxList(){
     const item = document.createElement('div');
     item.className = 'tx-item';
     const isPos = h.pos || h.amt > 0;
-    const amtSign = isPos ? '+' : '-';
-    const amtClass = isPos ? 'pos' : 'neg';
-    const catColor = h.catColor || (isPos ? '#EBFEF3' : '#FEEBEB');
-    const catIco   = h.catIco || (isPos
-      ? '<svg viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
-      : '<svg viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>');
+    const isTarik = h.type === 'tarik';
+    const amtSign = isTarik ? '🏧 ' : (isPos ? '+' : '-');
+    const amtClass = isTarik ? '' : (isPos ? 'pos' : 'neg');
+    const catColor = isTarik ? '#F4F6FC' : (h.catColor || (isPos ? '#EBFEF3' : '#FEEBEB'));
+    const catIco   = isTarik
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
+      : (h.catIco || (isPos
+        ? '<svg viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
+        : '<svg viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'));
     const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
+    const amtStyle = isTarik ? 'color:#6B7280;' : '';
     item.innerHTML = `<div class="tx-ico" style="background:${catColor};">${catIco}</div>
       <div style="flex:1"><div class="tx-name">${nm}</div><div class="tx-meta">${fmtItemTime(h)}</div></div>
-      <div class="tx-amt ${amtClass}">${amtSign}${fmt(Math.abs(h.amt||0))}</div>`;
+      <div class="tx-amt ${amtClass}" style="${amtStyle}">${amtSign}${fmt(Math.abs(h.amt||0))}</div>`;
     list.appendChild(item);
   });
 }
@@ -4067,7 +4149,7 @@ function refreshWeeklyBar(mode) {
     const de = new Date(ds.getTime() + 86400000);
     return historyItems
       .filter(h => h.ts && new Date(h.ts) >= ds && new Date(h.ts) < de)
-      .filter(h => wBarMode==='spending' ? !h.pos : h.pos)
+      .filter(h => wBarMode==='spending' ? (!h.pos && h.type!=='tarik') : h.pos)
       .reduce((s,h) => s + Math.abs(h.amt||0), 0);
   });
   const mx = Math.max(...amounts, 1);
@@ -4099,7 +4181,7 @@ function buildMonthlyChart() {
     cur = wEnd;
   }
   const spAmts = weeks.map(w =>
-    historyItems.filter(h=>h.ts&&!h.pos&&new Date(h.ts)>=w.start&&new Date(h.ts)<w.end)
+    historyItems.filter(h=>h.ts&&!h.pos&&h.type!=='tarik'&&new Date(h.ts)>=w.start&&new Date(h.ts)<w.end)
       .reduce((s,h)=>s+Math.abs(h.amt||0),0)
   );
   const inAmts = weeks.map(w =>
@@ -4139,7 +4221,7 @@ function buildYearlyChart() {
     if (d.getFullYear() !== yr) return;
     const m = d.getMonth();
     if (h.pos) inAmts[m] += Math.abs(h.amt||0);
-    else       spAmts[m] += Math.abs(h.amt||0);
+    else if (h.type !== 'tarik') spAmts[m] += Math.abs(h.amt||0);
   });
   const mx = Math.max(...spAmts,...inAmts,1);
   const bc = document.getElementById('barChartYearly');
@@ -4162,7 +4244,7 @@ function buildYearlyChart() {
 
 // ── Donut chart: realtime per kategori bulan ini ──
 function buildDonut() {
-  const data = getAnalyticsData('month').filter(h=>!h.pos);
+  const data = getAnalyticsData('month').filter(h=>!h.pos && h.type !== 'tarik');
   const catMap = {};
   data.forEach(h=>{
     const k = h.cat||'tarik';
@@ -4198,7 +4280,7 @@ function buildDonut() {
   });
   // Monthly overview total
   const mn = getAnalyticsData('month');
-  const mnExp = mn.filter(h=>!h.pos).reduce((s,h)=>s+Math.abs(h.amt||0),0);
+  const mnExp = mn.filter(h=>!h.pos && h.type!=='tarik').reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const mnInc = mn.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const elOv = document.getElementById('anAmt');
   if(elOv) elOv.textContent = fmt(mnExp);
@@ -4208,7 +4290,7 @@ function buildDonut() {
 
 // ── Top categories ──
 function buildTopCats() {
-  const data  = getAnalyticsData('month').filter(h=>!h.pos);
+  const data  = getAnalyticsData('month').filter(h=>!h.pos && h.type !== 'tarik');
   const catMap = {};
   data.forEach(h=>{ const k=h.cat||'tarik'; catMap[k]=(catMap[k]||0)+Math.abs(h.amt||0); });
   const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -4256,7 +4338,7 @@ function buildTopCats() {
 
 // ── Smart tip ──
 function buildSmartTip() {
-  const mn = getAnalyticsData('month').filter(h=>!h.pos);
+  const mn = getAnalyticsData('month').filter(h=>!h.pos && h.type !== 'tarik');
   if (!mn.length){
     const el=document.getElementById('a-tiptext');
     if(el)el.textContent='No spending this month yet. Keep it up!';
@@ -4271,6 +4353,79 @@ function buildSmartTip() {
   if(el)el.textContent=`${pct}% of this month's spending is on ${top[0]}. Total: ${fmt(top[1])}.`;
 }
 
+// ── Tarik Tunai per bulan card ──
+function buildTarikTunaiCard() {
+  const now = new Date();
+  const yr  = now.getFullYear();
+  const MONTH_NAMES_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  // Kumpulkan tarik tunai per bulan (kategori 'tarik', pos=false)
+  const monthly = Array(12).fill(0);
+  historyItems.forEach(h => {
+    if (!h.ts || h.cat !== 'tarik') return;
+    const d = new Date(h.ts);
+    if (d.getFullYear() !== yr) return;
+    // Tarik tunai dicatat sebagai transfer (pos=false, type='transfer') ATAU expense lama (pos=false)
+    // Kita ambil semua record dengan cat='tarik' yang nilainya negatif (pengurangan dari bank)
+    if (!h.pos) monthly[d.getMonth()] += Math.abs(h.amt || 0);
+  });
+
+  const total = monthly.reduce((s,v)=>s+v,0);
+  const mx    = Math.max(...monthly, 1);
+
+  const barsEl   = document.getElementById('tarikTunaiMonthlyBars');
+  const labelsEl = document.getElementById('tarikTunaiMonthLabels');
+  const emptyEl  = document.getElementById('tarikTunaiEmpty');
+  const tableEl  = document.getElementById('tarikTunaiTable');
+  const totalEl  = document.getElementById('tarikTunaiTotal');
+
+  if (totalEl) totalEl.textContent = total > 0 ? fmt(total) : '';
+
+  if (!barsEl || !labelsEl) return;
+
+  if (total === 0) {
+    barsEl.innerHTML = '';
+    labelsEl.innerHTML = '';
+    if (tableEl) tableEl.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  // Bar chart
+  barsEl.innerHTML = MONTH_NAMES_ID.map((mn, i) => {
+    const isCur  = i === now.getMonth();
+    const h      = monthly[i] > 0 ? Math.max(Math.round((monthly[i]/mx)*80), 6) : 2;
+    const bgCol  = isCur ? 'var(--blue2)' : '#6B7280';
+    const opacity= isCur ? 1 : (monthly[i]>0 ? 0.65 : 0.2);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+      <div style="font-size:8px;color:var(--t3);min-height:12px;">${monthly[i]>0?fmt(monthly[i]).replace('Rp ','').replace(' jt','jt'):''}
+      </div>
+      <div style="height:${h}px;width:100%;max-width:22px;border-radius:4px 4px 0 0;background:${bgCol};opacity:${opacity};transition:height .4s;" title="${mn}: ${fmt(monthly[i])}"></div>
+      <div style="font-size:9px;color:${isCur?'var(--blue2)':'var(--t3)'};font-weight:${isCur?700:400};">${mn}</div>
+    </div>`;
+  }).join('');
+  labelsEl.innerHTML = '';
+
+  // Tabel ringkasan bulan yang ada tarik tunai
+  if (tableEl) {
+    const rows = monthly
+      .map((v,i) => ({m:i, v}))
+      .filter(x => x.v > 0)
+      .sort((a,b) => a.m - b.m);
+    tableEl.innerHTML = rows.map(({m,v}) => {
+      const isCur = m === now.getMonth();
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:${isCur?'rgba(26,86,196,.06)':'var(--surface2)'};border-radius:10px;border:1.5px solid ${isCur?'var(--blue2)':'transparent'};">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:8px;height:8px;border-radius:2px;background:${isCur?'var(--blue2)':'#6B7280'};opacity:${isCur?1:.65};"></div>
+          <span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${MONTH_NAMES_ID[m]} ${yr}</span>
+        </div>
+        <span style="font-family:var(--f);font-size:13px;font-weight:700;color:${isCur?'var(--blue2)':'var(--navy)'};">${fmt(v)}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
 // ── Master refresh — panggil setiap kali data berubah ──
 function refreshAnalytics() {
   buildDonut();
@@ -4279,6 +4434,7 @@ function refreshAnalytics() {
   refreshWeeklyBar(wBarMode);
   buildMonthlyChart();
   buildYearlyChart();
+  buildTarikTunaiCard();
 }
 
 function setWTab(el, mode) {
@@ -5273,10 +5429,10 @@ function updateTagihanSummary(list) {
   const elCount = document.getElementById('tagihan-alert-count');
   if (elCount) elCount.textContent = needAttn+' '+T('tg-need-attention');
 
-  // Pengeluaran bulan ini dari historyItems
+  // Pengeluaran bulan ini dari historyItems (tarik tunai tidak dihitung sebagai expense)
   const now2 = new Date();
   const monthExpense = historyItems
-    .filter(h => !h.pos && h.ts && new Date(h.ts).getFullYear()===now2.getFullYear() && new Date(h.ts).getMonth()===now2.getMonth())
+    .filter(h => !h.pos && h.type!=='tarik' && h.ts && new Date(h.ts).getFullYear()===now2.getFullYear() && new Date(h.ts).getMonth()===now2.getMonth())
     .reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const elExp = document.getElementById('tagihan-expense-amt');
   if (elExp) elExp.textContent = 'Rp '+Math.round(monthExpense).toLocaleString('id-ID');
@@ -5902,7 +6058,7 @@ function calcAnggaranSpent(){
   const key = _anggaranPeriodeKey();
   const spent = {};
   historyItems.forEach(h => {
-    if(h.pos) return;
+    if(h.pos || h.type === 'tarik') return;
     const d = new Date(h.ts || 0);
     const hKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     if(hKey !== key) return;

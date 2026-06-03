@@ -1707,6 +1707,49 @@ body{background:var(--bg);transition:background .35s;}
   </div>
 </div>
 
+<!-- QUICK ADD DANA MODAL -->
+<div class="moverlay" id="quickAddModal">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mhdr">
+      <div>
+        <div class="mttl" id="qa-title">Tambah Dana</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:2px;" id="qa-goal-name"></div>
+      </div>
+      <button class="mcls" onclick="closeQuickAddModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <!-- Progress info -->
+    <div style="background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--t3);" id="qa-lbl-saved">Sudah ditabung</span>
+        <span style="font-size:12px;color:var(--t3);" id="qa-lbl-target">Target</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);" id="qa-current-val">Rp 0</span>
+        <span style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--blue2);" id="qa-target-val">Rp 0</span>
+      </div>
+      <div style="background:var(--border);border-radius:6px;height:8px;overflow:hidden;">
+        <div id="qa-prog-bar" style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue),var(--blue2));transition:width .4s;width:0%;"></div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:var(--t3);margin-top:4px;" id="qa-pct-info">0%</div>
+    </div>
+    <div class="albl" id="qa-amt-lbl">JUMLAH YANG DITAMBAHKAN</div>
+    <div class="awrap" style="margin-bottom:20px;">
+      <span class="acurr" id="qa-curr">Rp</span>
+      <input class="ainput hv" type="number" id="qaAmount" placeholder="0" style="font-size:30px;" oninput="updateQAPreview()">
+    </div>
+    <!-- Preview after add -->
+    <div id="qa-preview" style="display:none;background:rgba(26,86,196,.06);border-radius:12px;padding:10px 14px;margin-bottom:16px;border:1.5px solid var(--blue2);">
+      <div style="font-size:11px;color:var(--blue2);font-weight:600;" id="qa-preview-lbl">Setelah ditambahkan:</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);" id="qa-after-val">Rp 0</span>
+        <span style="font-size:12px;font-weight:700;color:var(--blue2);" id="qa-after-pct">0%</span>
+      </div>
+    </div>
+    <button class="btn btn-p" onclick="confirmQuickAdd()" id="qa-save-btn">Tambah Dana</button>
+  </div>
+</div>
+
 <!-- EDIT WALLET MODAL -->
 <div class="moverlay" id="editWalletModal">
   <div class="msheet" style="padding:20px 20px 28px;">
@@ -2125,15 +2168,27 @@ const goalIcons={
 };
 function renderGoals(){
   const c=document.getElementById('goalsContainer');if(!c)return;c.innerHTML='';
+  if(goals.length===0){
+    c.innerHTML=`<div style="text-align:center;padding:32px 16px;color:var(--t3);">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.3;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div style="font-size:13px;">${lang==='id'?'Belum ada tujuan. Tambahkan tujuan pertama kamu!':'No goals yet. Add your first savings goal!'}</div>
+    </div>`;
+    return;
+  }
   goals.forEach(g=>{
     const pct=Math.min(100,Math.round((g.current/g.target)*100));
     const isTeal=g.color==='#0B7A63';
     const div=document.createElement('div');div.className='goal-card';div.id='goal-'+g.id;
-    div.innerHTML=`<div class="goal-h"><div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div><button class="goal-more" onclick="toggleGoalMenu(event,${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg><div class="ctx-menu" id="gctx-${g.id}" style="display:none;"><div class="ctx-item" onclick="openEditGoal(${g.id})"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Goal</div><div class="ctx-item" onclick="quickAdd(${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Add Funds</div><div class="ctx-item danger" onclick="openEditGoal(${g.id})"><svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Delete</div></div></button></div>
+    const lblEdit   = lang==='id' ? 'Edit Tujuan'   : 'Edit Goal';
+    const lblAdd    = lang==='id' ? 'Tambah Dana'   : 'Add Funds';
+    const lblDelete = lang==='id' ? 'Hapus'         : 'Delete';
+    const btnLabel  = lang==='id' ? (isTeal ? 'Tambah Cepat' : 'Tambah Dana') : (isTeal ? 'Quick Add' : 'Add Funds');
+    const lblOf     = lang==='id' ? 'dari' : 'of';
+    div.innerHTML=`<div class="goal-h"><div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div><button class="goal-more" onclick="toggleGoalMenu(event,${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg><div class="ctx-menu" id="gctx-${g.id}" style="display:none;"><div class="ctx-item" onclick="openEditGoal(${g.id})">${lblEdit}</div><div class="ctx-item" onclick="quickAdd(${g.id})">${lblAdd}</div><div class="ctx-item danger" onclick="openEditGoal(${g.id})">${lblDelete}</div></div></button></div>
     <div class="goal-nm">${g.name}</div><div class="goal-sub">${g.desc}</div>
-    <div class="goal-ams"><span class="goal-cur">${fmt(g.current)}</span><span class="goal-tgt">of ${fmt(g.target)}</span></div>
+    <div class="goal-ams"><span class="goal-cur">${fmt(g.current)}</span><span class="goal-tgt">${lblOf} ${fmt(g.target)}</span></div>
     <div class="prog-w"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
-    <button class="goal-btn ${isTeal?'tl':''}" onclick="quickAdd(${g.id})"><svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>${isTeal?'Quick Add':'Add Funds'}</button>`;
+    <button class="goal-btn ${isTeal?'tl':''}" onclick="quickAdd(${g.id})"><svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>${btnLabel}</button>`;
     c.appendChild(div);
   });
 }
@@ -2143,17 +2198,81 @@ let _activeCtxWid=null;
 function _hideWalletCtx(){const p=document.getElementById('walletCtxPortal');if(p)p.style.display='none';_activeCtxWid=null;}
 function closeAllMenus(){document.querySelectorAll('.ctx-menu').forEach(m=>{if(m.id!=='walletCtxPortal')m.style.display='none';});_hideWalletCtx();openMenuId=null;}
 document.addEventListener('click',closeAllMenus);
+let _qaGoalId = null;
 function quickAdd(id){
-  closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;
-  const amt=prompt(`Add funds to "${g.name}":\nEnter amount:`,'');
-  if(!amt||isNaN(parseFloat(amt)))return;
-  const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);
-  g.current=Math.min(g.target,g.current+rp);
-  const pct=Math.round((g.current/g.target)*100);
-  addNotif('goal','Funds Added',`${fmt(rp)} added to "${g.name}" · ${pct}% complete`);
-  addHistoryItem(g.name,rp,true);
-  toast(`✅ ${fmt(rp)} → ${g.name}`)
-  renderGoals();updateSavingsTotal();
+  closeAllMenus();
+  const g = goals.find(x => x.id === id); if(!g) return;
+  _qaGoalId = id;
+  // Isi modal dengan data tujuan
+  const isId = lang === 'id';
+  const eTitle   = document.getElementById('qa-title');
+  const eGName   = document.getElementById('qa-goal-name');
+  const eSaved   = document.getElementById('qa-lbl-saved');
+  const eTarget  = document.getElementById('qa-lbl-target');
+  const eCurVal  = document.getElementById('qa-current-val');
+  const eTgtVal  = document.getElementById('qa-target-val');
+  const eBar     = document.getElementById('qa-prog-bar');
+  const ePct     = document.getElementById('qa-pct-info');
+  const eCurr    = document.getElementById('qa-curr');
+  const eSaveBtn = document.getElementById('qa-save-btn');
+  const eAmtLbl  = document.getElementById('qa-amt-lbl');
+  if(eTitle)   eTitle.textContent   = isId ? 'Tambah Dana' : 'Add Funds';
+  if(eGName)   eGName.textContent   = g.name;
+  if(eSaved)   eSaved.textContent   = isId ? 'Sudah ditabung' : 'Saved';
+  if(eTarget)  eTarget.textContent  = isId ? 'Target' : 'Target';
+  if(eCurVal)  eCurVal.textContent  = fmt(g.current);
+  if(eTgtVal)  eTgtVal.textContent  = fmt(g.target);
+  const pct0 = g.target > 0 ? Math.min(100, Math.round(g.current/g.target*100)) : 0;
+  if(eBar)     eBar.style.width     = pct0 + '%';
+  if(ePct)     ePct.textContent     = pct0 + '%';
+  if(eCurr)    eCurr.textContent    = isModeRp() ? 'Rp' : '$';
+  if(eSaveBtn) eSaveBtn.textContent = isId ? 'Tambah Dana' : 'Add Funds';
+  if(eAmtLbl)  eAmtLbl.textContent  = isId ? 'JUMLAH YANG DITAMBAHKAN' : 'AMOUNT TO ADD';
+  // Reset preview
+  const ePreview = document.getElementById('qa-preview');
+  if(ePreview) ePreview.style.display = 'none';
+  const eAmt = document.getElementById('qaAmount');
+  if(eAmt) eAmt.value = '';
+  document.getElementById('quickAddModal').classList.add('on');
+  setTimeout(()=>{ if(eAmt) eAmt.focus(); }, 300);
+}
+function updateQAPreview(){
+  const g = goals.find(x => x.id === _qaGoalId); if(!g) return;
+  const raw = parseFloat(document.getElementById('qaAmount').value) || 0;
+  const rp  = isModeRp() ? raw : Math.round(raw * exRate);
+  const ePreview = document.getElementById('qa-preview');
+  const eAfterVal = document.getElementById('qa-after-val');
+  const eAfterPct = document.getElementById('qa-after-pct');
+  const ePreviewLbl = document.getElementById('qa-preview-lbl');
+  if(raw <= 0){ if(ePreview) ePreview.style.display='none'; return; }
+  const after = Math.min(g.target, g.current + rp);
+  const pctAfter = g.target > 0 ? Math.min(100, Math.round(after/g.target*100)) : 0;
+  if(ePreviewLbl) ePreviewLbl.textContent = lang==='id' ? 'Setelah ditambahkan:' : 'After adding:';
+  if(eAfterVal) eAfterVal.textContent = fmt(after);
+  if(eAfterPct) eAfterPct.textContent = pctAfter + '%';
+  if(ePreview)  ePreview.style.display = 'block';
+}
+function closeQuickAddModal(){
+  document.getElementById('quickAddModal').classList.remove('on');
+  _qaGoalId = null;
+}
+function confirmQuickAdd(){
+  const g = goals.find(x => x.id === _qaGoalId); if(!g) return;
+  const raw = parseFloat(document.getElementById('qaAmount').value);
+  if(!raw || isNaN(raw) || raw <= 0){
+    toast(lang==='id' ? '⚠️ Masukkan jumlah yang valid' : '⚠️ Enter a valid amount');
+    return;
+  }
+  const rp = isModeRp() ? raw : Math.round(raw * exRate);
+  g.current = Math.min(g.target, g.current + rp);
+  const pct = Math.round((g.current / g.target) * 100);
+  const notifTitle = lang==='id' ? 'Dana Ditambahkan' : 'Funds Added';
+  const notifMsg   = `${fmt(rp)} → "${g.name}" · ${pct}%`;
+  addNotif('goal', notifTitle, notifMsg);
+  // TIDAK memanggil addHistoryItem — penambahan dana tujuan bukan pengeluaran/pemasukan
+  toast(`✅ ${fmt(rp)} → ${g.name}`);
+  closeQuickAddModal();
+  renderGoals(); updateSavingsTotal();
   fbAutoSave();
 }
 function openNewGoalModal(){document.getElementById('goalName').value='';document.getElementById('goalDesc').value='';document.getElementById('goalTarget').value='';document.getElementById('goalCurrent').value='';goalColor='#1A56C4';updateGCP();document.getElementById('goalModal').classList.add('on');}
@@ -2175,7 +2294,7 @@ function saveGoal(){
 }
 function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';document.getElementById('editGoalModal').classList.add('on');}
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);addHistoryItem(g.name,rp,true);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
@@ -3541,7 +3660,7 @@ const TR={
     'pw-nomatch':'Passwords do not match',
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
-  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
+  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',

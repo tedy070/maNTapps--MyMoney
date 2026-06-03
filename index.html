@@ -543,7 +543,7 @@ body{background:var(--bg);transition:background .35s;}
 .bal-amt{font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;letter-spacing:-1px;margin-bottom:3px;}
 .bal-usd{font-size:12px;opacity:.6;margin-bottom:14px;}
 .bal-foot{display:flex;align-items:center;justify-content:space-between;}
-.gain-b{background:rgba(34,197,94,.2);color:#4ade80;padding:4px 10px;border-radius:8px;font-weight:700;font-size:11px;}
+.gain-b{background:rgba(34,197,94,.2);color:#4ade80;padding:4px 10px;border-radius:8px;font-weight:700;font-size:11px;transition:background .3s,color .3s;}
 .topup-btn{background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.3);color:white;padding:9px 16px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:var(--f2);}
 .topup-btn svg{width:14px;height:14px;stroke:white;fill:none;stroke-width:2;}
 
@@ -1138,7 +1138,7 @@ body{background:var(--bg);transition:background .35s;}
         <div class="bal-usd" id="displayBalanceAlt"></div>
         <div class="bal-foot">
           <div style="display:flex;align-items:center;gap:7px;">
-            <span class="gain-b">↗ +12.5%</span>
+            <span class="gain-b" id="h-gain-badge">↗ +0%</span>
             <span style="font-size:11px;opacity:.7" id="h-gain">Monthly Gain</span>
           </div>
           <button class="topup-btn" onclick="openAddModal()">
@@ -3419,6 +3419,40 @@ function updateAllAmounts(){
   if(wallets.length>0) balance = totalW;
   document.getElementById('displayBalance').textContent=fmt(balance);
   document.getElementById('displayBalanceAlt').textContent=fmtAlt(balance);
+
+  // ── Kenaikan Bulanan (realtime) ──
+  // Net bulan ini = pemasukan bulan ini - pengeluaran bulan ini (tarik tunai tidak dihitung)
+  const now2 = new Date();
+  const mStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
+  const mEnd   = new Date(now2.getFullYear(), now2.getMonth() + 1, 1);
+  const thisMon = historyItems.filter(h => h.ts && new Date(h.ts) >= mStart && new Date(h.ts) < mEnd);
+  const incBulanIni = thisMon.filter(h => h.pos).reduce((s,h) => s + Math.abs(h.amt||0), 0);
+  const expBulanIni = thisMon.filter(h => !h.pos && !isTarikTx(h)).reduce((s,h) => s + Math.abs(h.amt||0), 0);
+  const netBulanIni = incBulanIni - expBulanIni;
+  // Saldo awal bulan = saldo sekarang - net bulan ini
+  const balAwalBulan = balance - netBulanIni;
+  const gainBadge = document.getElementById('h-gain-badge');
+  if (gainBadge) {
+    if (balAwalBulan > 0) {
+      const pct = (netBulanIni / balAwalBulan) * 100;
+      const sign = pct >= 0 ? '+' : '';
+      const arrow = pct >= 0 ? '↗' : '↘';
+      const color = pct >= 0 ? 'var(--green)' : 'var(--red)';
+      gainBadge.textContent = `${arrow} ${sign}${pct.toFixed(1)}%`;
+      gainBadge.style.background = pct >= 0 ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.13)';
+      gainBadge.style.color = color;
+    } else if (balance > 0 && balAwalBulan <= 0) {
+      // Baru mulai bulan ini (belum ada saldo awal)
+      gainBadge.textContent = `↗ Baru`;
+      gainBadge.style.background = 'rgba(34,197,94,.15)';
+      gainBadge.style.color = 'var(--green)';
+    } else {
+      gainBadge.textContent = `— 0%`;
+      gainBadge.style.background = 'rgba(107,114,128,.1)';
+      gainBadge.style.color = 'var(--t3)';
+    }
+  }
+
   // Spending chips — dari historyItems bulan ini
   const cats=['food','transport','rent','fun','shopping','charity','marriage','investasi','tarik'];
   const chipIds={'food':'sc-food','transport':'sc-trans','rent':'sc-life','fun':'sc-tech','shopping':'sc-shop','charity':'sc-health'};
@@ -4400,27 +4434,11 @@ function buildDonut() {
   const mn = getAnalyticsData('month');
   const mnExp = mn.filter(h=>!h.pos && !isTarikTx(h)).reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const mnInc = mn.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt||0),0);
-  // Hitung perbandingan dengan bulan sebelumnya
-  const prevM = analyticsMonth === 0 ? 11 : analyticsMonth - 1;
-  const prevY = analyticsMonth === 0 ? analyticsYear - 1 : analyticsYear;
-  const prevStart = new Date(prevY, prevM, 1);
-  const prevEnd   = new Date(prevY, prevM + 1, 1);
-  const prevExp   = historyItems.filter(h => h.ts && !h.pos && !isTarikTx(h)).filter(h => { const d = new Date(h.ts); return d >= prevStart && d < prevEnd; }).reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const elOv = document.getElementById('anAmt');
   if(elOv) elOv.textContent = fmt(mnExp);
   const elCh = document.querySelector('.an-ch');
   if(elCh) {
-    let cmp = '';
-    if (prevExp > 0) {
-      const diff = mnExp - prevExp;
-      const pct  = Math.round(Math.abs(diff) / prevExp * 100);
-      cmp = diff > 0
-        ? ` · <span style="color:var(--red)">↑${pct}% vs bulan lalu</span>`
-        : diff < 0
-          ? ` · <span style="color:var(--teal)">↓${pct}% vs bulan lalu</span>`
-          : ` · <span style="color:var(--t3)">sama dengan bulan lalu</span>`;
-    }
-    elCh.innerHTML = `Pemasukan: <span style="color:var(--teal)">+${fmt(mnInc)}</span> · Pengeluaran: <span style="color:var(--red)">-${fmt(mnExp)}</span>${cmp}`;
+    elCh.innerHTML = `Pemasukan: <span style="color:var(--teal)">+${fmt(mnInc)}</span> &nbsp;·&nbsp; Pengeluaran: <span style="color:var(--red)">-${fmt(mnExp)}</span>`;
   }
 }
 

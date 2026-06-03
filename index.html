@@ -154,7 +154,10 @@ function _applyStateFromDB(data){
     // Sync walletIdCtr agar tidak dobel ID saat add card baru
     if(wallets.length>0) walletIdCtr = Math.max(...wallets.map(w=>w.id||0))+1;
   }
-  if(Array.isArray(data.goals))        goals         = data.goals;
+  if(Array.isArray(data.goals)){
+    goals = data.goals;
+    if(goals.length>0) goalIdCtr = Math.max(...goals.map(g=>g.id||0))+1;
+  }
   if(Array.isArray(data.historyItems)){
     // ── Simpan snapshot lama (full copy) sebelum historyItems ditimpa ──
     const _oldSnapshot = historyItems ? historyItems.map(h => Object.assign({}, h)) : null;
@@ -2153,12 +2156,8 @@ function renderNI(n){
 // ============================================================
 // GOALS
 // ============================================================
-let goals=[
-  {id:1,name:'New Car',desc:'TESLA MODEL 3 FUND',current:189600000,target:553000000,color:'#1A56C4'},
-  {id:2,name:'Emergency Fund',desc:'6 MONTHS RUNWAY',current:134300000,target:158000000,color:'#0B7A63'},
-  {id:3,name:'Vacation',desc:'BALI SUMMER 2024',current:63200000,target:79000000,color:'#F59E0B'},
-];
-let goalIdCtr=4;
+let goals=[];
+let goalIdCtr=1;
 const goalIcons={
   '#1A56C4':'<svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
   '#0B7A63':'<svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
@@ -2167,7 +2166,9 @@ const goalIcons={
   '#9333EA':'<svg viewBox="0 0 24 24" stroke="#9333EA"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>',
 };
 function renderGoals(){
-  const c=document.getElementById('goalsContainer');if(!c)return;c.innerHTML='';
+  const c=document.getElementById('goalsContainer');if(!c)return;
+  // Hapus semua card lama; pertahankan event listener delegation yang sudah terpasang
+  c.innerHTML='';
   if(goals.length===0){
     c.innerHTML=`<div style="text-align:center;padding:32px 16px;color:var(--t3);">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.3;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -2176,23 +2177,86 @@ function renderGoals(){
     return;
   }
   goals.forEach(g=>{
-    const pct=Math.min(100,Math.round((g.current/g.target)*100));
-    const isTeal=g.color==='#0B7A63';
-    const div=document.createElement('div');div.className='goal-card';div.id='goal-'+g.id;
-    const lblEdit   = lang==='id' ? 'Edit Tujuan'   : 'Edit Goal';
-    const lblAdd    = lang==='id' ? 'Tambah Dana'   : 'Add Funds';
-    const lblDelete = lang==='id' ? 'Hapus'         : 'Delete';
+    const pct    = Math.min(100, Math.round((g.current / g.target) * 100));
+    const isTeal = g.color === '#0B7A63';
+    const lblEdit   = lang==='id' ? 'Edit Tujuan' : 'Edit Goal';
+    const lblAdd    = lang==='id' ? 'Tambah Dana' : 'Add Funds';
+    const lblDelete = lang==='id' ? 'Hapus'       : 'Delete';
     const btnLabel  = lang==='id' ? (isTeal ? 'Tambah Cepat' : 'Tambah Dana') : (isTeal ? 'Quick Add' : 'Add Funds');
     const lblOf     = lang==='id' ? 'dari' : 'of';
-    div.innerHTML=`<div class="goal-h"><div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div><button class="goal-more" onclick="toggleGoalMenu(event,${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg><div class="ctx-menu" id="gctx-${g.id}" style="display:none;"><div class="ctx-item" onclick="event.stopPropagation();openEditGoal(${g.id})">${lblEdit}</div><div class="ctx-item" onclick="event.stopPropagation();quickAdd(${g.id})">${lblAdd}</div><div class="ctx-item danger" onclick="event.stopPropagation();deleteGoalDirect(${g.id})">${lblDelete}</div></div></button></div>
-    <div class="goal-nm">${g.name}</div><div class="goal-sub">${g.desc}</div>
-    <div class="goal-ams"><span class="goal-cur">${fmt(g.current)}</span><span class="goal-tgt">${lblOf} ${fmt(g.target)}</span></div>
-    <div class="prog-w"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
-    <button class="goal-btn ${isTeal?'tl':''}" onclick="quickAdd(${g.id})"><svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>${btnLabel}</button>`;
+
+    const div = document.createElement('div');
+    div.className = 'goal-card';
+    // Simpan id sebagai data attribute — TIDAK pakai inline onclick string
+    div.dataset.gid = g.id;
+
+    div.innerHTML = `
+      <div class="goal-h">
+        <div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div>
+        <button class="goal-more" data-action="menu">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          <div class="ctx-menu" style="display:none;">
+            <div class="ctx-item" data-action="edit">${lblEdit}</div>
+            <div class="ctx-item" data-action="addfund">${lblAdd}</div>
+            <div class="ctx-item danger" data-action="delete">${lblDelete}</div>
+          </div>
+        </button>
+      </div>
+      <div class="goal-nm">${g.name}</div>
+      <div class="goal-sub">${g.desc}</div>
+      <div class="goal-ams">
+        <span class="goal-cur">${fmt(g.current)}</span>
+        <span class="goal-tgt">${lblOf} ${fmt(g.target)}</span>
+      </div>
+      <div class="prog-w"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
+      <button class="goal-btn ${isTeal?'tl':''}" data-action="addfund">
+        <svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        ${btnLabel}
+      </button>`;
     c.appendChild(div);
   });
+
+  // ── Event delegation — SATU listener di container, baca gid dari card terdekat ──
+  // Lepas listener lama supaya tidak dobel
+  if(c._goalDelegate) c.removeEventListener('click', c._goalDelegate);
+  c._goalDelegate = function(e) {
+    // Cari card terdekat (div[data-gid])
+    const card = e.target.closest('[data-gid]');
+    if(!card) return;
+    const gid = parseInt(card.dataset.gid);
+
+    // Tombol titik-3 (menu toggle)
+    const menuBtn = e.target.closest('[data-action="menu"]');
+    if(menuBtn){
+      e.stopPropagation();
+      const menu = menuBtn.querySelector('.ctx-menu');
+      if(!menu) return;
+      const isOpen = menu.style.display === 'block';
+      closeAllMenus();
+      if(!isOpen){ menu.style.display = 'block'; openMenuId = null; }
+      return;
+    }
+
+    // Item di dalam ctx-menu
+    const actionEl = e.target.closest('[data-action]');
+    if(!actionEl) return;
+    const action = actionEl.dataset.action;
+    if(action === 'edit')    { closeAllMenus(); openEditGoal(gid); }
+    if(action === 'addfund') { closeAllMenus(); quickAdd(gid); }
+    if(action === 'delete')  { closeAllMenus(); _deleteGoalById(gid); }
+  };
+  c.addEventListener('click', c._goalDelegate);
 }
-function toggleGoalMenu(e,id){e.stopPropagation();e.preventDefault();const m=document.getElementById('gctx-'+id);if(!m)return;const open=m.style.display==='block';closeAllMenus();if(!open){m.style.display='block';openMenuId='gctx-'+id;}}
+// Helper delete via event delegation (tidak perlu editGoalModal open dulu)
+function _deleteGoalById(id){
+  const g = goals.find(x=>x.id===id); if(!g) return;
+  if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`)) return;
+  goals = goals.filter(x=>x.id!==id);
+  renderGoals(); updateSavingsTotal();
+  toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);
+  fbAutoSave();
+}
+// toggleGoalMenu digantikan oleh event delegation di renderGoals
 // Wallet ctx portal helpers — deklarasi SEBELUM closeAllMenus agar tidak reference error
 let _activeCtxWid=null;
 function _hideWalletCtx(){const p=document.getElementById('walletCtxPortal');if(p)p.style.display='none';_activeCtxWid=null;}
@@ -2296,7 +2360,6 @@ function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
 function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
-function deleteGoalDirect(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;const konfirmasi=lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`;if(!confirm(konfirmasi))return;goals=goals.filter(x=>x.id!==id);renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
   const goalTotal  = goals.reduce((s,g) => s + (g.current||0), 0);
@@ -3661,7 +3724,7 @@ const TR={
     'pw-nomatch':'Passwords do not match',
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
-  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
+  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',

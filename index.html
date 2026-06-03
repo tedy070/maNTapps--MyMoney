@@ -2184,7 +2184,7 @@ function renderGoals(){
     const lblDelete = lang==='id' ? 'Hapus'         : 'Delete';
     const btnLabel  = lang==='id' ? (isTeal ? 'Tambah Cepat' : 'Tambah Dana') : (isTeal ? 'Quick Add' : 'Add Funds');
     const lblOf     = lang==='id' ? 'dari' : 'of';
-    div.innerHTML=`<div class="goal-h"><div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div><button class="goal-more" onclick="toggleGoalMenu(event,${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg><div class="ctx-menu" id="gctx-${g.id}" style="display:none;"><div class="ctx-item" onclick="openEditGoal(${g.id})">${lblEdit}</div><div class="ctx-item" onclick="quickAdd(${g.id})">${lblAdd}</div><div class="ctx-item danger" onclick="openEditGoal(${g.id})">${lblDelete}</div></div></button></div>
+    div.innerHTML=`<div class="goal-h"><div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div><button class="goal-more" onclick="toggleGoalMenu(event,${g.id})"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg><div class="ctx-menu" id="gctx-${g.id}" style="display:none;"><div class="ctx-item" onclick="event.stopPropagation();openEditGoal(${g.id})">${lblEdit}</div><div class="ctx-item" onclick="event.stopPropagation();quickAdd(${g.id})">${lblAdd}</div><div class="ctx-item danger" onclick="event.stopPropagation();deleteGoalDirect(${g.id})">${lblDelete}</div></div></button></div>
     <div class="goal-nm">${g.name}</div><div class="goal-sub">${g.desc}</div>
     <div class="goal-ams"><span class="goal-cur">${fmt(g.current)}</span><span class="goal-tgt">${lblOf} ${fmt(g.target)}</span></div>
     <div class="prog-w"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
@@ -2192,7 +2192,7 @@ function renderGoals(){
     c.appendChild(div);
   });
 }
-function toggleGoalMenu(e,id){e.stopPropagation();const m=document.getElementById('gctx-'+id);if(!m)return;const open=m.style.display==='block';closeAllMenus();if(!open){m.style.display='block';openMenuId='gctx-'+id;}}
+function toggleGoalMenu(e,id){e.stopPropagation();e.preventDefault();const m=document.getElementById('gctx-'+id);if(!m)return;const open=m.style.display==='block';closeAllMenus();if(!open){m.style.display='block';openMenuId='gctx-'+id;}}
 // Wallet ctx portal helpers — deklarasi SEBELUM closeAllMenus agar tidak reference error
 let _activeCtxWid=null;
 function _hideWalletCtx(){const p=document.getElementById('walletCtxPortal');if(p)p.style.display='none';_activeCtxWid=null;}
@@ -2296,6 +2296,7 @@ function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
 function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
+function deleteGoalDirect(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;const konfirmasi=lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`;if(!confirm(konfirmasi))return;goals=goals.filter(x=>x.id!==id);renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
   const goalTotal  = goals.reduce((s,g) => s + (g.current||0), 0);

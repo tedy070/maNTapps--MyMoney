@@ -1284,18 +1284,27 @@ body{background:var(--bg);transition:background .35s;}
 
         <!-- TUJUAN PANEL -->
         <div id="sv-tujuan-panel">
-          <div class="sv-hc">
-            <div class="sv-lbl" id="sv-prog">TOTAL PROGRESS</div>
-            <div class="sv-amt" id="svAmt">$24,500.00</div>
-            <div class="sv-ch">↑ +12% <span id="sv-from">from last month</span></div>
-            <div class="sv-btns">
-              <button class="sv-btn p" onclick="openNewGoalModal()" id="sv-new">+ New Goal</button>
-              <button class="sv-btn" onclick="switchTab('analytics')" id="sv-ins">Insights</button>
+          <!-- Card Total Kemajuan — biru gradient -->
+          <div style="margin:0 16px 14px;background:linear-gradient(135deg,#0D2152,#1a3a7a 55%,var(--blue2));border-radius:18px;padding:20px;color:white;box-shadow:0 12px 32px rgba(13,33,82,.32);">
+            <div style="font-size:10px;letter-spacing:2px;opacity:.7;margin-bottom:4px;font-weight:500;text-transform:uppercase;" id="sv-prog">TOTAL KEMAJUAN</div>
+            <div style="font-family:var(--f);font-size:clamp(22px,6vw,28px);font-weight:800;letter-spacing:-1px;margin-bottom:2px;" id="svAmt">Rp 0</div>
+            <div style="font-size:12px;opacity:.75;margin-bottom:14px;">dari <span id="sv-target-total" style="opacity:1;font-weight:700;">Rp 0</span> target</div>
+            <!-- Progress bar -->
+            <div style="background:rgba(255,255,255,.18);border-radius:8px;height:10px;overflow:hidden;margin-bottom:8px;">
+              <div id="sv-progress-bar" style="height:100%;border-radius:8px;background:rgba(255,255,255,.9);transition:width .6s ease;width:0%;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:12px;opacity:.8;"><span id="sv-goals-count">0</span> tujuan aktif</div>
+              <div style="font-size:13px;font-weight:800;" id="sv-pct-label">0%</div>
             </div>
           </div>
-          <div class="tip-ban">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <div><p class="tip-ban-txt" id="sv-emtip">Saving for an emergency fund first provides ultimate peace of mind.</p><span class="tip-ban-lnk" id="sv-learn">Learn More</span></div>
+          <!-- Tombol Tambah Tujuan — di luar card -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0 16px 12px;">
+            <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);" id="sv-goals-title">Daftar Tujuan</div>
+            <button onclick="openNewGoalModal()" style="display:flex;align-items:center;gap:5px;background:var(--navy);color:white;border:none;border-radius:20px;padding:7px 14px;font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span id="sv-new">Tujuan Baru</span>
+            </button>
           </div>
           <div id="goalsContainer"></div>
         </div>
@@ -2169,12 +2178,29 @@ function closeEditGoalModal(){document.getElementById('editGoalModal').classList
 function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);addHistoryItem(g.name,rp,true);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
 function updateSavingsTotal(){
-  // Goals total
-  const goalTotal = goals.reduce((s,g)=>s+g.current,0);
-  const eGoal = document.getElementById('svAmt');
-  if(eGoal) eGoal.textContent = fmt(goalTotal);
-  // Wallet summary total — realtime
-  const walletTotal = wallets.reduce((s,w)=>s+(w.balance||0),0);
+  // ── Goals total — realtime ──
+  const goalTotal  = goals.reduce((s,g) => s + (g.current||0), 0);
+  const targetTotal= goals.reduce((s,g) => s + (g.target||0), 0);
+  const pct        = targetTotal > 0 ? Math.min(Math.round((goalTotal / targetTotal) * 100), 100) : 0;
+  const activeCount= goals.length;
+
+  const eAmt = document.getElementById('svAmt');
+  if (eAmt) eAmt.textContent = fmt(goalTotal);
+
+  const eTarget = document.getElementById('sv-target-total');
+  if (eTarget) eTarget.textContent = fmt(targetTotal);
+
+  const eBar = document.getElementById('sv-progress-bar');
+  if (eBar) eBar.style.width = pct + '%';
+
+  const ePct = document.getElementById('sv-pct-label');
+  if (ePct) ePct.textContent = pct + '%';
+
+  const eCount = document.getElementById('sv-goals-count');
+  if (eCount) eCount.textContent = activeCount;
+
+  // ── Wallet summary total — realtime ──
+  const walletTotal = wallets.reduce((s,w) => s + (w.balance||0), 0);
   const eWS = document.getElementById('walletSummary');
   if(eWS) eWS.innerHTML = wallets.length
     ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
@@ -2182,6 +2208,7 @@ function updateSavingsTotal(){
          <span style="font-family:var(--f);font-size:18px;font-weight:800;color:var(--navy);">${fmt(walletTotal)}</span>
        </div>`
     : '';
+
   // Update main displayBalance too
   recalcTotalBalance();
 }

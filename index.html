@@ -2742,7 +2742,7 @@ function renderHistory(){
 
   c.innerHTML = filtered.map(h => {
     const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
-    const isTarik = h.type === 'tarik';
+    const isTarik = isTarikTx(h);
     const icon = isTarik
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
       : h.pos
@@ -3425,7 +3425,7 @@ function updateAllAmounts(){
   const mnData = getAnalyticsData?getAnalyticsData('month'):historyItems;
   cats.forEach(cat=>{
     const cid=chipIds[cat];if(!cid)return;
-    const v=mnData.filter(h=>!h.pos&&h.cat===cat&&h.type!=='tarik').reduce((s,h)=>s+Math.abs(h.amt||0),0);
+    const v=mnData.filter(h=>!h.pos&&h.cat===cat&&!isTarikTx(h)).reduce((s,h)=>s+Math.abs(h.amt||0),0);
     const el=document.getElementById(cid);if(el)el.textContent=fmt(v);
   });
   updateSavingsTotal();
@@ -4105,7 +4105,7 @@ function renderRecentTxList(){
     const item = document.createElement('div');
     item.className = 'tx-item';
     const isPos = h.pos || h.amt > 0;
-    const isTarik = h.type === 'tarik';
+    const isTarik = isTarikTx(h);
     const amtSign = isTarik ? '🏧 ' : (isPos ? '+' : '-');
     const amtClass = isTarik ? '' : (isPos ? 'pos' : 'neg');
     const catColor = isTarik ? '#F4F6FC' : (h.catColor || (isPos ? '#EBFEF3' : '#FEEBEB'));
@@ -4222,6 +4222,12 @@ function selectAnalyticsBulan(y, m) {
   buildSmartTip();
 }
 
+// ── Helper: cek apakah transaksi adalah Tarik Tunai (type ATAU cat) ──
+// Menangkap data lama (cat:'tarik' tanpa type) dan data baru (type:'tarik')
+function isTarikTx(h) {
+  return h.type === 'tarik' || h.cat === 'tarik';
+}
+
 // ── Kumpulkan data per-periode ──
 function getAnalyticsData(period) {
   const now   = new Date();
@@ -4258,7 +4264,7 @@ function refreshWeeklyBar(mode) {
     const de = new Date(ds.getTime() + 86400000);
     return historyItems
       .filter(h => h.ts && new Date(h.ts) >= ds && new Date(h.ts) < de)
-      .filter(h => wBarMode==='spending' ? (!h.pos && h.type!=='tarik') : h.pos)
+      .filter(h => wBarMode==='spending' ? (!h.pos && !isTarikTx(h)) : h.pos)
       .reduce((s,h) => s + Math.abs(h.amt||0), 0);
   });
   const mx = Math.max(...amounts, 1);
@@ -4290,7 +4296,7 @@ function buildMonthlyChart() {
     cur = wEnd;
   }
   const spAmts = weeks.map(w =>
-    historyItems.filter(h=>h.ts&&!h.pos&&h.type!=='tarik'&&new Date(h.ts)>=w.start&&new Date(h.ts)<w.end)
+    historyItems.filter(h=>h.ts&&!h.pos&&!isTarikTx(h)&&new Date(h.ts)>=w.start&&new Date(h.ts)<w.end)
       .reduce((s,h)=>s+Math.abs(h.amt||0),0)
   );
   const inAmts = weeks.map(w =>
@@ -4330,7 +4336,7 @@ function buildYearlyChart() {
     if (d.getFullYear() !== yr) return;
     const m = d.getMonth();
     if (h.pos) inAmts[m] += Math.abs(h.amt||0);
-    else if (h.type !== 'tarik') spAmts[m] += Math.abs(h.amt||0);
+    else if (!isTarikTx(h)) spAmts[m] += Math.abs(h.amt||0);
   });
   const mx = Math.max(...spAmts,...inAmts,1);
   const bc = document.getElementById('barChartYearly');
@@ -4356,7 +4362,7 @@ function buildDonut() {
   // Update subtitle
   const subEl = document.getElementById('a-goes-sub');
   if (subEl) subEl.textContent = `Distribusi pengeluaran · ${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear}`;
-  const data = getAnalyticsData('month').filter(h=>!h.pos && h.type !== 'tarik');
+  const data = getAnalyticsData('month').filter(h=>!h.pos && !isTarikTx(h));
   const catMap = {};
   data.forEach(h=>{
     const k = h.cat||'tarik';
@@ -4392,14 +4398,14 @@ function buildDonut() {
   });
   // Monthly overview total — gunakan bulan yang dipilih
   const mn = getAnalyticsData('month');
-  const mnExp = mn.filter(h=>!h.pos && h.type!=='tarik').reduce((s,h)=>s+Math.abs(h.amt||0),0);
+  const mnExp = mn.filter(h=>!h.pos && !isTarikTx(h)).reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const mnInc = mn.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt||0),0);
   // Hitung perbandingan dengan bulan sebelumnya
   const prevM = analyticsMonth === 0 ? 11 : analyticsMonth - 1;
   const prevY = analyticsMonth === 0 ? analyticsYear - 1 : analyticsYear;
   const prevStart = new Date(prevY, prevM, 1);
   const prevEnd   = new Date(prevY, prevM + 1, 1);
-  const prevExp   = historyItems.filter(h => h.ts && !h.pos && h.type !== 'tarik').filter(h => { const d = new Date(h.ts); return d >= prevStart && d < prevEnd; }).reduce((s,h)=>s+Math.abs(h.amt||0),0);
+  const prevExp   = historyItems.filter(h => h.ts && !h.pos && !isTarikTx(h)).filter(h => { const d = new Date(h.ts); return d >= prevStart && d < prevEnd; }).reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const elOv = document.getElementById('anAmt');
   if(elOv) elOv.textContent = fmt(mnExp);
   const elCh = document.querySelector('.an-ch');
@@ -4423,7 +4429,7 @@ function buildTopCats() {
   // Update subtitle
   const subEl = document.getElementById('a-top-sub');
   if (subEl) subEl.textContent = `Pengeluaran terbesar · ${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear}`;
-  const data  = getAnalyticsData('month').filter(h=>!h.pos && h.type !== 'tarik');
+  const data  = getAnalyticsData('month').filter(h=>!h.pos && !isTarikTx(h));
   const catMap = {};
   data.forEach(h=>{ const k=h.cat||'tarik'; catMap[k]=(catMap[k]||0)+Math.abs(h.amt||0); });
   const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -4471,7 +4477,7 @@ function buildTopCats() {
 
 // ── Smart tip ──
 function buildSmartTip() {
-  const mn = getAnalyticsData('month').filter(h=>!h.pos && h.type !== 'tarik');
+  const mn = getAnalyticsData('month').filter(h=>!h.pos && !isTarikTx(h));
   const bulanLbl = `${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear}`;
   if (!mn.length){
     const el=document.getElementById('a-tiptext');
@@ -5567,7 +5573,7 @@ function updateTagihanSummary(list) {
   // Pengeluaran bulan ini dari historyItems (tarik tunai tidak dihitung sebagai expense)
   const now2 = new Date();
   const monthExpense = historyItems
-    .filter(h => !h.pos && h.type!=='tarik' && h.ts && new Date(h.ts).getFullYear()===now2.getFullYear() && new Date(h.ts).getMonth()===now2.getMonth())
+    .filter(h => !h.pos && !isTarikTx(h) && h.ts && new Date(h.ts).getFullYear()===now2.getFullYear() && new Date(h.ts).getMonth()===now2.getMonth())
     .reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const elExp = document.getElementById('tagihan-expense-amt');
   if (elExp) elExp.textContent = 'Rp '+Math.round(monthExpense).toLocaleString('id-ID');
@@ -6193,7 +6199,7 @@ function calcAnggaranSpent(){
   const key = _anggaranPeriodeKey();
   const spent = {};
   historyItems.forEach(h => {
-    if(h.pos || h.type === 'tarik') return;
+    if(h.pos || isTarikTx(h)) return;
     const d = new Date(h.ts || 0);
     const hKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     if(hKey !== key) return;

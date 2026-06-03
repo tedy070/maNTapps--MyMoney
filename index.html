@@ -2203,7 +2203,7 @@ function renderGoals(){
     div.innerHTML = `
       <div class="goal-h">
         <div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div>
-        <button class="goal-more" data-action="menu">
+        <button class="goal-more">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
           <div class="ctx-menu" style="display:none;">
             <div class="ctx-item" data-action="edit">${lblEdit}</div>
@@ -2219,46 +2219,53 @@ function renderGoals(){
         <span class="goal-tgt">${lblOf} ${fmt(g.target)}</span>
       </div>
       <div class="prog-w"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
-      <button class="goal-btn ${isTeal?'tl':''}" data-action="addfund">
+      <button class="goal-btn ${isTeal?'tl':''}">
         <svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
         ${btnLabel}
       </button>`;
     c.appendChild(div);
   });
 
-  // ── Event delegation — SATU listener di container, baca gid dari card terdekat ──
+  // ── Event delegation ──
   if(c._goalDelegate) c.removeEventListener('click', c._goalDelegate);
   c._goalDelegate = function(e) {
+    // Cari card
     const card = e.target.closest('[data-gid]');
     if(!card) return;
     const gid = parseInt(card.dataset.gid);
 
-    // Tombol titik-3 (menu toggle)
-    const menuBtn = e.target.closest('[data-action="menu"]');
+    // Deteksi klik pada item ctx-menu DULU (sebelum cek menu button)
+    // karena ctx-menu berada di dalam goal-more button
+    const ctxItem = e.target.closest('.ctx-item');
+    if(ctxItem){
+      e.stopPropagation();
+      // Tutup menu
+      card.querySelectorAll('.ctx-menu').forEach(m=>m.style.display='none');
+      const action = ctxItem.dataset.action;
+      if(action === 'edit')    openEditGoal(gid);
+      if(action === 'addfund') quickAdd(gid);
+      if(action === 'delete')  _deleteGoalById(gid);
+      return;
+    }
+
+    // Deteksi klik tombol titik-3 (goal-more) atau isinya (SVG/circle)
+    const menuBtn = e.target.closest('.goal-more');
     if(menuBtn){
       e.stopPropagation();
       const menu = menuBtn.querySelector('.ctx-menu');
       if(!menu) return;
       const isOpen = menu.style.display === 'block';
-      // Tutup semua menu lain dulu (bypass guard karena kita panggil langsung)
-      document.querySelectorAll('.ctx-menu').forEach(m=>{ if(m !== menu) m.style.display='none'; });
+      // Tutup semua ctx-menu lain
+      document.querySelectorAll('.ctx-menu').forEach(m=>{ if(m!==menu) m.style.display='none'; });
       menu.style.display = isOpen ? 'none' : 'block';
       return;
     }
 
-    // Item di dalam ctx-menu — stopPropagation agar tidak trigger closeAllMenus
-    const actionEl = e.target.closest('[data-action]');
-    if(!actionEl) return;
-    const action = actionEl.dataset.action;
-    if(action === 'menu') return; // sudah ditangani di atas
-
-    e.stopPropagation();
-    // Tutup menu dulu
-    document.querySelectorAll('.ctx-menu').forEach(m=>{ m.style.display='none'; });
-
-    if(action === 'edit')    { openEditGoal(gid); }
-    if(action === 'addfund') { quickAdd(gid); }
-    if(action === 'delete')  { _deleteGoalById(gid); }
+    // Tombol Tambah Dana / Quick Add (goal-btn)
+    if(e.target.closest('.goal-btn')){
+      e.stopPropagation();
+      quickAdd(gid);
+    }
   };
   c.addEventListener('click', c._goalDelegate);
 }
@@ -2276,10 +2283,10 @@ function _deleteGoalById(id){
 let _activeCtxWid=null;
 function _hideWalletCtx(){const p=document.getElementById('walletCtxPortal');if(p)p.style.display='none';_activeCtxWid=null;}
 function closeAllMenus(e){
-  // Jangan tutup jika klik berasal dari dalam ctx-menu atau tombol titik-3
+  // Jangan tutup jika klik berasal dari dalam ctx-menu atau tombol goal-more
   if(e && e.target){
     if(e.target.closest('.ctx-menu')) return;
-    if(e.target.closest('[data-action="menu"]')) return;
+    if(e.target.closest('.goal-more')) return;
   }
   document.querySelectorAll('.ctx-menu').forEach(m=>{if(m.id!=='walletCtxPortal')m.style.display='none';});
   _hideWalletCtx();

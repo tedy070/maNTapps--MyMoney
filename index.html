@@ -1281,14 +1281,33 @@ body{background:var(--bg);transition:background .35s;}
       <!-- ── STICKY NAV: Tab utama + Sub-tab ── -->
       <div id="savings-sticky-nav" style="position:sticky;top:0;z-index:60;background:var(--bg);transition:background .35s;padding-top:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
         <div class="sv-tabs">
-          <button class="sv-tab on" id="svt-goals" onclick="switchSvTab('goals')" data-i18n="svt-goals">Goals & Bills</button>
+          <button class="sv-tab on" id="svt-goals" onclick="switchSvTab('goals')" data-i18n="svt-goals">Goals &amp; Bills</button>
           <button class="sv-tab" id="svt-wallets" onclick="switchSvTab('wallets')">Kartu &amp; Anggaran</button>
           <button class="sv-tab" id="svt-history" onclick="switchSvTab('history')">History</button>
         </div>
-        <!-- Sub-navbar: Tujuan | Tagihan — hanya tampil saat tab Goals aktif -->
+        <!-- Sub-tab: Tujuan | Tagihan -->
         <div id="sv-sub-nav-wrap" style="display:flex;margin:0 16px 8px;background:var(--surface2);border-radius:12px;padding:4px;gap:0;">
           <button class="sv-subtab on" id="svsubt-tujuan" onclick="switchGoalsSubTab('tujuan')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;" data-i18n="tg-tab-goals">Tujuan</button>
           <button class="sv-subtab" id="svsubt-tagihan" onclick="switchGoalsSubTab('tagihan')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;" data-i18n="tg-tab-bills">Tagihan</button>
+        </div>
+        <!-- Sub-tab: Kartu | Anggaran -->
+        <div id="sv-wallet-nav-wrap" style="display:none;margin:0 16px 8px;background:var(--surface2);border-radius:12px;padding:4px;gap:0;">
+          <button class="sv-subtab on" id="svsubt-kartu" onclick="switchWalletSubTab('kartu')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;">Kartu</button>
+          <button class="sv-subtab" id="svsubt-anggaran" onclick="switchWalletSubTab('anggaran')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;">Anggaran</button>
+        </div>
+        <!-- Navbar Riwayat: Tanggal | E-Statement -->
+        <div id="sv-history-nav-wrap" style="display:none;padding:0 16px 8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <button id="hist-bulan-btn" onclick="openBulanPicker()" style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:none;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span id="hist-bulan-label">Mei 2026</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+            </button>
+            <button onclick="openEStatement()" style="display:flex;align-items:center;gap:6px;background:var(--blue);border:none;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;color:white;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+              E-Statement
+            </button>
+          </div>
         </div>
       </div><!-- /savings sticky nav -->
       <!-- Goals/Tagihan Content -->
@@ -1389,11 +1408,6 @@ body{background:var(--bg);transition:background .35s;}
       </div>
       <!-- Kartu & Anggaran — SWIPEABLE -->
       <div id="sv-wallets-content" style="display:none;">
-        <!-- Sub-navbar: Kartu | Anggaran -->
-        <div style="display:flex;margin:0 16px 16px;background:var(--surface2);border-radius:12px;padding:4px;gap:0;">
-          <button class="sv-subtab on" id="svsubt-kartu" onclick="switchWalletSubTab('kartu')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);transition:all .2s;">Kartu</button>
-          <button class="sv-subtab" id="svsubt-anggaran" onclick="switchWalletSubTab('anggaran')" style="flex:1;padding:9px;border-radius:9px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .2s;">Anggaran</button>
-        </div>
 
         <!-- KARTU PANEL -->
         <div id="sv-kartu-panel">
@@ -1453,19 +1467,7 @@ body{background:var(--bg);transition:background .35s;}
       <!-- History -->
       <div id="sv-history-content" style="display:none;">
         <!-- NAVBAR: Bulan (kiri) | E-Statement (kanan) -->
-        <div id="hist-navbar" style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 12px;margin-bottom:2px;">
-          <!-- Bulan pill kiri -->
-          <button id="hist-bulan-btn" onclick="openBulanPicker()" style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:none;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span id="hist-bulan-label">Mei 2026</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
-          </button>
-          <!-- E-Statement kanan -->
-          <button onclick="openEStatement()" style="display:flex;align-items:center;gap:6px;background:var(--blue);border:none;border-radius:20px;padding:7px 14px;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;color:white;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
-            E-Statement
-          </button>
-        </div>
+        
         <!-- Bulan month dropdown (hidden by default) -->
         <div id="bulan-picker" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.45);" onclick="closeBulanPicker()">
           <div onclick="event.stopPropagation()" style="position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;padding:18px 16px 32px;max-height:60vh;overflow-y:auto;">
@@ -1747,8 +1749,7 @@ body{background:var(--bg);transition:background .35s;}
     </div>
     <div class="albl" id="qa-amt-lbl">JUMLAH YANG DITAMBAHKAN</div>
     <div class="awrap" style="margin-bottom:20px;">
-      <span class="acurr" id="qa-curr">Rp</span>
-      <input class="ainput hv" type="number" id="qaAmount" placeholder="0" style="font-size:30px;" oninput="updateQAPreview()">
+      <input class="ainput hv" type="number" id="qaAmount" placeholder="0" style="font-size:30px;padding-left:16px;" oninput="updateQAPreview()">
     </div>
     <!-- Preview after add -->
     <div id="qa-preview" style="display:none;background:rgba(26,86,196,.06);border-radius:12px;padding:10px 14px;margin-bottom:16px;border:1.5px solid var(--blue2);">
@@ -2286,7 +2287,7 @@ function quickAdd(id){
   const eTgtVal  = document.getElementById('qa-target-val');
   const eBar     = document.getElementById('qa-prog-bar');
   const ePct     = document.getElementById('qa-pct-info');
-  const eCurr    = document.getElementById('qa-curr');
+  const eCurr    = null; // currency symbol removed
   const eSaveBtn = document.getElementById('qa-save-btn');
   const eAmtLbl  = document.getElementById('qa-amt-lbl');
   if(eTitle)   eTitle.textContent   = isId ? 'Tambah Dana' : 'Add Funds';
@@ -2298,7 +2299,7 @@ function quickAdd(id){
   const pct0 = g.target > 0 ? Math.min(100, Math.round(g.current/g.target*100)) : 0;
   if(eBar)     eBar.style.width     = pct0 + '%';
   if(ePct)     ePct.textContent     = pct0 + '%';
-  if(eCurr)    eCurr.textContent    = isModeRp() ? 'Rp' : '$';
+  // currency label removed
   if(eSaveBtn) eSaveBtn.textContent = isId ? 'Tambah Dana' : 'Add Funds';
   if(eAmtLbl)  eAmtLbl.textContent  = isId ? 'JUMLAH YANG DITAMBAHKAN' : 'AMOUNT TO ADD';
   // Reset preview
@@ -2987,12 +2988,16 @@ function renderHistory(){
 function switchSvTab(t){
   document.querySelectorAll('.sv-tab').forEach(x=>x.classList.remove('on'));
   document.getElementById('svt-'+t)?.classList.add('on');
-  document.getElementById('sv-goals-content').style.display=t==='goals'?'block':'none';
-  document.getElementById('sv-wallets-content').style.display=t==='wallets'?'block':'none';
-  document.getElementById('sv-history-content').style.display=t==='history'?'block':'none';
-  // Tampilkan sub-nav Tujuan/Tagihan hanya saat tab Goals aktif
-  const subNavWrap = document.getElementById('sv-sub-nav-wrap');
-  if(subNavWrap) subNavWrap.style.display = t==='goals' ? 'flex' : 'none';
+  document.getElementById('sv-goals-content').style.display   = t==='goals'   ? 'block' : 'none';
+  document.getElementById('sv-wallets-content').style.display = t==='wallets' ? 'block' : 'none';
+  document.getElementById('sv-history-content').style.display = t==='history' ? 'block' : 'none';
+  // Tampilkan sub-nav yang sesuai di sticky header
+  const subGoals   = document.getElementById('sv-sub-nav-wrap');
+  const subWallets = document.getElementById('sv-wallet-nav-wrap');
+  const subHistory = document.getElementById('sv-history-nav-wrap');
+  if(subGoals)   subGoals.style.display   = t==='goals'   ? 'flex'  : 'none';
+  if(subWallets) subWallets.style.display = t==='wallets' ? 'flex'  : 'none';
+  if(subHistory) subHistory.style.display = t==='history' ? 'block' : 'none';
   // Sembunyikan FAB tagihan jika tidak di goals tab
   const fab = document.getElementById('fab-tambah-tagihan');
   if(fab) fab.style.display='none';
@@ -3715,7 +3720,7 @@ const TR={
 'tg-err-name':'Bill name is required','tg-err-date':'Due date is required',
 'tg-remind-custom':'Remind how many days before? (e.g. 7)',
 'tg-remind-days-label':'days','tg-added-notif':'Bill Added',
-'cat-rent-sub':'BILLS & HOUSING','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE','cat-saving':'Saving','cat-saving-sub':'SAVE & GROW',
+'cat-rent-sub':'BILLS & HOUSING','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE','cat-saving':'Saving','cat-saving-sub':'SAVE & GROW','cat-emergency':'Emergency Fund','cat-emergency-sub':'DANA DARURAT',
     'tx-income':'Income','tx-expense':'Expense','tx-transfer':'Transfer',
     'tx-topup':'Top Up','tx-recorded':'recorded','tx-from':'from','tx-to':'to',
     'tx-insufficient':'Insufficient balance! Available',
@@ -3736,7 +3741,7 @@ const TR={
     'pw-nomatch':'Passwords do not match',
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
-  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'+ Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
+  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',
@@ -3760,7 +3765,7 @@ const TR={
 'tg-err-name':'Nama tagihan wajib diisi','tg-err-date':'Tanggal jatuh tempo wajib diisi',
 'tg-remind-custom':'Ingatkan berapa hari sebelumnya? (contoh: 7)',
 'tg-remind-days-label':'hari','tg-added-notif':'Tagihan Ditambahkan',
-'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS','cat-saving':'Saving','cat-saving-sub':'TABUNG & TUMBUH',
+'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS','cat-saving':'Saving','cat-saving-sub':'TABUNG & TUMBUH','cat-emergency':'Dana Darurat','cat-emergency-sub':'DANA DARURAT',
     'tx-income':'Pemasukan','tx-expense':'Pengeluaran','tx-transfer':'Transfer',
     'tx-topup':'Isi Saldo','tx-recorded':'tercatat','tx-from':'dari','tx-to':'ke',
     'tx-insufficient':'Saldo tidak cukup! Tersedia',
@@ -3923,6 +3928,7 @@ const cats=[
   {id:'tarik',stroke:'#6B7280',bg:'#F4F6FC',svg:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/>'},
   {id:'gaji',stroke:'#0B7A63',bg:'#EBFEF3',svg:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>'},
   {id:'saving',stroke:'#0FA884',bg:'#E8FBF5',svg:'<path d="M19 5H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2z"/><path d="M16 14a2 2 0 100-4 2 2 0 000 4z"/><path d="M6 10h4"/><path d="M6 13h2"/>'},
+  {id:'emergency',stroke:'#EF4444',bg:'#FEF2F2',svg:'<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'},
 ];
 
 // Money source definitions — ID maps to wallet ID (null = main balance)

@@ -197,6 +197,15 @@ function _applyStateFromDB(data){
     if(data.darkMode) document.body.classList.add('dk');
     else              document.body.classList.remove('dk');
   }
+  // ── Selalu reset filter ke bulan SEKARANG ──
+  // Agar Riwayat & Anggaran selalu buka di bulan saat ini (bukan bulan transaksi lama di DB)
+  const _nowDB = new Date();
+  histFilterYear  = _nowDB.getFullYear();
+  histFilterMonth = _nowDB.getMonth();
+  anggaranYear    = _nowDB.getFullYear();
+  anggaranMonth   = _nowDB.getMonth();
+  analyticsYear   = _nowDB.getFullYear();
+  analyticsMonth  = _nowDB.getMonth();
   refreshAllUI();
 }
 

@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>MyMoney</title>
+<title>MyMoney v21</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
 <link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
@@ -138,6 +138,10 @@ function fbStartRealtimeSync(){
   });
 }
 let _lastSyncTs = 0;
+// Flag: true selama enterApp berjalan (initial data load dari RTDB).
+// Digunakan untuk mencegah _syncFiltersAfterRTDBUpdate mengubah filter
+// ke bulan lama saat pertama kali data dimuat dari Firebase.
+let _isInitialAppLoad = false;
 
 function fbStopRealtimeSync(){
   if(_rtdbRef && _rtdbListener){
@@ -204,6 +208,9 @@ function _applyStateFromDB(data){
 //   3. Jika ada item yang ts-nya berubah, arahkan filter ke bulan ts baru
 //   4. Dengan begitu Riwayat & Anggaran langsung loncat ke bulan yang relevan
 function _syncFiltersAfterRTDBUpdate(oldSnapshot){
+  // Jangan ubah filter saat initial load dari enterApp —
+  // filter sudah di-reset ke bulan sekarang di enterApp.
+  if(_isInitialAppLoad) return;
   if(!historyItems || historyItems.length === 0) return;
   // Jika tidak ada snapshot lama (login pertama), tidak perlu sync
   if(!oldSnapshot || oldSnapshot.length === 0) return;
@@ -5241,6 +5248,7 @@ async function doRegister(){
 // enterApp — apply state dari Firebase, render UI
 // ════════════════════════════════════════════════════════════
 async function enterApp(initialState){
+  _isInitialAppLoad = true; // Tandai sedang initial load — cegah filter terganggu RTDB sync
   // ① Terapkan state dari DB kalau ada
   if(initialState){
     if(initialState.balance     !== undefined) balance       = initialState.balance;
@@ -5275,7 +5283,18 @@ async function enterApp(initialState){
     syncAvPicker();
   }
 
-  // ③ Tampilkan layar app
+  // ③ Reset semua filter waktu ke bulan sekarang
+  // Ini memastikan setiap kali user masuk/kembali ke app, semua halaman
+  // (Riwayat, Anggaran, Analitik) langsung menampilkan bulan yang sesuai.
+  const _nowEntry = new Date();
+  histFilterYear   = _nowEntry.getFullYear();
+  histFilterMonth  = _nowEntry.getMonth();
+  anggaranYear     = _nowEntry.getFullYear();
+  anggaranMonth    = _nowEntry.getMonth();
+  analyticsYear    = _nowEntry.getFullYear();
+  analyticsMonth   = _nowEntry.getMonth();
+
+  // ④ Tampilkan layar app
   document.querySelectorAll('.scr').forEach(el=>{ el.classList.remove('on'); el.style.display='none'; });
   document.getElementById('app').classList.add('on');
   // Show rate banner immediately
@@ -5284,13 +5303,14 @@ async function enterApp(initialState){
   switchTab('home');
   fetchRate();
 
-  // ④ Render semua UI
+  // ⑤ Render semua UI
   refreshAllUI();
 
-  // ⑤ Mulai realtime sync lintas device
+  // ⑥ Mulai realtime sync lintas device
+  _isInitialAppLoad = false; // Initial load selesai — RTDB listener boleh ubah filter lagi
   fbStartRealtimeSync();
 
-  // ⑥ Push notifications
+  // ⑦ Push notifications
   initPushNotifications();
 
   // ⑦ Schedule tagihan reminders (after SW registration)

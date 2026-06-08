@@ -5617,6 +5617,275 @@ let selTagihanCatColor = '';
 let selTagihanCatIco = '';
 let tagihanBudget = 8000000; // default 8 juta
 
+// ============================================================
+// TAGIHAN — Form Functions (open/edit/save/delete/helpers)
+// ============================================================
+
+function openTambahTagihan() {
+  // Reset form untuk tambah baru
+  document.getElementById('tambah-tagihan-title').textContent = lang==='id' ? 'Tagihan Baru' : 'New Bill';
+  document.getElementById('tg-nama').value = '';
+  document.getElementById('tg-nominal').value = '';
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('tg-tanggal').value = today;
+  document.getElementById('tg-edit-id').value = '';
+  document.getElementById('tg-delete-btn').style.display = 'none';
+  // Reset kategori
+  selTagihanCat = ''; selTagihanCatColor = ''; selTagihanCatIco = '';
+  document.getElementById('tg-cat-txt').textContent = lang==='id' ? 'Pilih kategori...' : 'Select category...';
+  // Reset frekuensi ke sekali
+  setTagihanFreq('sekali', null);
+  // Reset reminder pills
+  tagihanReminderDays = [3];
+  _syncReminderPills();
+  document.getElementById('tg-reminder-time').value = '09:00';
+  // Tampilkan overlay
+  const ovr = document.getElementById('tambahTagihanOvr');
+  ovr.style.display = 'flex';
+  ovr.scrollTop = 0;
+}
+
+function openEditTagihan(id) {
+  const t = tagihan.find(x => x.id === id); if (!t) return;
+  document.getElementById('tambah-tagihan-title').textContent = lang==='id' ? 'Edit Tagihan' : 'Edit Bill';
+  document.getElementById('tg-nama').value = t.nama || '';
+  // Tampilkan nominal tanpa pemisah ribuan di field
+  document.getElementById('tg-nominal').value = (t.nominal || 0).toLocaleString('id-ID');
+  document.getElementById('tg-tanggal').value = t.tanggal || new Date().toISOString().split('T')[0];
+  document.getElementById('tg-edit-id').value = id;
+  document.getElementById('tg-delete-btn').style.display = 'block';
+  // Set kategori
+  selTagihanCat = t.cat || '';
+  selTagihanCatColor = t.catColor || '';
+  selTagihanCatIco   = t.catIco   || '';
+  const catObj = cats.find(c => c.id === selTagihanCat);
+  const catLabel = catObj ? (T('cat-'+catObj.id) || catObj.id) : (selTagihanCat || (lang==='id' ? 'Pilih kategori...' : 'Select category...'));
+  document.getElementById('tg-cat-txt').textContent = catLabel;
+  // Set frekuensi
+  setTagihanFreq(t.frekuensi || 'sekali', null);
+  // Set reminder
+  tagihanReminderDays = Array.isArray(t.reminders) ? [...t.reminders] : [3];
+  _syncReminderPills();
+  document.getElementById('tg-reminder-time').value = t.reminderTime || '09:00';
+  // Tampilkan overlay
+  const ovr = document.getElementById('tambahTagihanOvr');
+  ovr.style.display = 'flex';
+  ovr.scrollTop = 0;
+}
+
+function closeTambahTagihan() {
+  document.getElementById('tambahTagihanOvr').style.display = 'none';
+}
+
+function simpanTagihan() {
+  const nama    = document.getElementById('tg-nama').value.trim();
+  const nomStr  = document.getElementById('tg-nominal').value.replace(/\./g,'').replace(/,/g,'');
+  const nominal = parseFloat(nomStr) || 0;
+  const tanggal = document.getElementById('tg-tanggal').value;
+  const editId  = document.getElementById('tg-edit-id').value;
+
+  if (!nama)    { toast('⚠️ ' + (lang==='id' ? 'Nama tagihan harus diisi' : 'Bill name required')); return; }
+  if (!tanggal) { toast('⚠️ ' + (lang==='id' ? 'Tanggal harus diisi' : 'Due date required')); return; }
+  if (nominal <= 0) { toast('⚠️ ' + (lang==='id' ? 'Nominal harus lebih dari 0' : 'Amount must be > 0')); return; }
+
+  const catObj = cats.find(c => c.id === selTagihanCat);
+  const catColor = selTagihanCatColor || catObj?.bg   || '#EBF3FE';
+  const catIco   = selTagihanCatIco   || (catObj ? `<svg viewBox="0 0 24 24" fill="none" stroke="${catObj.stroke}" stroke-width="1.8">${catObj.svg}</svg>` : '');
+  const reminderTime = document.getElementById('tg-reminder-time').value || '09:00';
+
+  if (editId) {
+    // Update existing
+    const t = tagihan.find(x => x.id === parseInt(editId)); if (!t) return;
+    t.nama         = nama;
+    t.nominal      = nominal;
+    t.tanggal      = tanggal;
+    t.frekuensi    = tagihanFreqSel;
+    t.cat          = selTagihanCat;
+    t.catColor     = catColor;
+    t.catIco       = catIco;
+    t.reminders    = [...tagihanReminderDays];
+    t.reminderTime = reminderTime;
+    cancelTagihanSchedule(t.id);
+    scheduleTagihanNotifications(t);
+    toast('✅ ' + (lang==='id' ? `"${nama}" diperbarui` : `"${nama}" updated`));
+  } else {
+    // Tambah baru
+    const t = {
+      id:           tagihanIdCtr++,
+      nama,
+      nominal,
+      tanggal,
+      frekuensi:    tagihanFreqSel,
+      cat:          selTagihanCat,
+      catColor,
+      catIco,
+      lunas:        false,
+      reminders:    [...tagihanReminderDays],
+      reminderTime,
+    };
+    tagihan.push(t);
+    scheduleTagihanNotifications(t);
+    toast('✅ ' + (lang==='id' ? `"${nama}" ditambahkan` : `"${nama}" added`));
+  }
+
+  closeTambahTagihan();
+  renderTagihanList();
+  fbAutoSave();
+}
+
+function hapusTagihan() {
+  const editId = document.getElementById('tg-edit-id').value;
+  if (!editId) return;
+  const id = parseInt(editId);
+  const t  = tagihan.find(x => x.id === id);
+  if (!confirm(lang==='id' ? `Hapus tagihan "${t?.nama}"?` : `Delete bill "${t?.nama}"?`)) return;
+  cancelTagihanSchedule(id);
+  tagihan = tagihan.filter(x => x.id !== id);
+  closeTambahTagihan();
+  renderTagihanList();
+  toast('🗑️ ' + (lang==='id' ? `"${t?.nama}" dihapus` : `"${t?.nama}" deleted`));
+  fbAutoSave();
+}
+
+function setTagihanFreq(freq, btnEl) {
+  tagihanFreqSel = freq;
+  document.querySelectorAll('.tg-freq-btn').forEach(b => {
+    const isOn = b.id === 'tgfreq-' + freq;
+    b.style.background  = isOn ? 'var(--surface)' : 'transparent';
+    b.style.color       = isOn ? 'var(--navy)'    : 'var(--t3)';
+    b.style.boxShadow   = isOn ? 'var(--sh2)'     : 'none';
+  });
+}
+
+function toggleReminderPill(btn, days) {
+  const idx = tagihanReminderDays.indexOf(days);
+  if (idx >= 0) {
+    tagihanReminderDays.splice(idx, 1);
+    btn.classList.remove('on');
+    btn.style.background  = 'transparent';
+    btn.style.color       = 'var(--navy)';
+    btn.style.borderColor = 'var(--border)';
+    // Hapus ✓ prefix jika ada
+    if (btn.innerHTML.startsWith('✓ ')) btn.innerHTML = btn.innerHTML.slice(2);
+  } else {
+    tagihanReminderDays.push(days);
+    btn.classList.add('on');
+    btn.style.background  = 'var(--navy)';
+    btn.style.color       = 'white';
+    btn.style.borderColor = 'var(--blue2)';
+    if (!btn.innerHTML.startsWith('✓')) btn.innerHTML = '✓ ' + btn.innerHTML;
+  }
+}
+
+function addCustomReminderPill() {
+  const val = prompt(lang==='id' ? 'H berapa sebelum jatuh tempo? (isi angka)' : 'How many days before due date?');
+  if (!val || isNaN(parseInt(val))) return;
+  const d = parseInt(val);
+  if (d < 0 || d > 30) { toast('⚠️ 0–30 hari'); return; }
+  if (tagihanReminderDays.includes(d)) return;
+  tagihanReminderDays.push(d);
+  // Tambahkan pill baru
+  const wrap = document.getElementById('tg-reminder-pills');
+  const addBtn = wrap.querySelector('button:last-child');
+  const pill = document.createElement('button');
+  pill.className  = 'tg-remind-pill on';
+  pill.dataset.days = d;
+  pill.onclick    = function() { toggleReminderPill(this, d); };
+  pill.style.cssText = 'padding:8px 14px;border-radius:50px;border:1.5px solid var(--blue2);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;background:var(--navy);color:white;transition:all .2s;';
+  pill.innerHTML  = `✓ H-${d}`;
+  wrap.insertBefore(pill, addBtn);
+}
+
+// Sync visual state semua reminder pills dengan array tagihanReminderDays
+function _syncReminderPills() {
+  document.querySelectorAll('.tg-remind-pill').forEach(btn => {
+    const d   = parseInt(btn.dataset.days);
+    const isOn = tagihanReminderDays.includes(d);
+    btn.classList.toggle('on', isOn);
+    btn.style.background  = isOn ? 'var(--navy)' : 'transparent';
+    btn.style.color       = isOn ? 'white'       : 'var(--navy)';
+    btn.style.borderColor = isOn ? 'var(--blue2)': 'var(--border)';
+    // Sync ✓ prefix
+    const hasCheck = btn.innerHTML.trimStart().startsWith('✓');
+    if (isOn && !hasCheck)  btn.innerHTML = '✓ ' + btn.innerHTML;
+    if (!isOn && hasCheck)  btn.innerHTML = btn.innerHTML.replace(/^✓\s*/, '');
+  });
+}
+
+function openTagihanCatPicker() {
+  _buildTagihanCatGrid(); // selalu rebuild agar kategori & bahasa terkini
+  document.getElementById('tagihanCatPicker').classList.add('on');
+}
+
+function _buildTagihanCatGrid() {
+  const grid = document.getElementById('tagihanCatGrid'); if (!grid) return;
+  grid.innerHTML = '';
+  cats.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cat-c';
+    if (c.id === selTagihanCat) d.classList.add('on');
+    d.innerHTML = `<div class="cat-ico" style="background:${c.bg};border:2px solid ${c.id===selTagihanCat?c.stroke:'transparent'};"><svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg></div><div class="cat-nm">${T('cat-'+c.id)||c.id}</div>`;
+    d.onclick = () => {
+      grid.querySelectorAll('.cat-c').forEach(x => { x.classList.remove('on'); x.querySelector('.cat-ico').style.border='2px solid transparent'; });
+      d.classList.add('on');
+      d.querySelector('.cat-ico').style.border = `2px solid ${c.stroke}`;
+      selTagihanCat      = c.id;
+      selTagihanCatColor = c.bg;
+      selTagihanCatIco   = `<svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>`;
+      document.getElementById('tagihanCatConfSub').textContent = T('cat-'+c.id) || c.id;
+    };
+    grid.appendChild(d);
+  });
+}
+
+function confirmTagihanCat() {
+  if (!selTagihanCat) { toast('⚠️ ' + (lang==='id' ? 'Pilih kategori dulu' : 'Choose a category')); return; }
+  const catObj = cats.find(c => c.id === selTagihanCat);
+  document.getElementById('tg-cat-txt').textContent = T('cat-'+selTagihanCat) || selTagihanCat;
+  document.getElementById('tagihanCatPicker').classList.remove('on');
+}
+
+function formatTagihanNominal(el) {
+  let raw = el.value.replace(/\D/g, '');
+  if (!raw) { el.value = ''; return; }
+  el.value = parseInt(raw, 10).toLocaleString('id-ID');
+}
+
+function updateTagihanSummary(tagihanArr) {
+  // Total tagihan aktif (belum lunas)
+  const aktif  = tagihanArr.filter(t => !t.lunas);
+  const total  = aktif.reduce((s,t) => s+(t.nominal||0), 0);
+  const now    = new Date();
+  const urgent = aktif.filter(t => {
+    const diff = Math.ceil((new Date(t.tanggal) - now) / 86400000);
+    return diff <= 3;
+  }).length;
+
+  const elTotal  = document.getElementById('tagihan-total-amt');
+  const elAlert  = document.getElementById('tagihan-alert-count');
+  if (elTotal) elTotal.textContent = 'Rp ' + total.toLocaleString('id-ID');
+  if (elAlert) elAlert.textContent = urgent > 0
+    ? `${urgent} ${lang==='id'?'tagihan perlu perhatian':'bills need attention'}`
+    : (lang==='id' ? 'Semua tagihan aman ✓' : 'All bills on track ✓');
+
+  // Monthly expense bar
+  const elExp  = document.getElementById('tagihan-expense-amt');
+  const elBud  = document.getElementById('tagihan-budget-amt');
+  const elBar  = document.getElementById('tagihan-expense-bar');
+  const elPct  = document.getElementById('tagihan-expense-pct');
+  const now2   = new Date();
+  const mStart = new Date(now2.getFullYear(), now2.getMonth(), 1);
+  const mEnd   = new Date(now2.getFullYear(), now2.getMonth()+1, 1);
+  const monthExp = historyItems
+    .filter(h => !h.pos && !isTarikTx(h) && h.ts && new Date(h.ts) >= mStart && new Date(h.ts) < mEnd)
+    .reduce((s,h) => s+Math.abs(h.amt||0), 0);
+  const pct = tagihanBudget > 0 ? Math.min(100, Math.round(monthExp/tagihanBudget*100)) : 0;
+  if (elExp) elExp.textContent = 'Rp ' + monthExp.toLocaleString('id-ID');
+  if (elBud) elBud.textContent = 'Rp ' + (tagihanBudget||0).toLocaleString('id-ID');
+  if (elBar) { elBar.style.width = pct+'%'; elBar.style.background = pct>=100?'linear-gradient(90deg,#dc2626,#ef4444)':pct>=80?'linear-gradient(90deg,#f59e0b,#ef4444)':'linear-gradient(90deg,var(--green),#34d399)'; }
+  if (elPct) elPct.textContent = pct + (lang==='id'?' dari anggaran':'% of budget');
+}
+
 function switchGoalsSubTab(tab) {
   // Update sub-tab button styles
   document.getElementById('svsubt-tujuan').style.background = tab==='tujuan' ? 'var(--surface)' : 'transparent';

@@ -73,6 +73,7 @@ async function fbSaveState(){
     historyItems,
     tagihan: (typeof tagihan !== 'undefined') ? tagihan : [],
     tagihanBudget: (typeof tagihanBudget !== 'undefined') ? tagihanBudget : 8000000,
+    tagihanRiwayatBulanan: (typeof tagihanRiwayatBulanan !== 'undefined') ? tagihanRiwayatBulanan : [],
     budgets: (typeof budgets !== 'undefined') ? budgets : [],
     // notifications SENGAJA tidak disimpan ke RTDB — hanya lokal per-device
     savedPin,
@@ -177,6 +178,10 @@ function _applyStateFromDB(data){
     if(tagihan.length>0) tagihanIdCtr = Math.max(...data.tagihan.map(t=>t.id||0))+1;
   }
   if(data.tagihanBudget !== undefined) tagihanBudget = data.tagihanBudget;
+  if(Array.isArray(data.tagihanRiwayatBulanan)){
+    tagihanRiwayatBulanan = data.tagihanRiwayatBulanan;
+    if(tagihanRiwayatBulanan.length>0) tagihanRiwayatIdCtr = Math.max(...tagihanRiwayatBulanan.map(r=>r.id||0))+1;
+  }
   // ── ANGGARAN / BUDGETS — restore dari RTDB ──
   if(Array.isArray(data.budgets)){
     budgets = data.budgets;
@@ -5764,12 +5769,28 @@ function renderTagihanList() {
 
 function renderTagihanRiwayat() {
   const c = document.getElementById('tagihan-riwayat-list'); if (!c) return;
-  // Riwayat = tagihan sekali pakai yang sudah lunas
-  const riwayat = tagihan
-    .filter(t => t.lunas && (t.frekuensi === 'sekali' || !t.frekuensi))
-    .sort((a,b) => new Date(b.tanggalLunas||b.tanggal) - new Date(a.tanggalLunas||a.tanggal));
 
-  if (!riwayat.length) {
+  // Gabung: tagihan sekali lunas + riwayat bulanan
+  const riwayatSekali = tagihan
+    .filter(t => t.lunas && (t.frekuensi === 'sekali' || !t.frekuensi))
+    .map(t => ({
+      uid:         'sekali-' + t.id,
+      nama:        t.nama,
+      nominal:     t.nominal,
+      catColor:    t.catColor,
+      catIco:      t.catIco,
+      tanggalBayar: t.tanggalLunas || t.tanggal,
+      frekuensi:   'sekali',
+      tagihanId:   t.id,
+      isSekali:    true,
+    }));
+
+  const allRiwayat = [
+    ...riwayatSekali,
+    ...tagihanRiwayatBulanan.map(r => ({ ...r, uid: 'bulanan-' + r.id })),
+  ].sort((a,b) => new Date(b.tanggalBayar) - new Date(a.tanggalBayar));
+
+  if (!allRiwayat.length) {
     c.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--t3);font-size:13px;">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px"><polyline points="12,8 12,12 14,14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3,3 3,8 8,8"/></svg>
       Belum ada riwayat pembayaran
@@ -5777,24 +5798,29 @@ function renderTagihanRiwayat() {
     return;
   }
 
-  // Kelompokkan per bulan lunas
   const grouped = {};
-  riwayat.forEach(t => {
-    const d = new Date(t.tanggalLunas || t.tanggal);
+  allRiwayat.forEach(r => {
+    const d = new Date(r.tanggalBayar);
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const label = d.toLocaleDateString(lang==='id'?'id-ID':'en-US',{month:'long',year:'numeric'});
     if (!grouped[key]) grouped[key] = { label, items: [] };
-    grouped[key].items.push(t);
+    grouped[key].items.push(r);
   });
 
   c.innerHTML = Object.keys(grouped).sort((a,b)=>b.localeCompare(a)).map(key => {
     const { label, items } = grouped[key];
-    const totalGrp = items.reduce((s,t)=>s+(t.nominal||0),0);
-    const cards = items.map(t => {
-      const lunasDate = t.tanggalLunas ? new Date(t.tanggalLunas).toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'}) : '-';
-      const catBg  = t.catColor || '#EBF3FE';
-      const catIco = t.catIco  || `<svg viewBox="0 0 24 24" stroke="#22C55E"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
-      return `<div style="background:var(--surface);border-radius:13px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:11px;box-shadow:var(--sh2);border:1.5px solid rgba(34,197,94,0.2);opacity:0.85;">
+    const totalGrp = items.reduce((s,r)=>s+(r.nominal||0),0);
+    const cards = items.map(r => {
+      const bayarDate = new Date(r.tanggalBayar).toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'});
+      const catBg  = r.catColor || '#EBF3FE';
+      const catIco = r.catIco  || `<svg viewBox="0 0 24 24" stroke="#22C55E"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+      const frekBadge = r.frekuensi === 'bulanan'
+        ? `<span style="background:#EEF3FF;color:var(--blue);border-radius:5px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px;">🔄 Bulanan</span>`
+        : '';
+      const hapusOnclick = r.isSekali
+        ? `hapusRiwayatTagihan(${r.tagihanId})`
+        : `hapusRiwayatBulanan(${r.id})`;
+      return `<div style="background:var(--surface);border-radius:13px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:11px;box-shadow:var(--sh2);border:1.5px solid rgba(34,197,94,0.2);opacity:0.88;">
         <div style="width:40px;height:40px;border-radius:11px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;">
           <div style="width:18px;height:18px;">${catIco}</div>
           <div style="position:absolute;bottom:-3px;right:-3px;width:14px;height:14px;background:#22C55E;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);">
@@ -5802,285 +5828,25 @@ function renderTagihanRiwayat() {
           </div>
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t2);margin-bottom:2px;text-decoration:line-through;">${t.nama}</div>
-          <div style="font-size:11px;color:var(--t3);">Dibayar ${lunasDate}</div>
+          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t2);margin-bottom:2px;text-decoration:line-through;">${r.nama}${frekBadge}</div>
+          <div style="font-size:11px;color:var(--t3);">Dibayar ${bayarDate}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
-          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t3);">Rp ${Number(t.nominal||0).toLocaleString('id-ID')}</div>
-          <button onclick="hapusRiwayatTagihan(${t.id})" style="margin-top:4px;background:rgba(239,68,68,.08);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-family:var(--f);font-size:10px;font-weight:600;cursor:pointer;">Hapus</button>
+          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t3);">Rp ${Number(r.nominal||0).toLocaleString('id-ID')}</div>
+          <button onclick="${hapusOnclick}" style="margin-top:4px;background:rgba(239,68,68,.08);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-family:var(--f);font-size:10px;font-weight:600;cursor:pointer;">Hapus</button>
         </div>
       </div>`;
     }).join('');
-
     return `<div style="margin-bottom:18px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t3);text-transform:capitalize;">${label}</div>
-        <div style="font-size:12px;font-weight:700;color:#16A34A;">Rp ${totalGrp.toLocaleString('id-ID')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-family:var(--f);font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;">${label}</div>
+        <div style="font-size:11px;color:var(--t3);">Total: <strong style="color:var(--navy);font-family:var(--f);">Rp ${Number(totalGrp).toLocaleString('id-ID')}</strong></div>
       </div>
       ${cards}
     </div>`;
   }).join('');
 }
 
-function updateTagihanSummary(list) {
-  const now = new Date();
-  // Hanya hitung tagihan yang belum lunas
-  const belumLunas = list.filter(t => !t.lunas);
-  const total = belumLunas.reduce((s,t)=>s+(t.nominal||0),0);
-  const needAttn = belumLunas.filter(t => {
-    const diff = Math.ceil((new Date(t.tanggal)-now)/86400000);
-    return diff <= 3;
-  }).length;
-
-  const elTotal = document.getElementById('tagihan-total-amt');
-  if (elTotal) elTotal.textContent = 'Rp '+total.toLocaleString('id-ID');
-  const elCount = document.getElementById('tagihan-alert-count');
-  if (elCount) elCount.textContent = needAttn+' '+T('tg-need-attention');
-
-  // Pengeluaran bulan ini dari historyItems (tarik tunai tidak dihitung sebagai expense)
-  const now2 = new Date();
-  const monthExpense = historyItems
-    .filter(h => !h.pos && !isTarikTx(h) && h.ts && new Date(h.ts).getFullYear()===now2.getFullYear() && new Date(h.ts).getMonth()===now2.getMonth())
-    .reduce((s,h)=>s+Math.abs(h.amt||0),0);
-  const elExp = document.getElementById('tagihan-expense-amt');
-  if (elExp) elExp.textContent = 'Rp '+Math.round(monthExpense).toLocaleString('id-ID');
-  const elBudget = document.getElementById('tagihan-budget-amt');
-  if (elBudget) elBudget.textContent = 'Rp '+tagihanBudget.toLocaleString('id-ID');
-  const pct = tagihanBudget > 0 ? Math.min(100, Math.round(monthExpense/tagihanBudget*100)) : 0;
-  const elBar = document.getElementById('tagihan-expense-bar');
-  if (elBar) {
-    elBar.style.width = pct+'%';
-    elBar.style.background = pct >= 90 ? 'linear-gradient(90deg,var(--red),#f87171)' : pct >= 70 ? 'linear-gradient(90deg,#F59E0B,#fbbf24)' : 'linear-gradient(90deg,var(--green),#34d399)';
-  }
-  const elPct = document.getElementById('tagihan-expense-pct');
-  if (elPct) elPct.textContent = pct+T('tg-of-budget');
-}
-
-function openTambahTagihan() {
-  // Reset form
-  document.getElementById('tg-nama').value = '';
-  document.getElementById('tg-tanggal').value = '';
-  document.getElementById('tg-nominal').value = '';
-  document.getElementById('tg-edit-id').value = '';
-  document.getElementById('tg-delete-btn').style.display = 'none';
-  document.getElementById('tambah-tagihan-title').textContent = T('tg-form-new');
-  selTagihanCat = ''; selTagihanCatColor = ''; selTagihanCatIco = '';
-  document.getElementById('tg-cat-txt').textContent = T('tg-cat-placeholder');
-  document.getElementById('tg-cat-sel').style.background = '';
-  tagihanFreqSel = 'sekali';
-  tagihanReminderDays = [3];
-  const timeEl = document.getElementById('tg-reminder-time');
-  if (timeEl) timeEl.value = '09:00';
-  updateTagihanFreqBtns();
-  updateTagihanReminderPills();
-  document.getElementById('tambahTagihanOvr').style.display = 'flex';
-}
-
-function openEditTagihan(id) {
-  const t = tagihan.find(x=>x.id===id); if (!t) return;
-  document.getElementById('tg-nama').value = t.nama;
-  document.getElementById('tg-tanggal').value = t.tanggal;
-  document.getElementById('tg-nominal').value = Number(t.nominal).toLocaleString('id-ID');
-  document.getElementById('tg-edit-id').value = id;
-  document.getElementById('tg-delete-btn').style.display = 'block';
-  document.getElementById('tambah-tagihan-title').textContent = T('tg-form-edit');
-  selTagihanCat = t.cat || '';
-  selTagihanCatColor = t.catColor || '';
-  selTagihanCatIco = t.catIco || '';
-  const catTxt = document.getElementById('tg-cat-txt');
-  catTxt.textContent = selTagihanCat ? (T('cat-'+selTagihanCat)||selTagihanCat) : T('tg-cat-placeholder');
-  catTxt.classList.toggle('sel', !!selTagihanCat);
-  tagihanFreqSel = t.frekuensi || 'sekali';
-  tagihanReminderDays = t.reminders || [3];
-  const timeEl = document.getElementById('tg-reminder-time');
-  if (timeEl) timeEl.value = t.reminderTime || '09:00';
-  updateTagihanFreqBtns();
-  updateTagihanReminderPills();
-  document.getElementById('tambahTagihanOvr').style.display = 'flex';
-}
-
-function closeTambahTagihan() {
-  document.getElementById('tambahTagihanOvr').style.display = 'none';
-}
-
-function setTagihanFreq(freq, btn) {
-  tagihanFreqSel = freq;
-  updateTagihanFreqBtns();
-}
-
-function updateTagihanFreqBtns() {
-  ['sekali','bulanan'].forEach(f => {
-    const b = document.getElementById('tgfreq-'+f);
-    if (!b) return;
-    const on = f === tagihanFreqSel;
-    b.style.background = on ? 'var(--surface)' : 'transparent';
-    b.style.color = on ? 'var(--navy)' : 'var(--t3)';
-    b.style.boxShadow = on ? 'var(--sh2)' : 'none';
-  });
-}
-
-function toggleReminderPill(el, days) {
-  if (tagihanReminderDays.includes(days)) {
-    tagihanReminderDays = tagihanReminderDays.filter(d=>d!==days);
-  } else {
-    tagihanReminderDays.push(days);
-  }
-  updateTagihanReminderPills();
-}
-
-function updateTagihanReminderPills() {
-  document.querySelectorAll('.tg-remind-pill').forEach(p => {
-    const d = parseInt(p.getAttribute('data-days'));
-    const on = tagihanReminderDays.includes(d);
-    p.style.background = on ? 'var(--navy)' : 'transparent';
-    p.style.color = on ? 'white' : 'var(--navy)';
-    p.style.borderColor = on ? 'var(--blue2)' : 'var(--border)';
-    const d3 = T('tg-d3')||'H-3', db = T('tg-day-before')||'H-1', ddp = T('tg-due-date-pill')||'Hari H';
-    p.textContent = on ? (d===0?'✓ '+ddp : d===1?'✓ '+db : '✓ '+d3.replace('3',d)) : (d===0?ddp : d===1?db : d3.replace('3',d));
-  });
-}
-
-function addCustomReminderPill() {
-  const n = prompt(T('tg-remind-custom'),'');
-  if (!n || isNaN(parseInt(n))) return;
-  const days = Math.max(0, parseInt(n));
-  if (!tagihanReminderDays.includes(days)) {
-    tagihanReminderDays.push(days);
-    // Add pill ke DOM
-    const container = document.getElementById('tg-reminder-pills');
-    const addBtn = container.lastElementChild;
-    const pill = document.createElement('button');
-    pill.className = 'tg-remind-pill';
-    pill.setAttribute('data-days', days);
-    pill.onclick = function(){ toggleReminderPill(this, days); };
-    pill.style.cssText = 'padding:8px 16px;border-radius:50px;font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;';
-    container.insertBefore(pill, addBtn);
-  }
-  updateTagihanReminderPills();
-}
-
-function openTagihanCatPicker() {
-  buildTagihanCatGrid();
-  document.getElementById('tagihanCatPicker').classList.add('on');
-}
-
-function buildTagihanCatGrid() {
-  const g = document.getElementById('tagihanCatGrid'); if (!g) return;
-  g.innerHTML = '';
-  cats.forEach(c => {
-    const d = document.createElement('div');
-    d.className = 'cat-c'+(selTagihanCat===c.id?' sel':'');
-    d.onclick = () => selectTagihanCat(d, c);
-    d.innerHTML = `<div class="cico-w"><div class="cico" style="background:${c.bg};"><svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg></div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${T('cat-'+c.id)}</div><div class="csub">${T('cat-'+c.id+'-sub')}</div>`;
-    g.appendChild(d);
-  });
-}
-
-function selectTagihanCat(el, c) {
-  document.querySelectorAll('#tagihanCatGrid .cat-c').forEach(x=>x.classList.remove('sel'));
-  el.classList.add('sel');
-  selTagihanCat = c.id;
-  selTagihanCatIco = `<svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>`;
-  selTagihanCatColor = c.bg;
-  document.getElementById('tagihanCatConfSub').textContent = T('tg-cat-selected') + T('cat-'+c.id);
-}
-
-function confirmTagihanCat() {
-  if (!selTagihanCat) return;
-  const tEl = document.getElementById('tg-cat-txt');
-  tEl.textContent = T('cat-'+selTagihanCat) || selTagihanCat;
-  tEl.classList.add('sel');
-  document.getElementById('tagihanCatPicker').classList.remove('on');
-}
-
-function formatTagihanNominal(el) {
-  const raw = el.value.replace(/\D/g,'');
-  el.value = raw ? Number(raw).toLocaleString('id-ID') : '';
-}
-
-function simpanTagihan() {
-  const nama = document.getElementById('tg-nama').value.trim();
-  if (!nama) { toast('⚠️ '+T('tg-err-name')); return; }
-  const tanggal = document.getElementById('tg-tanggal').value;
-  if (!tanggal) { toast('⚠️ '+T('tg-err-date')); return; }
-  const nominalRaw = document.getElementById('tg-nominal').value.replace(/\./g,'').replace(/,/g,'');
-  const nominal = parseInt(nominalRaw) || 0;
-  const reminderTime = document.getElementById('tg-reminder-time')?.value || '09:00';
-  const editId = document.getElementById('tg-edit-id').value;
-
-  // Batalkan timer lama jika edit
-  if (editId) {
-    cancelTagihanSchedule(parseInt(editId));
-    const t = tagihan.find(x=>x.id===parseInt(editId));
-    if (t) {
-      t.nama = nama; t.tanggal = tanggal; t.nominal = nominal;
-      t.cat = selTagihanCat; t.catColor = selTagihanCatColor; t.catIco = selTagihanCatIco;
-      t.frekuensi = tagihanFreqSel; t.reminders = [...tagihanReminderDays];
-      t.reminderTime = reminderTime;
-      scheduleTagihanNotifications(t);
-      toast('✅ '+T('tg-toast-updated'));
-    }
-  } else {
-    const newT = {
-      id: tagihanIdCtr++,
-      nama, tanggal, nominal,
-      cat: selTagihanCat, catColor: selTagihanCatColor, catIco: selTagihanCatIco,
-      frekuensi: tagihanFreqSel,
-      reminders: [...tagihanReminderDays],
-      reminderTime,
-      lunas: false
-    };
-    tagihan.push(newT);
-    scheduleTagihanNotifications(newT);
-    addNotif('goal', '📅 '+T('tg-added-notif'), `"${nama}" — Rp ${nominal.toLocaleString('id-ID')} · ${new Date(tanggal).toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'})}`);
-    toast('✅ '+T('tg-toast-saved'));
-  }
-  closeTambahTagihan();
-  renderTagihanList();
-  fbAutoSave();
-}
-
-function hapusTagihan() {
-  const editId = document.getElementById('tg-edit-id').value;
-  if (!editId) return;
-  const id = parseInt(editId);
-  const t = tagihan.find(x=>x.id===id);
-  cancelTagihanSchedule(id);
-  tagihan = tagihan.filter(x=>x.id!==id);
-  closeTambahTagihan();
-  renderTagihanList();
-  toast('🗑️ '+(t?.nama||'Bill')+' '+T('tg-toast-deleted'));
-  fbAutoSave();
-}
-
-function tandaiTagihanLunas(id) {
-  const t = tagihan.find(x=>x.id===id); if (!t) return;
-  const isBulanan = t.frekuensi === 'bulanan';
-
-  if (isBulanan) {
-    // Tandai lunas sementara (tidak disimpan ke array riwayat), lalu geser tanggal ke bulan berikutnya
-    t.tanggal = _nextMonthDate(t.tanggal);
-    // t.lunas tetap false — tagihan direset langsung aktif untuk bulan berikutnya
-    renderTagihanList();
-    toast(`\u2705 "${t.nama}" lunas! Tagihan diperbarui ke bulan depan \uD83D\uDD04`);
-  } else {
-    // Tagihan sekali pakai → tandai lunas & pindah ke riwayat
-    t.lunas = true;
-    t.tanggalLunas = new Date().toISOString();
-    renderTagihanList();
-    toast(`\u2705 "${t.nama}" sudah dibayar!`);
-  }
-  fbAutoSave();
-}
-
-function tandaiTagihanBelumBayar(id) {
-  const t = tagihan.find(x=>x.id===id); if (!t) return;
-  t.lunas = false;
-  delete t.tanggalLunas;
-  renderTagihanList();
-  toast(`\u21A9\uFE0F "${t.nama}" ditandai belum bayar`);
-  fbAutoSave();
-}
 
 function hapusRiwayatTagihan(id) {
   const t = tagihan.find(x=>x.id===id);
@@ -6088,6 +5854,14 @@ function hapusRiwayatTagihan(id) {
   renderTagihanList();
   if (_tagihanTab === 'riwayat') renderTagihanRiwayat();
   toast(`\uD83D\uDDD1\uFE0F ${t?.nama||'Tagihan'} dihapus dari riwayat`);
+  fbAutoSave();
+}
+
+function hapusRiwayatBulanan(id) {
+  const r = tagihanRiwayatBulanan.find(x=>x.id===id);
+  tagihanRiwayatBulanan = tagihanRiwayatBulanan.filter(x=>x.id!==id);
+  renderTagihanRiwayat();
+  toast(`\uD83D\uDDD1\uFE0F ${r?.nama||'Riwayat'} dihapus`);
   fbAutoSave();
 }
 
@@ -6483,9 +6257,10 @@ function renderAnggaranList(){
   const list = document.getElementById('anggaran-list');
   if(!list) return;
 
-  // Summary card totals
-  const totalNominal = monthBudgets.reduce((s,b) => s + b.nominal, 0);
-  const totalSpent   = monthBudgets.reduce((s,b) => s + (spent[b.catId]||0), 0);
+  // Summary card totals — hanya anggaran yang aktif (active !== false)
+  const activeBudgets = monthBudgets.filter(b => b.active !== false);
+  const totalNominal = activeBudgets.reduce((s,b) => s + b.nominal, 0);
+  const totalSpent   = activeBudgets.reduce((s,b) => s + (spent[b.catId]||0), 0);
   const totalSisa    = totalNominal - totalSpent;
   const pct          = totalNominal > 0 ? Math.min(100, Math.round((totalSpent/totalNominal)*100)) : 0;
   const barColor     = pct >= 100 ? 'linear-gradient(90deg,var(--red),#f87171)' : pct >= 80 ? 'linear-gradient(90deg,var(--orange),var(--red))' : pct >= 60 ? 'linear-gradient(90deg,var(--orange),#fbbf24)' : 'linear-gradient(90deg,var(--blue),var(--blue2))';
@@ -6565,30 +6340,52 @@ function renderAnggaranList(){
     // Card border merah jika over
     const cardBorder = isOver ? 'border:1.5px solid rgba(239,68,68,.35);' : '';
 
-    return `<div style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);cursor:pointer;${cardBorder}" onclick="editAnggaran(${b.id})">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+    const isActive = b.active !== false; // default ON jika belum ada field active
+    const toggleBg = isActive ? 'var(--green)' : '#D1D5DB';
+    const cardOpacity = isActive ? '1' : '0.6';
+    const cardFilter  = isActive ? '' : 'filter:grayscale(.5);';
+
+    return `<div style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);${cardBorder}opacity:${cardOpacity};${cardFilter}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isActive?10:0}px;" onclick="editAnggaran(${b.id})" style="cursor:pointer;">
         <div style="width:40px;height:40px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>
         </div>
-        <div style="flex:1;">
+        <div style="flex:1;cursor:pointer;" onclick="editAnggaran(${b.id})">
           <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">${catName}</div>
           <div style="font-size:11px;color:var(--t3);">Anggaran: ${fmt(b.nominal)}</div>
         </div>
-        <span style="font-size:11px;font-weight:700;color:${statusClr};background:${statusBg};padding:4px 10px;border-radius:20px;">${statusTxt}</span>
+        ${isActive ? `<span style="font-size:11px;font-weight:700;color:${statusClr};background:${statusBg};padding:4px 10px;border-radius:20px;">${statusTxt}</span>` : `<span style="font-size:11px;font-weight:600;color:#9CA3AF;background:#F3F4F6;padding:4px 10px;border-radius:20px;">⏸ Nonaktif</span>`}
       </div>
+      ${isActive ? `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:12px;color:var(--t3);">Terpakai</span>
         <span style="font-family:var(--f);font-size:16px;font-weight:700;color:${isOver?'var(--red)':'var(--navy)'};">${fmt(spentAmt)}${bpct>0?` <span style="font-size:11px;color:${isOver?'var(--red)':'var(--t3)'};">(${bpct}%)</span>`:''}</span>
       </div>
       <div style="background:#E8EEF8;border-radius:4px;height:8px;overflow:hidden;margin-bottom:8px;">
         <div style="height:100%;border-radius:4px;background:${bBarColor};width:${bpctBar}%;transition:width .5s ease;${isOver?'animation:pulse-red .8s ease infinite alternate;':''}"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:12px;color:${sisaColor};font-weight:${isOver?'700':'500'};">${sisaLabel}: <strong style="font-family:var(--f);font-size:13px;">${sisaDisplay}</strong></span>
-        ${isOver ? `<span style="font-size:11px;color:var(--red);font-weight:600;">Melebihi ${fmt(Math.abs(sisa))}</span>` : ''}
+      </div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:${isActive?0:8}px;">
+        ${isActive
+          ? `<span style="font-size:12px;color:${sisaColor};font-weight:${isOver?'700':'500'};">${sisaLabel}: <strong style="font-family:var(--f);font-size:13px;">${sisaDisplay}</strong></span>`
+          : `<span style="font-size:12px;color:var(--t3);">Anggaran dinonaktifkan</span>`}
+        <!-- Toggle ON/OFF -->
+        <button onclick="toggleAnggaranActive(${b.id})" style="display:flex;align-items:center;gap:5px;background:${toggleBg};border:none;border-radius:20px;padding:5px 12px;cursor:pointer;transition:background .2s;">
+          <div style="width:16px;height:16px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s;transform:translateX(${isActive?'2px':'-2px'});"></div>
+          <span style="font-family:var(--f);font-size:11px;font-weight:700;color:white;">${isActive?'ON':'OFF'}</span>
+        </button>
       </div>
     </div>`;
   }).join('');
+}
+
+// Toggle ON/OFF anggaran per card
+function toggleAnggaranActive(id){
+  const b = budgets.find(x=>x.id===id); if(!b) return;
+  b.active = b.active === false ? true : false; // toggle
+  renderAnggaranList();
+  const statusLabel = b.active ? '✅ Anggaran diaktifkan' : '⏸ Anggaran dinonaktifkan';
+  toast(statusLabel);
+  fbAutoSave();
 }
 
 // Open tambah anggaran modal

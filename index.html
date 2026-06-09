@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>MyMoney v21</title>
+<title>MyMoney</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="apple-touch-icon" sizes="180x180" href="MyMoney_iphone.PNG">
 <link rel="icon" type="image/png" sizes="192x192" href="MyMoney_android.PNG">
@@ -75,7 +75,8 @@ async function fbSaveState(){
     tagihanBudget: (typeof tagihanBudget !== 'undefined') ? tagihanBudget : 8000000,
     tagihanRiwayatBulanan: (typeof tagihanRiwayatBulanan !== 'undefined') ? tagihanRiwayatBulanan : [],
     budgets: (typeof budgets !== 'undefined') ? budgets : [],
-    // notifications SENGAJA tidak disimpan ke RTDB — hanya lokal per-device
+    // notifications: disimpan terpisah di /users/{uid}/notifications (bukan di state)
+    // Notifikasi kurs/emas (tipe 'rate') tetap lokal per-device di localStorage saja
     savedPin,
     lang,
     darkMode: document.body.classList.contains('dk'),
@@ -138,10 +139,6 @@ function fbStartRealtimeSync(){
   });
 }
 let _lastSyncTs = 0;
-// Flag: true selama enterApp berjalan (initial data load dari RTDB).
-// Digunakan untuk mencegah _syncFiltersAfterRTDBUpdate mengubah filter
-// ke bulan lama saat pertama kali data dimuat dari Firebase.
-let _isInitialAppLoad = false;
 
 function fbStopRealtimeSync(){
   if(_rtdbRef && _rtdbListener){
@@ -176,7 +173,7 @@ function _applyStateFromDB(data){
     // ── Sync filter Riwayat & Anggaran ke bulan item yang berubah ──
     _syncFiltersAfterRTDBUpdate(_oldSnapshot);
   }
-  // notifications TIDAK disync dari RTDB — hanya lokal per-device
+  // notifications tidak disync dari state RTDB — dimuat dari path terpisah /users/{uid}/notifications
   if(Array.isArray(data.tagihan)){
     tagihan = data.tagihan;
     if(tagihan.length>0) tagihanIdCtr = Math.max(...data.tagihan.map(t=>t.id||0))+1;
@@ -197,15 +194,6 @@ function _applyStateFromDB(data){
     if(data.darkMode) document.body.classList.add('dk');
     else              document.body.classList.remove('dk');
   }
-  // ── Selalu reset filter ke bulan SEKARANG ──
-  // Agar Riwayat & Anggaran selalu buka di bulan saat ini (bukan bulan transaksi lama di DB)
-  const _nowDB = new Date();
-  histFilterYear  = _nowDB.getFullYear();
-  histFilterMonth = _nowDB.getMonth();
-  anggaranYear    = _nowDB.getFullYear();
-  anggaranMonth   = _nowDB.getMonth();
-  analyticsYear   = _nowDB.getFullYear();
-  analyticsMonth  = _nowDB.getMonth();
   refreshAllUI();
 }
 
@@ -217,9 +205,6 @@ function _applyStateFromDB(data){
 //   3. Jika ada item yang ts-nya berubah, arahkan filter ke bulan ts baru
 //   4. Dengan begitu Riwayat & Anggaran langsung loncat ke bulan yang relevan
 function _syncFiltersAfterRTDBUpdate(oldSnapshot){
-  // Jangan ubah filter saat initial load dari enterApp —
-  // filter sudah di-reset ke bulan sekarang di enterApp.
-  if(_isInitialAppLoad) return;
   if(!historyItems || historyItems.length === 0) return;
   // Jika tidak ada snapshot lama (login pertama), tidak perlu sync
   if(!oldSnapshot || oldSnapshot.length === 0) return;
@@ -2040,7 +2025,15 @@ function _loadNotifLocal(){
     const data = JSON.parse(raw);
     if(!Array.isArray(data)) return;
     // Parse timestamp kembali ke Date object
-    notifications = data.map(n=>({...n, time: new Date(n.time)}));
+    // Hanya ambil notifikasi lokal-only (rate/kurs) dari localStorage
+    const localOnly = data
+      .filter(n => _NOTIF_LOCAL_ONLY_TYPES.has(n.type))
+      .map(n=>({...n, time: new Date(n.time)}));
+    // Merge ke notifications yang mungkin sudah ada dari RTDB
+    localOnly.forEach(ln => {
+      if(!notifications.find(n => n.id === ln.id)) notifications.push(ln);
+    });
+    notifications.sort((a,b) => new Date(b.time) - new Date(a.time));
     // Restore notifId agar tidak overlap
     const savedId = parseInt(localStorage.getItem(_notifKey()+'_id')||'0');
     notifId = Math.max(notifId, savedId, notifications.length);
@@ -2056,11 +2049,68 @@ function _clearNotifLocal(){
   } catch(e){}
 }
 
+// ── Tipe notifikasi yang TIDAK disimpan ke RTDB (hanya lokal/device) ──
+// 'rate' = notifikasi kurs & emas diperbarui → tetap lokal saja
+const _NOTIF_LOCAL_ONLY_TYPES = new Set(['rate']);
+
+/* ── Simpan notifikasi ke RTDB (hanya non-rate) ── */
+async function _saveNotifRTDB(){
+  const uid = fbUID(); if(!uid) return;
+  try{
+    // Filter: hanya simpan notifikasi yang bukan tipe lokal-only
+    const toSave = notifications
+      .filter(n => !_NOTIF_LOCAL_ONLY_TYPES.has(n.type))
+      .slice(0, 150)
+      .map(n => ({
+        ...n,
+        time: n.time instanceof Date ? n.time.toISOString() : n.time
+      }));
+    await fbDB.ref(`users/${uid}/notifications`).set({ items: toSave, notifId });
+  } catch(e){ console.warn('RTDB notif save error:', e); }
+}
+
+/* ── Load notifikasi dari RTDB + localStorage (merge, dedup by id) ── */
+async function _loadNotifFromRTDB(){
+  const uid = fbUID(); if(!uid) return;
+  try{
+    const snap = await fbDB.ref(`users/${uid}/notifications`).once('value');
+    const data = snap.val();
+    if(!data || !Array.isArray(data.items)) return;
+    // Parse time ke Date
+    const rtdbNotifs = data.items.map(n => ({ ...n, time: new Date(n.time) }));
+    // Merge dengan notifikasi lokal (kurs dll) yang sudah ada
+    const localOnlyNotifs = notifications.filter(n => _NOTIF_LOCAL_ONLY_TYPES.has(n.type));
+    // Gabung: RTDB (utama) + lokal-only, dedup berdasarkan id
+    const merged = [...rtdbNotifs];
+    localOnlyNotifs.forEach(ln => {
+      if(!merged.find(n => n.id === ln.id)) merged.push(ln);
+    });
+    // Urutkan dari terbaru
+    merged.sort((a,b) => new Date(b.time) - new Date(a.time));
+    notifications = merged.slice(0, 200);
+    // Restore notifId
+    const rtdbId = parseInt(data.notifId || '0');
+    notifId = Math.max(notifId, rtdbId, notifications.length);
+    updateNotifBadge();
+  } catch(e){ console.warn('RTDB notif load error:', e); }
+}
+
+/* ── Hapus notifikasi dari RTDB saat logout ── */
+async function _clearNotifRTDB(){
+  const uid = fbUID(); if(!uid) return;
+  try{
+    await fbDB.ref(`users/${uid}/notifications`).remove();
+  } catch(e){}
+}
+
 function addNotif(type,title,msg){
   notifications.unshift({id:notifId++, type, title, msg, time:new Date(), unread:true});
   updateNotifBadge();
   _saveNotifLocal();
-  // fbAutoSave() TIDAK dipanggil — notifikasi hanya lokal, tidak ke RTDB
+  // Simpan ke RTDB jika bukan tipe lokal-only (kurs/emas)
+  if(!_NOTIF_LOCAL_ONLY_TYPES.has(type)){
+    _saveNotifRTDB();
+  }
 }
 
 function updateNotifBadge(){
@@ -2073,6 +2123,8 @@ function updateNotifBadge(){
 function markAllRead(){
   notifications.forEach(n=>n.unread=false);
   _saveNotifLocal();
+  // Simpan status "sudah dibaca" ke RTDB untuk notif non-lokal
+  _saveNotifRTDB();
   updateNotifBadge();renderNotifCenter();toast('All notifications marked as read');
 }
 
@@ -2091,6 +2143,7 @@ function openNotifCenter(){
   setTimeout(()=>{
     notifications.forEach(n=>n.unread=false);
     _saveNotifLocal();
+    _saveNotifRTDB(); // persist status dibaca ke RTDB
     updateNotifBadge();
   },1500);
 }
@@ -2099,7 +2152,7 @@ function closeNotifCenter(){
   if(window._notifRefreshTimer){ clearInterval(window._notifRefreshTimer); window._notifRefreshTimer=null; }
 }
 
-const nBg={tx:'#EBFEF3',neg:'#FEEBEB',goal:'#EBF3FE',wallet:'#F3EBFE',tip:'#FEF3EB',security:'#FEEBEB',welcome:'#EBFEF3'};
+const nBg={tx:'#EBFEF3',neg:'#FEEBEB',goal:'#EBF3FE',wallet:'#F3EBFE',tip:'#FEF3EB',security:'#FEEBEB',welcome:'#EBFEF3',rate:'#FEF3EB'};
 const nIco={
   tx:'<svg viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
   neg:'<svg viewBox="0 0 24 24" stroke="#EF4444"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
@@ -2108,6 +2161,8 @@ const nIco={
   tip:'<svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>',
   security:'<svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
   welcome:'<svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  // 'rate' = kurs & emas — lokal-only, ikon grafik
+  rate:'<svg viewBox="0 0 24 24" stroke="#F59E0B"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/><polyline points="17,6 23,6 23,12"/></svg>',
 };
 
 /* ── timeAgo akurat — pakai timestamp asli, bukan "Just now" semua ── */
@@ -3655,7 +3710,8 @@ async function fetchRate(){
       await fetchGoldPrice();
       const g = window._goldData;
       const goldMsg = g ? ` · Gold: $${g.priceUSD_per_oz.toFixed(0)}/oz (Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g)` : '';
-      addNotif('tip',
+      // Tipe 'rate' = LOKAL ONLY, tidak disimpan ke RTDB (hanya info device saat ini)
+      addNotif('rate',
         lang==='id'?'💹 Kurs & Emas Diperbarui':'💹 Rate & Gold Updated',
         `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}${goldMsg}`
       );
@@ -5257,14 +5313,13 @@ async function doRegister(){
 // enterApp — apply state dari Firebase, render UI
 // ════════════════════════════════════════════════════════════
 async function enterApp(initialState){
-  _isInitialAppLoad = true; // Tandai sedang initial load — cegah filter terganggu RTDB sync
   // ① Terapkan state dari DB kalau ada
   if(initialState){
     if(initialState.balance     !== undefined) balance       = initialState.balance;
     if(Array.isArray(initialState.wallets))      wallets       = initialState.wallets;
     if(Array.isArray(initialState.goals))        goals         = initialState.goals;
     if(Array.isArray(initialState.historyItems)) historyItems  = initialState.historyItems;
-    // notifications TIDAK dimuat dari RTDB — hanya lokal per-device
+    // notifications tidak dimuat dari state RTDB — dimuat terpisah di langkah ⑧
     if(Array.isArray(initialState.tagihan)){
       tagihan = initialState.tagihan;
       if(tagihan.length>0) tagihanIdCtr = Math.max(...tagihan.map(t=>t.id||0))+1;
@@ -5292,18 +5347,7 @@ async function enterApp(initialState){
     syncAvPicker();
   }
 
-  // ③ Reset semua filter waktu ke bulan sekarang
-  // Ini memastikan setiap kali user masuk/kembali ke app, semua halaman
-  // (Riwayat, Anggaran, Analitik) langsung menampilkan bulan yang sesuai.
-  const _nowEntry = new Date();
-  histFilterYear   = _nowEntry.getFullYear();
-  histFilterMonth  = _nowEntry.getMonth();
-  anggaranYear     = _nowEntry.getFullYear();
-  anggaranMonth    = _nowEntry.getMonth();
-  analyticsYear    = _nowEntry.getFullYear();
-  analyticsMonth   = _nowEntry.getMonth();
-
-  // ④ Tampilkan layar app
+  // ③ Tampilkan layar app
   document.querySelectorAll('.scr').forEach(el=>{ el.classList.remove('on'); el.style.display='none'; });
   document.getElementById('app').classList.add('on');
   // Show rate banner immediately
@@ -5312,20 +5356,20 @@ async function enterApp(initialState){
   switchTab('home');
   fetchRate();
 
-  // ⑤ Render semua UI
+  // ④ Render semua UI
   refreshAllUI();
 
-  // ⑥ Mulai realtime sync lintas device
-  _isInitialAppLoad = false; // Initial load selesai — RTDB listener boleh ubah filter lagi
+  // ⑤ Mulai realtime sync lintas device
   fbStartRealtimeSync();
 
-  // ⑦ Push notifications
+  // ⑥ Push notifications
   initPushNotifications();
 
   // ⑦ Schedule tagihan reminders (after SW registration)
   initTagihanScheduler();
 
-  // ⑧ Load notifikasi dari localStorage (per UID, tidak dari RTDB)
+  // ⑧ Load notifikasi: RTDB dulu (histori/transaksi), lalu localStorage (kurs lokal)
+  await _loadNotifFromRTDB();
   _loadNotifLocal();
 
   // ⑨ Auto-refresh gold + exchange rate every 5 minutes
@@ -5363,7 +5407,8 @@ async function doLogout(){
 
   // ③ Reset seluruh state lokal
   user=null;
-  _clearNotifLocal(); // hapus notifikasi dari localStorage user ini
+  _clearNotifLocal(); // hapus notifikasi kurs dari localStorage
+  await _clearNotifRTDB(); // hapus notifikasi histori dari RTDB
   notifications=[]; historyItems=[]; goals=[]; wallets=[];
   balance=0; savedPin=''; lockPinBuf='';
 

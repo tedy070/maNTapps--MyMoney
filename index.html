@@ -6294,6 +6294,45 @@ function closeBayarModal() {
   }, 280);
 }
 
+// ── Tandai satu tagihan sebagai lunas ──────────────────────────────────────
+// Dipanggil dari bayarSatuTagihan (single) maupun bisa dipanggil manual.
+// Logika:
+//   • Tagihan bulanan  → geser tanggal +1 bulan & catat riwayat bulanan
+//   • Tagihan sekali   → set t.lunas = true & t.tanggalLunas
+// Setelah update data: render ulang list + footer + save ke Firebase.
+function tandaiTagihanLunas(id) {
+  const t = tagihan.find(x => x.id === id);
+  if (!t) return;
+
+  const now = new Date();
+
+  if (t.frekuensi === 'bulanan') {
+    // Simpan riwayat pembayaran bulan ini
+    if (typeof tagihanRiwayatBulanan === 'undefined') window.tagihanRiwayatBulanan = [];
+    if (typeof tagihanRiwayatIdCtr   === 'undefined') window.tagihanRiwayatIdCtr   = 1;
+    tagihanRiwayatBulanan.push({
+      id:          tagihanRiwayatIdCtr++,
+      tagihanId:   t.id,
+      nama:        t.nama,
+      nominal:     t.nominal,
+      catColor:    t.catColor  || null,
+      catIco:      t.catIco    || null,
+      frekuensi:   'bulanan',
+      tanggalBayar: now.toISOString(),
+    });
+    // Geser jatuh tempo ke bulan berikutnya
+    t.tanggal = _nextMonthDate(t.tanggal);
+  } else {
+    // Tagihan sekali bayar → tandai lunas
+    t.lunas        = true;
+    t.tanggalLunas = now.toISOString();
+  }
+
+  // Render ulang list jatuh tempo & simpan
+  renderTagihanList();
+  fbAutoSave();
+}
+
 function bayarSatuTagihan(id, btnEl) {
   const item = document.getElementById('bayar-item-'+id);
   if (!item || item.classList.contains('paying')) return;
@@ -6332,17 +6371,30 @@ function bayarSemuaTagihan() {
   // After last animation completes, do the actual data update + close
   const delay = items.length * 80 + 500;
   setTimeout(() => {
+    const nowAll = new Date();
     belumBayar.forEach(t => {
       if (t.frekuensi === 'bulanan') {
+        // Simpan riwayat bulanan
+        if (typeof tagihanRiwayatIdCtr === 'undefined') window.tagihanRiwayatIdCtr = 1;
+        tagihanRiwayatBulanan.push({
+          id:           tagihanRiwayatIdCtr++,
+          tagihanId:    t.id,
+          nama:         t.nama,
+          nominal:      t.nominal,
+          catColor:     t.catColor  || null,
+          catIco:       t.catIco    || null,
+          frekuensi:    'bulanan',
+          tanggalBayar: nowAll.toISOString(),
+        });
         t.tanggal = _nextMonthDate(t.tanggal);
       } else {
         t.lunas = true;
-        t.tanggalLunas = new Date().toISOString();
+        t.tanggalLunas = nowAll.toISOString();
       }
     });
     renderTagihanList();
     closeBayarModal();
-    toast(`💳 Semua tagihan sudah dibayar! Rp ${total.toLocaleString('id-ID')}`);
+    toast(`\uD83D\uDCB3 Semua tagihan sudah dibayar! Rp ${total.toLocaleString('id-ID')}`);
     fbAutoSave();
   }, delay);
 }

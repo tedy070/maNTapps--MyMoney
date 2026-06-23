@@ -80,7 +80,6 @@ async function fbSaveState(){
     savedPin,
     lang,
     darkMode: document.body.classList.contains('dk'),
-    themeColor: (typeof currentThemeId !== 'undefined') ? currentThemeId : 'blue',
     updatedAt: ts
   };
   try {
@@ -195,7 +194,6 @@ function _applyStateFromDB(data){
     if(data.darkMode) document.body.classList.add('dk');
     else              document.body.classList.remove('dk');
   }
-  applyThemeColor(data.themeColor || currentThemeId, {save:false});
   refreshAllUI();
 }
 
@@ -994,22 +992,6 @@ body{background:var(--bg);transition:background .35s;}
 </style>
 </head>
 <body>
-<script>
-// Terapkan warna tema tersimpan (localStorage) sesegera mungkin agar tidak "flash" warna default
-(function(){
-  try{
-    var raw = localStorage.getItem('mm_theme_vars');
-    if(raw){
-      var t = JSON.parse(raw);
-      var v = (t && t.light) ? t.light : null;
-      if(v && v.blue && v.blue2){
-        document.body.style.setProperty('--blue', v.blue);
-        document.body.style.setProperty('--blue2', v.blue2);
-      }
-    }
-  }catch(e){}
-})();
-</script>
 <div class="toast" id="toast"></div>
 
 <!-- FIREBASE LOADING OVERLAY -->
@@ -1220,19 +1202,6 @@ body{background:var(--bg);transition:background .35s;}
           <div id="analytics-bulan-picker-list"></div>
         </div>
       </div>
-
-      <!-- DONUT: PENGELUARAN vs PEMASUKAN -->
-      <div class="cc">
-        <div class="cc-ttl">Pengeluaran vs Pemasukan</div>
-        <div class="cc-sub" id="a-ie-sub">Persentase pengeluaran dari total pemasukan bulan ini</div>
-        <div class="donut-w"><canvas id="donutChartIE"></canvas><div class="donut-c"><div class="dpct" id="ie-pct">0%</div><div class="dlbl" id="ie-lbl">DARI PEMASUKAN</div></div></div>
-        <div class="leg">
-          <div class="leg-item"><div class="leg-l"><div class="leg-dot" style="background:var(--red);"></div><span class="leg-n">Pengeluaran</span></div><span class="leg-a" id="ie-exp-amt" style="color:var(--red);">Rp0</span></div>
-          <div class="leg-item"><div class="leg-l"><div class="leg-dot" style="background:var(--teal);"></div><span class="leg-n">Pemasukan</span></div><span class="leg-a" id="ie-inc-amt" style="color:var(--teal2);">Rp0</span></div>
-          <div class="leg-item"><div class="leg-l"><div class="leg-dot" style="background:var(--border);"></div><span class="leg-n">Sisa / Tabungan</span></div><span class="leg-a" id="ie-sisa-amt">Rp0</span></div>
-        </div>
-      </div>
-
       <div class="cc">
         <div class="cc-ttl" id="a-cat">Pengeluaran per Kategori</div>
         <div class="cc-sub" id="a-goes-sub">Distribusi pengeluaran bulan ini</div>
@@ -1536,7 +1505,6 @@ body{background:var(--bg);transition:background .35s;}
         <div class="st-item" onclick="openSecOverlay()"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="st-info"><div class="st-nm" id="st-sec">Keamanan</div><div class="st-sub">2FA, PIN, Biometrik</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" onclick="openNotifSettingsOverlay()"><div class="st-ico" style="background:#FFFBEB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="st-info"><div class="st-nm" id="st-notif">Notifications</div><div class="st-sub">Alerts, News, Transactions</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" style="cursor:default;"><div class="st-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="st-info"><div class="st-nm" id="st-dark">Dark Mode</div><div class="st-sub" id="st-darksub">Adjust visual theme</div></div><button class="tog" id="darkToggle" onclick="toggleDark()"></button></div>
-        <div class="st-item" onclick="openThemeColorOverlay()"><div class="st-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#DC2626"><circle cx="13.5" cy="6.5" r=".5" fill="#DC2626"/><circle cx="17.5" cy="10.5" r=".5" fill="#DC2626"/><circle cx="8.5" cy="7.5" r=".5" fill="#DC2626"/><circle cx="6.5" cy="12.5" r=".5" fill="#DC2626"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C22 6.012 17.461 2 12 2z"/></svg></div><div class="st-info"><div class="st-nm" id="st-themecolor">Warna Tema</div><div class="st-sub" id="curThemeLbl">Biru (Default)</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" onclick="openLangOverlay()"><div class="st-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div><div class="st-info"><div class="st-nm" id="st-lang">Language</div><div class="st-sub" id="curLangLbl">English</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
       </div>
       <!-- TOOLS -->
@@ -2009,102 +1977,12 @@ body{background:var(--bg);transition:background .35s;}
   </div>
 </div>
 
-<!-- THEME COLOR OVERLAY -->
-<div class="ovr" id="themeColorOvr">
-  <div class="ovr-hdr"><button class="ovr-back" onclick="closeThemeColorOverlay()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Warna Tema</div></div>
-  <div style="padding:0 16px 4px;font-size:12px;color:var(--t3);line-height:1.5;">Pilih warna aksen aplikasi. Warna akan otomatis menyesuaikan agar tetap kontras di Mode Terang maupun Mode Gelap.</div>
-  <div id="themeColorPreviewCard" style="margin:16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,var(--blue),var(--blue2));box-shadow:var(--sh2);display:flex;align-items:center;justify-content:space-between;">
-    <div style="color:#fff;">
-      <div style="font-family:var(--f);font-size:13px;font-weight:700;opacity:.85;">PRATINJAU</div>
-      <div style="font-family:var(--f);font-size:17px;font-weight:800;" id="themeColorPreviewName">Biru (Default)</div>
-    </div>
-    <div style="width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
-    </div>
-  </div>
-  <div id="themeColorGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 16px 36px;"></div>
-</div>
-
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // ============================================================
 // STATE
 // ============================================================
 let lang='id', darkMode=false;
-
-// ============================================================
-// THEME COLOR — palet warna aksen (gantikan --blue / --blue2)
-// ============================================================
-const THEME_PALETTE = [
-  { id:'blue',    name:'Biru (Default)', light:{blue:'#1A56C4',blue2:'#2A6FD6'}, dark:{blue:'#1A56C4',blue2:'#5B9BF8'} },
-  { id:'indigo',  name:'Indigo',         light:{blue:'#4338CA',blue2:'#6366F1'}, dark:{blue:'#4338CA',blue2:'#818CF8'} },
-  { id:'violet',  name:'Violet',         light:{blue:'#6D28D9',blue2:'#8B5CF6'}, dark:{blue:'#6D28D9',blue2:'#A78BFA'} },
-  { id:'purple',  name:'Ungu',           light:{blue:'#7E22CE',blue2:'#9333EA'}, dark:{blue:'#7E22CE',blue2:'#C084FC'} },
-  { id:'pink',    name:'Pink',           light:{blue:'#BE185D',blue2:'#DB2777'}, dark:{blue:'#BE185D',blue2:'#F472B6'} },
-  { id:'rose',    name:'Rose',           light:{blue:'#9F1239',blue2:'#E11D48'}, dark:{blue:'#9F1239',blue2:'#FB7185'} },
-  { id:'red',     name:'Merah',          light:{blue:'#B91C1C',blue2:'#DC2626'}, dark:{blue:'#B91C1C',blue2:'#F87171'} },
-  { id:'orange',  name:'Oranye',         light:{blue:'#C2410C',blue2:'#EA580C'}, dark:{blue:'#C2410C',blue2:'#FB923C'} },
-  { id:'amber',   name:'Amber',          light:{blue:'#B45309',blue2:'#D97706'}, dark:{blue:'#B45309',blue2:'#FBBF24'} },
-  { id:'green',   name:'Hijau',          light:{blue:'#15803D',blue2:'#16A34A'}, dark:{blue:'#15803D',blue2:'#4ADE80'} },
-  { id:'emerald', name:'Emerald',        light:{blue:'#047857',blue2:'#059669'}, dark:{blue:'#047857',blue2:'#34D399'} },
-  { id:'teal',    name:'Teal',           light:{blue:'#0F766E',blue2:'#14B8A6'}, dark:{blue:'#0F766E',blue2:'#2DD4BF'} },
-  { id:'cyan',    name:'Cyan',           light:{blue:'#0E7490',blue2:'#0891B2'}, dark:{blue:'#0E7490',blue2:'#22D3EE'} },
-  { id:'sky',     name:'Sky',            light:{blue:'#0369A1',blue2:'#0284C7'}, dark:{blue:'#0369A1',blue2:'#38BDF8'} },
-  { id:'slate',   name:'Abu Elegan',     light:{blue:'#334155',blue2:'#475569'}, dark:{blue:'#334155',blue2:'#94A3B8'} },
-];
-let currentThemeId = 'blue';
-try {
-  const _rawTheme = localStorage.getItem('mm_theme_vars');
-  if (_rawTheme) {
-    const _t = JSON.parse(_rawTheme);
-    if (_t && _t.id && THEME_PALETTE.find(p => p.id === _t.id)) currentThemeId = _t.id;
-  }
-} catch(e){}
-
-// Terapkan warna tema sesuai mode (terang/gelap) saat ini
-function applyThemeColor(id, opts){
-  opts = opts || {};
-  const theme = THEME_PALETTE.find(t => t.id === id) || THEME_PALETTE[0];
-  const isDark = document.body.classList.contains('dk');
-  const v = isDark ? theme.dark : theme.light;
-  document.body.style.setProperty('--blue', v.blue);
-  document.body.style.setProperty('--blue2', v.blue2);
-  currentThemeId = theme.id;
-  if (opts.save !== false) {
-    try { localStorage.setItem('mm_theme_vars', JSON.stringify({ id: theme.id, light: theme.light, dark: theme.dark })); } catch(e){}
-    fbAutoSave();
-  }
-  renderThemeColorGrid();
-}
-
-function renderThemeColorGrid(){
-  const grid = document.getElementById('themeColorGrid');
-  const theme = THEME_PALETTE.find(t => t.id === currentThemeId) || THEME_PALETTE[0];
-  const curLbl = document.getElementById('curThemeLbl');
-  if (curLbl) curLbl.textContent = theme.name;
-  const prevName = document.getElementById('themeColorPreviewName');
-  if (prevName) prevName.textContent = theme.name;
-  if (!grid) return;
-  grid.innerHTML = THEME_PALETTE.map(t => {
-    const isActive = t.id === currentThemeId;
-    return `<div onclick="applyThemeColor('${t.id}')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;">
-      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,${t.light.blue},${t.light.blue2});display:flex;align-items:center;justify-content:center;box-shadow:${isActive?'0 0 0 3px var(--surface),0 0 0 5px '+t.light.blue2:'var(--sh2)'};transition:box-shadow .2s;">
-        ${isActive ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>' : ''}
-      </div>
-      <span style="font-size:10.5px;font-weight:${isActive?'700':'500'};color:${isActive?'var(--navy)':'var(--t3)'};text-align:center;">${t.name}</span>
-    </div>`;
-  }).join('');
-}
-
-function openThemeColorOverlay(){
-  renderThemeColorGrid();
-  document.getElementById('themeColorOvr').classList.add('on');
-}
-function closeThemeColorOverlay(){
-  document.getElementById('themeColorOvr').classList.remove('on');
-}
-
 let selCat='',selCatIco='',selCatColor='',selCatStroke='';
 // SISTEM BARU: Semua nilai internal disimpan dalam RUPIAH
 // exRate = kurs 1 USD → IDR (untuk konversi tampilan USD saja)
@@ -4081,7 +3959,7 @@ async function doForgot(){
 // ============================================================
 // DARK MODE
 // ============================================================
-function toggleDark(){darkMode=!darkMode;document.body.classList.toggle('dk',darkMode);document.getElementById('darkToggle').classList.toggle('on',darkMode);applyThemeColor(currentThemeId,{save:false});toast(darkMode?'🌙 Dark Mode ON':'☀️ Light Mode ON');fbAutoSave();}
+function toggleDark(){darkMode=!darkMode;document.body.classList.toggle('dk',darkMode);document.getElementById('darkToggle').classList.toggle('on',darkMode);toast(darkMode?'🌙 Dark Mode ON':'☀️ Light Mode ON');fbAutoSave();}
 
 // ============================================================
 // AVATAR
@@ -4648,7 +4526,6 @@ function analyticsPrevMonth() {
   if (analyticsMonth < 0) { analyticsMonth = 11; analyticsYear--; }
   updateAnalyticsBulanLabel();
   buildDonut();
-  buildIncomeExpenseDonut();
   buildTopCats();
   buildSmartTip();
 }
@@ -4657,7 +4534,6 @@ function analyticsNextMonth() {
   if (analyticsMonth > 11) { analyticsMonth = 0; analyticsYear++; }
   updateAnalyticsBulanLabel();
   buildDonut();
-  buildIncomeExpenseDonut();
   buildTopCats();
   buildSmartTip();
 }
@@ -4702,7 +4578,6 @@ function selectAnalyticsBulan(y, m) {
   closeAnalyticsBulanPicker();
   updateAnalyticsBulanLabel();
   buildDonut();
-  buildIncomeExpenseDonut();
   buildTopCats();
   buildSmartTip();
 }
@@ -4893,58 +4768,6 @@ function buildDonut() {
   }
 }
 
-// ── Donut chart: Pengeluaran vs Pemasukan (persentase) — bulan dipilih ──
-function buildIncomeExpenseDonut() {
-  const subEl = document.getElementById('a-ie-sub');
-  if (subEl) subEl.textContent = `Persentase pengeluaran dari total pemasukan · ${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear}`;
-
-  const mn = getAnalyticsData('month');
-  const mnExp = mn.filter(h=>!h.pos && !isTarikTx(h)).reduce((s,h)=>s+Math.abs(h.amt||0),0);
-  const mnInc = mn.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt||0),0);
-  const sisa  = mnInc - mnExp;
-
-  const pct = mnInc > 0 ? Math.round((mnExp/mnInc)*100) : (mnExp > 0 ? 100 : 0);
-  const pctClamped = Math.min(pct, 100);
-  const pctColor = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--orange)' : 'var(--navy)';
-
-  const c = document.getElementById('donutChartIE');
-  if (c && c._ch) { c._ch.destroy(); }
-  if (c) {
-    const sisaShare = mnInc > 0 ? Math.max(mnInc - mnExp, 0) : 0;
-    const expShare   = mnInc > 0 ? Math.min(mnExp, mnInc) : (mnExp > 0 ? 1 : 0);
-    const overShare  = mnInc > 0 ? Math.max(mnExp - mnInc, 0) : 0;
-    const hasData = (expShare + sisaShare + overShare) > 0;
-    const dataVals = hasData ? [expShare, sisaShare, overShare].filter(v=>v>0) : [1];
-    const dataColors = hasData
-      ? [expShare>0?getCssVar('--red'):null, sisaShare>0?getCssVar('--teal'):null, overShare>0?'#dc2626':null].filter(Boolean)
-      : [getCssVar('--border')];
-    c._ch = new Chart(c.getContext('2d'),{
-      type:'doughnut',
-      data:{datasets:[{data:dataVals,backgroundColor:dataColors,borderWidth:0,hoverOffset:4}]},
-      options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{animateRotate:true,duration:800}}
-    });
-  }
-  const pctEl = document.getElementById('ie-pct');
-  const lblEl = document.getElementById('ie-lbl');
-  if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = pctColor; }
-  if (lblEl) lblEl.textContent = pct >= 100 ? 'MELEBIHI' : 'DARI PEMASUKAN';
-
-  const expEl  = document.getElementById('ie-exp-amt');
-  const incEl  = document.getElementById('ie-inc-amt');
-  const sisaEl = document.getElementById('ie-sisa-amt');
-  if (expEl)  expEl.textContent  = fmt(mnExp);
-  if (incEl)  incEl.textContent  = fmt(mnInc);
-  if (sisaEl) {
-    sisaEl.textContent = (sisa < 0 ? '-' : '') + fmt(Math.abs(sisa));
-    sisaEl.style.color = sisa < 0 ? 'var(--red)' : 'var(--teal2)';
-  }
-}
-
-// ── Helper: ambil nilai resolved dari CSS variable (untuk dipakai Chart.js) ──
-function getCssVar(name) {
-  return getComputedStyle(document.body).getPropertyValue(name).trim() || '#999';
-}
-
 // ── Top categories ──
 function buildTopCats() {
   // Update subtitle
@@ -5091,7 +4914,6 @@ function buildTarikTunaiCard() {
 function refreshAnalytics() {
   updateAnalyticsBulanLabel();
   buildDonut();
-  buildIncomeExpenseDonut();
   buildTopCats();
   buildSmartTip();
   refreshWeeklyBar(wBarMode);
@@ -5506,11 +5328,9 @@ async function enterApp(initialState){
     if(initialState.savedPin)   savedPin = initialState.savedPin;
     if(initialState.lang)       lang     = initialState.lang;
     if(initialState.darkMode)   document.body.classList.add('dk');
-    applyThemeColor(initialState.themeColor || currentThemeId, {save:false});
   } else {
     // State baru (user baru)
     historyItems=[]; goals=[]; wallets=[]; notifications=[]; balance=0;
-    applyThemeColor(currentThemeId, {save:false});
   }
 
   // ② Update UI profil

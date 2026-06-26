@@ -1268,10 +1268,41 @@ body{background:var(--bg);transition:background .35s;}
       </div>
       <!-- PENGELUARAN HARIAN -->
       <div class="cc">
-        <div class="cc-ttl" style="margin-bottom:11px;" id="a-daily-title">Pengeluaran Harian</div>
-        <div class="cc-sub" id="a-daily-sub" style="margin-top:-8px;margin-bottom:10px;">Pengeluaran per hari bulan ini</div>
+        <div class="cc-ttl" style="margin-bottom:6px;" id="a-daily-title">Pengeluaran Harian</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div id="a-daily-sub" style="font-size:11px;color:var(--t3);cursor:pointer;display:flex;align-items:center;gap:4px;" onclick="openDailyDatePicker()">
+            <span>Pengeluaran per hari · </span>
+            <span id="a-daily-date-label" style="color:var(--blue);font-weight:600;text-decoration:underline dotted;text-underline-offset:3px;"></span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+          </div>
+          <div id="a-daily-total" style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--red);"></div>
+        </div>
         <div class="tc" id="daily-list">
-          <div id="daily-empty" style="text-align:center;padding:18px 0;color:var(--t3);font-size:12px;">Belum ada transaksi — mulai tambah transaksi untuk melihat pengeluaran harian.</div>
+          <div id="daily-empty" style="text-align:center;padding:18px 0;color:var(--t3);font-size:12px;">Tidak ada pengeluaran pada hari ini.</div>
+        </div>
+      </div>
+
+      <!-- DAILY DATE PICKER MODAL -->
+      <div id="daily-date-picker" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeDailyDatePicker()">
+        <div style="background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 16px 32px;max-height:90vh;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);" id="dp-month-label"></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button onclick="dpPrevMonth()" style="background:var(--surface2);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--navy);">‹</button>
+              <button onclick="dpNextMonth()" style="background:var(--surface2);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--navy);">›</button>
+              <button onclick="closeDailyDatePicker()" style="background:var(--surface2);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--t3);">✕</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin-bottom:8px;">
+            <div style="font-size:10px;font-weight:600;color:var(--t3);">Min</div>
+            <div style="font-size:10px;font-weight:600;color:var(--t3);">Sen</div>
+            <div style="font-size:10px;font-weight:600;color:var(--t3);">Sel</div>
+            <div style="font-size:10px;font-weight:600;color:var(--t3);">Rab</div>
+            <div style="font-size:10px;font-weight:600;color:var(--t3);">Kam</div>
+            <div style="font-size:10px;font-weight:600;color:var(--t3);">Jum</div>
+            <div style="font-size:10px;font-weight:600;color:var(--t3);">Sab</div>
+          </div>
+          <div id="dp-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;"></div>
         </div>
       </div>
 
@@ -5037,37 +5068,63 @@ function buildTopCats() {
 // ── Daily spending ──
 let _dailyRefreshTimer = null;
 let _dailyLastDate = null;
+let _dailySelectedDate = new Date(); // hari yang sedang ditampilkan
+let _dpViewYear  = new Date().getFullYear();
+let _dpViewMonth = new Date().getMonth();
+
+const DAY_NAMES_FULL_ID  = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const DAY_NAMES_SHORT_ID = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 
 function buildDailySpending() {
-  const subEl = document.getElementById('a-daily-sub');
-  if (subEl) subEl.textContent = `Pengeluaran per hari · ${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear}`;
-
-  // Ambil semua hari dalam bulan yang dipilih
-  const daysInMonth = new Date(analyticsYear, analyticsMonth + 1, 0).getDate();
+  // Jika ganti bulan analitik, reset selectedDate ke hari pertama bulan itu
+  // tapi kalau masih di bulan yang sama, tetap di hari sekarang
   const today = new Date();
-  const isCurrentMonth = analyticsYear === today.getFullYear() && analyticsMonth === today.getMonth();
-  const maxDay = isCurrentMonth ? today.getDate() : daysInMonth;
-
-  // Hitung pengeluaran per hari dari historyItems
-  const dayMap = {};
-  for (let d = 1; d <= daysInMonth; d++) dayMap[d] = 0;
-
-  const monthStart = new Date(analyticsYear, analyticsMonth, 1);
-  const monthEnd   = new Date(analyticsYear, analyticsMonth + 1, 1);
-  historyItems.filter(h => h.ts && !h.pos && !isTarikTx(h)).forEach(h => {
-    const d = new Date(h.ts);
-    if (d >= monthStart && d < monthEnd) {
-      const day = d.getDate();
-      dayMap[day] = (dayMap[day] || 0) + Math.abs(h.amt || 0);
-    }
-  });
-
-  // Sort hari berdasarkan pengeluaran terbesar → terkecil
-  const sorted = [];
-  for (let d = 1; d <= daysInMonth; d++) {
-    sorted.push([d, dayMap[d] || 0]);
+  const selY = _dailySelectedDate.getFullYear();
+  const selM = _dailySelectedDate.getMonth();
+  if (selY !== analyticsYear || selM !== analyticsMonth) {
+    // pindah bulan: set ke hari pertama, kecuali bulan ini pakai today
+    const isCurrentMonth = analyticsYear === today.getFullYear() && analyticsMonth === today.getMonth();
+    _dailySelectedDate = isCurrentMonth ? new Date(today) : new Date(analyticsYear, analyticsMonth, 1);
   }
-  sorted.sort((a, b) => b[1] - a[1]);
+
+  _updateDailyLabel();
+  _renderDailyItems();
+  _scheduleDailyRefresh();
+}
+
+function _updateDailyLabel() {
+  const d = _dailySelectedDate;
+  const dayName  = DAY_NAMES_FULL_ID[d.getDay()];
+  const dateNum  = d.getDate();
+  const monthNm  = MONTH_NAMES_FULL_ID[d.getMonth()];
+  const yr       = d.getFullYear();
+  const labelEl  = document.getElementById('a-daily-date-label');
+  if (labelEl) labelEl.textContent = `${dayName}, ${dateNum} ${monthNm} ${yr}`;
+}
+
+function _renderDailyItems() {
+  const d   = _dailySelectedDate;
+  const ds  = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const de  = new Date(ds.getTime() + 86400000);
+
+  // Ambil transaksi pengeluaran hari itu
+  const txs = historyItems.filter(h =>
+    h.ts && !h.pos && !isTarikTx(h) &&
+    new Date(h.ts) >= ds && new Date(h.ts) < de
+  );
+
+  // Group by kategori
+  const catMap = {};
+  txs.forEach(h => {
+    const k = h.cat || 'tarik';
+    catMap[k] = (catMap[k] || 0) + Math.abs(h.amt || 0);
+  });
+  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  const totalAmt = sorted.reduce((s, [, v]) => s + v, 0);
+
+  // Update total
+  const totalEl = document.getElementById('a-daily-total');
+  if (totalEl) totalEl.textContent = totalAmt > 0 ? fmt(totalAmt) : '';
 
   const colorPalette = [
     ['#EBF3FE','#1A56C4'],['#FEF3EB','#F59E0B'],['#F3EBFE','#9333EA'],
@@ -5075,18 +5132,25 @@ function buildDailySpending() {
     ['#EBF8FE','#0284C7'],['#F5FEEB','#65A30D'],['#FEEBF8','#DB2777'],
     ['#FFFBEB','#D97706'],
   ];
-  const DAY_NAMES_ID = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const catSvgs = {
+    food:'<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>',
+    transport:'<rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/>',
+    rent:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',
+    fun:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/>',
+    shopping:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>',
+    charity:'<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',
+    marriage:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+    investasi:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
+    tarik:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+  };
 
-  const list   = document.getElementById('daily-list');
-  const empEl  = document.getElementById('daily-empty');
+  const list  = document.getElementById('daily-list');
+  const empEl = document.getElementById('daily-empty');
   if (!list) return;
 
-  // Hapus item lama (kecuali daily-empty)
   Array.from(list.children).forEach(c => { if (c.id !== 'daily-empty') c.remove(); });
 
-  // Cek apakah semua 0
-  const hasAny = sorted.some(([, v]) => v > 0);
-  if (!hasAny) {
+  if (sorted.length === 0) {
     if (empEl) empEl.style.display = 'block';
     return;
   }
@@ -5094,21 +5158,19 @@ function buildDailySpending() {
 
   const maxAmt = sorted[0][1] || 1;
 
-  sorted.forEach(([day, amt], i) => {
-    const col   = colorPalette[i % colorPalette.length];
-    const pct   = Math.round((amt / maxAmt) * 100);
-    const dateObj = new Date(analyticsYear, analyticsMonth, day);
-    const dayName = DAY_NAMES_ID[dateObj.getDay()];
-    const isTd    = isCurrentMonth && day === today.getDate();
-    const calIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="${col[1]}" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><text x="12" y="19" text-anchor="middle" font-size="7" font-weight="700" fill="${col[1]}" stroke="none">${day}</text></svg>`;
-
+  sorted.forEach(([cat, amt], i) => {
+    const col     = colorPalette[i % colorPalette.length];
+    const pct     = Math.round((amt / maxAmt) * 100);
+    const catName = T('cat-' + cat) || (cat.charAt(0).toUpperCase() + cat.slice(1));
+    const svg     = catSvgs[cat] || catSvgs.tarik;
     const item = document.createElement('div');
     item.className = 'tc-item';
-    if (isTd) item.style.cssText = 'border:1.5px solid var(--blue2);background:var(--surface);';
     item.innerHTML = `
-      <div class="tc-ico" style="background:${col[0]};flex-shrink:0;">${calIcon}</div>
+      <div class="tc-ico" style="background:${col[0]};flex-shrink:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="${col[1]}" stroke-width="1.8">${svg}</svg>
+      </div>
       <div style="flex:1;min-width:0;">
-        <div class="tc-n">${dayName}, ${day} ${MONTH_NAMES_FULL_ID[analyticsMonth]}${isTd ? ' <span style="font-size:9px;background:var(--blue2);color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle;">Hari ini</span>' : ''}</div>
+        <div class="tc-n">${catName}</div>
         <div style="margin-top:4px;height:4px;border-radius:2px;background:var(--border);overflow:hidden;">
           <div style="height:100%;width:${pct}%;background:${col[1]};border-radius:2px;transition:width .5s;"></div>
         </div>
@@ -5119,9 +5181,81 @@ function buildDailySpending() {
       </div>`;
     list.appendChild(item);
   });
+}
 
-  // Jadwalkan refresh otomatis saat ganti hari
-  _scheduleDailyRefresh();
+// ── Daily Date Picker ──
+function openDailyDatePicker() {
+  _dpViewYear  = _dailySelectedDate.getFullYear();
+  _dpViewMonth = _dailySelectedDate.getMonth();
+  _renderDpGrid();
+  document.getElementById('daily-date-picker').style.display = 'flex';
+}
+function closeDailyDatePicker() {
+  document.getElementById('daily-date-picker').style.display = 'none';
+}
+function dpPrevMonth() {
+  _dpViewMonth--;
+  if (_dpViewMonth < 0) { _dpViewMonth = 11; _dpViewYear--; }
+  _renderDpGrid();
+}
+function dpNextMonth() {
+  _dpViewMonth++;
+  if (_dpViewMonth > 11) { _dpViewMonth = 0; _dpViewYear++; }
+  _renderDpGrid();
+}
+function _renderDpGrid() {
+  const lbl = document.getElementById('dp-month-label');
+  if (lbl) lbl.textContent = `${MONTH_NAMES_FULL_ID[_dpViewMonth]} ${_dpViewYear}`;
+  const grid = document.getElementById('dp-grid');
+  if (!grid) return;
+
+  const today = new Date();
+  const daysInMonth = new Date(_dpViewYear, _dpViewMonth + 1, 0).getDate();
+  const firstDay    = new Date(_dpViewYear, _dpViewMonth, 1).getDay(); // 0=Min
+
+  // Hitung hari yang punya pengeluaran
+  const monthStart = new Date(_dpViewYear, _dpViewMonth, 1);
+  const monthEnd   = new Date(_dpViewYear, _dpViewMonth + 1, 1);
+  const txDays = new Set();
+  historyItems.filter(h => h.ts && !h.pos && !isTarikTx(h)).forEach(h => {
+    const d = new Date(h.ts);
+    if (d >= monthStart && d < monthEnd) txDays.add(d.getDate());
+  });
+
+  const selD = _dailySelectedDate;
+  const isSameSelMonth = selD.getFullYear() === _dpViewYear && selD.getMonth() === _dpViewMonth;
+  const selDay = isSameSelMonth ? selD.getDate() : -1;
+
+  let html = '';
+  // Padding kosong sebelum hari pertama
+  for (let i = 0; i < firstDay; i++) html += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday  = today.getFullYear() === _dpViewYear && today.getMonth() === _dpViewMonth && today.getDate() === d;
+    const isSel    = d === selDay;
+    const hasTx    = txDays.has(d);
+    const isFuture = new Date(_dpViewYear, _dpViewMonth, d) > today;
+    let bg    = 'transparent';
+    let color = isFuture ? 'var(--t3)' : 'var(--navy)';
+    let fw    = '500';
+    let brd   = 'none';
+    if (isSel) { bg = 'var(--blue)'; color = '#fff'; fw = '700'; }
+    else if (isToday) { brd = '1.5px solid var(--blue)'; color = 'var(--blue)'; fw = '700'; }
+    const dot = hasTx && !isSel ? `<div style="width:4px;height:4px;border-radius:50%;background:${isFuture?'var(--t3)':'var(--red)'};margin:1px auto 0;"></div>` : '<div style="height:5px;"></div>';
+    html += `<div onclick="${isFuture?'':'selectDailyDate('+_dpViewYear+','+_dpViewMonth+','+d+')'}" style="cursor:${isFuture?'default':'pointer'};padding:6px 2px;border-radius:8px;background:${bg};border:${brd};">
+      <div style="font-size:13px;font-weight:${fw};color:${color};text-align:center;">${d}</div>
+      ${dot}
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+function selectDailyDate(y, m, d) {
+  _dailySelectedDate = new Date(y, m, d);
+  // Update analyticsMonth/Year agar selaras
+  analyticsYear  = y;
+  analyticsMonth = m;
+  closeDailyDatePicker();
+  _updateDailyLabel();
+  _renderDailyItems();
 }
 
 function _scheduleDailyRefresh() {
@@ -5129,15 +5263,24 @@ function _scheduleDailyRefresh() {
   const now = new Date();
   const nowDate = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
   _dailyLastDate = nowDate;
-  // Hitung ms sampai tengah malam berikutnya + 1 detik
   const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
   const msUntil  = midnight - now;
   _dailyRefreshTimer = setTimeout(() => {
     const n = new Date();
     const nd = `${n.getFullYear()}-${n.getMonth()}-${n.getDate()}`;
-    if (nd !== _dailyLastDate) { _dailyLastDate = nd; buildDailySpending(); }
+    if (nd !== _dailyLastDate) {
+      _dailyLastDate = nd;
+      // Auto-pindah ke hari baru jika sedang lihat hari ini
+      const prev = new Date(_dailySelectedDate);
+      const yesterday = new Date(n); yesterday.setDate(n.getDate() - 1);
+      if (prev.toDateString() === yesterday.toDateString()) {
+        _dailySelectedDate = new Date(n);
+      }
+      buildDailySpending();
+    }
   }, msUntil);
 }
+
 
 function buildSmartTip() {
   const mn = getAnalyticsData('month').filter(h=>!h.pos && !isTarikTx(h));

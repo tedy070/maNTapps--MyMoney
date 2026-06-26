@@ -638,7 +638,8 @@ body{background:var(--bg);transition:background .35s;}
 .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .leg-n{font-size:12px;color:var(--t2);}
 .leg-a{font-family:var(--f);font-size:12px;font-weight:600;color:var(--navy);}
-.tc{display:flex;flex-direction:column;gap:8px;}
+.tc{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:2px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;-webkit-overflow-scrolling:touch;}
+.tc::-webkit-scrollbar{width:4px;}.tc::-webkit-scrollbar-track{background:transparent;}.tc::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 .tc-item{display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface2);border-radius:12px;}
 .tc-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
 .tc-ico svg{width:18px;height:18px;fill:none;stroke-width:1.8;}
@@ -1261,10 +1262,7 @@ body{background:var(--bg);transition:background .35s;}
       <div class="cc">
         <div class="cc-ttl" style="margin-bottom:11px;" id="a-top">Kategori Teratas</div>
         <div class="cc-sub" id="a-top-sub" style="margin-top:-8px;margin-bottom:10px;">Pengeluaran terbesar bulan ini</div>
-        <div class="tc">
-          <div class="tc-item" id="tc-item-1" style="display:none;"><div class="tc-ico" id="tc-ico-1" style="background:#EBF3FE;"></div><div style="flex:1"><div class="tc-n" id="a-re"></div><div class="tc-s" id="tc-sub-1"></div></div><div style="text-align:right"><div class="tc-a" id="tca1">Rp0</div><div class="tc-up" id="tc-pct-1">0%</div></div></div>
-          <div class="tc-item" id="tc-item-2" style="display:none;"><div class="tc-ico" id="tc-ico-2" style="background:#FEF3EB;"></div><div style="flex:1"><div class="tc-n" id="a-gas"></div><div class="tc-s" id="tc-sub-2"></div></div><div style="text-align:right"><div class="tc-a" id="tca2">Rp0</div><div class="tc-up" id="tc-pct-2">0%</div></div></div>
-          <div class="tc-item" id="tc-item-3" style="display:none;"><div class="tc-ico" id="tc-ico-3" style="background:#F3EBFE;"></div><div style="flex:1"><div class="tc-n" id="a-ls"></div><div class="tc-s" id="tc-sub-3"></div></div><div style="text-align:right"><div class="tc-a" id="tca3">Rp0</div><div class="tc-dn" id="tc-pct-3">0%</div></div></div>
+        <div class="tc" id="tc-list">
           <div id="tc-empty" style="text-align:center;padding:18px 0;color:var(--t3);font-size:12px;">Belum ada transaksi — mulai tambah transaksi untuk melihat kategori teratas.</div>
         </div>
       </div>
@@ -4971,8 +4969,13 @@ function buildTopCats() {
   const data  = getAnalyticsData('month').filter(h=>!h.pos && !isTarikTx(h));
   const catMap = {};
   data.forEach(h=>{ const k=h.cat||'tarik'; catMap[k]=(catMap[k]||0)+Math.abs(h.amt||0); });
-  const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const colors=[['#EBF3FE','#1A56C4'],['#FEF3EB','#F59E0B'],['#F3EBFE','#9333EA']];
+  const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const colorPalette=[
+    ['#EBF3FE','#1A56C4'],['#FEF3EB','#F59E0B'],['#F3EBFE','#9333EA'],
+    ['#EBFEF3','#16A34A'],['#FEF1EB','#EA580C'],['#FEEBED','#DC2626'],
+    ['#EBF8FE','#0284C7'],['#F5FEEB','#65A30D'],['#FEEBF8','#DB2777'],
+    ['#FFFBEB','#D97706'],
+  ];
   const catSvgs={
     food:'<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>',
     transport:'<rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/>',
@@ -4984,33 +4987,38 @@ function buildTopCats() {
     investasi:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>',
     tarik:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
   };
-  const tcItemIds=['tc-item-1','tc-item-2','tc-item-3'];
-  const tcIcoIds=['tc-ico-1','tc-ico-2','tc-ico-3'];
-  const tcNameIds=['a-re','a-gas','a-ls'];
-  const tcSubIds=['tc-sub-1','tc-sub-2','tc-sub-3'];
-  const tcAmtIds=['tca1','tca2','tca3'];
-  const tcPctIds=['tc-pct-1','tc-pct-2','tc-pct-3'];
-  const totalAll = sorted.reduce((s,[,v])=>s+v,0)||1;
-  // Sembunyikan semua dulu
-  for(let i=0;i<3;i++){ const el=document.getElementById(tcItemIds[i]); if(el)el.style.display='none'; }
-  const empEl = document.getElementById('tc-empty');
-  if(sorted.length===0){
-    if(empEl)empEl.style.display='block';
+  const tcList = document.getElementById('tc-list');
+  const empEl  = document.getElementById('tc-empty');
+  if (!tcList) return;
+  // Hapus item lama (kecuali tc-empty)
+  Array.from(tcList.children).forEach(c=>{ if(c.id!=='tc-empty') c.remove(); });
+  if (sorted.length === 0) {
+    if (empEl) empEl.style.display = 'block';
     return;
   }
-  if(empEl)empEl.style.display='none';
+  if (empEl) empEl.style.display = 'none';
+  const totalAll = sorted.reduce((s,[,v])=>s+v,0)||1;
   sorted.forEach(([cat,amt],i)=>{
-    const item=document.getElementById(tcItemIds[i]); if(!item)return;
-    item.style.display='flex';
-    const ico=document.getElementById(tcIcoIds[i]);
-    if(ico){ico.style.background=colors[i][0];ico.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="${colors[i][1]}" stroke-width="1.8">${catSvgs[cat]||catSvgs.tarik}</svg>`;}
-    const nm=document.getElementById(tcNameIds[i]);
-    if(nm)nm.textContent=T('cat-'+cat)||cat.charAt(0).toUpperCase()+cat.slice(1);
-    const sub=document.getElementById(tcSubIds[i]);
-    if(sub)sub.textContent=T('cat-'+cat+'-sub')||'';
-    const amtEl=document.getElementById(tcAmtIds[i]); if(amtEl)amtEl.textContent=fmt(amt);
-    const pct=Math.round((amt/totalAll)*100);
-    const pctEl=document.getElementById(tcPctIds[i]); if(pctEl)pctEl.textContent=pct+'%';
+    const col = colorPalette[i % colorPalette.length];
+    const pct = Math.round((amt/totalAll)*100);
+    const catName = T('cat-'+cat) || (cat.charAt(0).toUpperCase()+cat.slice(1));
+    const item = document.createElement('div');
+    item.className = 'tc-item';
+    item.innerHTML = `
+      <div class="tc-ico" style="background:${col[0]};flex-shrink:0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="${col[1]}" stroke-width="1.8">${catSvgs[cat]||catSvgs.tarik}</svg>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="tc-n">${catName}</div>
+        <div style="margin-top:4px;height:4px;border-radius:2px;background:var(--border);overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${col[1]};border-radius:2px;transition:width .5s;"></div>
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:10px;">
+        <div class="tc-a">${fmt(amt)}</div>
+        <div class="tc-up">${pct}%</div>
+      </div>`;
+    tcList.appendChild(item);
   });
 }
 

@@ -5113,18 +5113,7 @@ function _renderDailyItems() {
     new Date(h.ts) >= ds && new Date(h.ts) < de
   );
 
-  // Group by kategori
-  const catMap = {};
-  txs.forEach(h => {
-    const k = h.cat || 'tarik';
-    catMap[k] = (catMap[k] || 0) + Math.abs(h.amt || 0);
-  });
-  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-  const totalAmt = sorted.reduce((s, [, v]) => s + v, 0);
-
-  // Update total
-  const totalEl = document.getElementById('a-daily-total');
-  if (totalEl) totalEl.textContent = totalAmt > 0 ? fmt(totalAmt) : '';
+  const ALL_EXPENSE_CATS = ['food','transport','rent','fun','shopping','charity','marriage','investasi'];
 
   const colorPalette = [
     ['#EBF3FE','#1A56C4'],['#FEF3EB','#F59E0B'],['#F3EBFE','#9333EA'],
@@ -5144,27 +5133,43 @@ function _renderDailyItems() {
     tarik:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
   };
 
+  // Group transaksi by kategori
+  const catMap = {};
+  txs.forEach(h => {
+    const k = h.cat || 'tarik';
+    catMap[k] = (catMap[k] || 0) + Math.abs(h.amt || 0);
+  });
+
+  // Pastikan semua kategori standar selalu ada (Rp 0 jika tidak ada transaksi)
+  ALL_EXPENSE_CATS.forEach(c => { if (!(c in catMap)) catMap[c] = 0; });
+  // Tambah kategori custom dari transaksi jika ada
+  txs.forEach(h => { const k = h.cat || 'tarik'; if (!ALL_EXPENSE_CATS.includes(k)) catMap[k] = catMap[k] || 0; });
+
+  // Sort: yang ada transaksi dulu (terbesar → terkecil), lalu yang 0
+  const sorted = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+  const totalAmt = sorted.reduce((s, [, v]) => s + v, 0);
+
+  // Update total
+  const totalEl = document.getElementById('a-daily-total');
+  if (totalEl) totalEl.textContent = totalAmt > 0 ? fmt(totalAmt) : 'Rp 0';
+
   const list  = document.getElementById('daily-list');
   const empEl = document.getElementById('daily-empty');
   if (!list) return;
 
   Array.from(list.children).forEach(c => { if (c.id !== 'daily-empty') c.remove(); });
-
-  if (sorted.length === 0) {
-    if (empEl) empEl.style.display = 'block';
-    return;
-  }
   if (empEl) empEl.style.display = 'none';
 
   const maxAmt = sorted[0][1] || 1;
 
   sorted.forEach(([cat, amt], i) => {
     const col     = colorPalette[i % colorPalette.length];
-    const pct     = Math.round((amt / maxAmt) * 100);
+    const pct     = amt > 0 ? Math.round((amt / maxAmt) * 100) : 0;
     const catName = T('cat-' + cat) || (cat.charAt(0).toUpperCase() + cat.slice(1));
     const svg     = catSvgs[cat] || catSvgs.tarik;
     const item = document.createElement('div');
     item.className = 'tc-item';
+    if (amt === 0) item.style.opacity = '0.5';
     item.innerHTML = `
       <div class="tc-ico" style="background:${col[0]};flex-shrink:0;">
         <svg viewBox="0 0 24 24" fill="none" stroke="${col[1]}" stroke-width="1.8">${svg}</svg>
@@ -5176,8 +5181,8 @@ function _renderDailyItems() {
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0;margin-left:10px;">
-        <div class="tc-a">${fmt(amt)}</div>
-        <div class="tc-up">${pct}%</div>
+        <div class="tc-a" style="color:${amt===0?'var(--t3)':'var(--navy)'};">${amt === 0 ? 'Rp 0' : fmt(amt)}</div>
+        <div class="tc-up" style="color:${amt===0?'var(--t3)':''};">${pct}%</div>
       </div>`;
     list.appendChild(item);
   });

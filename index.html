@@ -5693,6 +5693,9 @@ function refreshAllUI(){
   // Selalu refresh anggaran agar data berubah dari RTDB langsung terrefleksi
   updateAnggaranBulanLabel();
   renderAnggaranList();
+  // Refresh seluruh analytics (Kategori Teratas, Pengeluaran Harian, dsb)
+  // agar perubahan historyItems dari Firebase langsung terrefleksi
+  refreshAnalytics();
 }
 
 // ════════════════════════════════════════════════════════════

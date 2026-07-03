@@ -144,12 +144,19 @@ function fbStartRealtimeSync(){
     _rtdbRef.off('value', _rtdbListener);
   }
   _rtdbRef = fbDB.ref(`users/${uid}/state`);
+  let _lastSnapJson = null;
   _rtdbListener = _rtdbRef.on('value', snap => {
     const data = snap.val();
     if(!data) return;
-    const prevTs = _lastSyncTs || 0;
-    if(data.updatedAt && data.updatedAt <= prevTs) return;
-    _lastSyncTs = data.updatedAt || Date.now();
+    // Cek perubahan via updatedAt ATAU via JSON diff (untuk edit langsung di Firebase Console
+    // yang tidak mengupdate updatedAt secara otomatis)
+    const snapJson = JSON.stringify(data);
+    const prevTs   = _lastSyncTs || 0;
+    const tsChanged = data.updatedAt && data.updatedAt > prevTs;
+    const dataChanged = snapJson !== _lastSnapJson;
+    if(!tsChanged && !dataChanged) return;
+    _lastSyncTs   = data.updatedAt || Date.now();
+    _lastSnapJson = snapJson;
     _applyStateFromDB(data);
   });
 }

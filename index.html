@@ -864,7 +864,11 @@ body{background:var(--bg);transition:background .35s;}
 /* MODAL */
 .moverlay{position:fixed;inset:0;background:rgba(13,33,82,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:700;display:none;align-items:flex-end;}
 .moverlay.on{display:flex;}
-.msheet{background:var(--surface);border-radius:24px 24px 0 0;padding:10px 20px calc(var(--safe-bot) + 24px);width:100%;animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);max-height:92vh;overflow-y:auto;scrollbar-width:none;}
+.msheet{background:var(--surface);border-radius:24px 24px 0 0;width:100%;animation:slideUp .3s cubic-bezier(.34,1.56,.64,1);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+.msheet-body{flex:1;overflow-y:auto;padding:10px 20px 8px;scrollbar-width:none;}
+.msheet-body::-webkit-scrollbar{display:none;}
+.msheet-foot{padding:12px 20px calc(var(--safe-bot) + 16px);background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+.msheet-foot .btn{margin-bottom:0;}
 .msheet::-webkit-scrollbar{display:none;}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .mhandle{width:38px;height:4px;background:#DDE4F0;border-radius:2px;margin:0 auto 17px;}
@@ -889,9 +893,10 @@ body{background:var(--bg);transition:background .35s;}
 .noteinput::placeholder{color:var(--t3);}
 
 /* CAT PICKER */
-.cpick{position:fixed;inset:0;background:var(--bg);z-index:800;display:none;flex-direction:column;overflow-y:auto;scrollbar-width:none;}
-.cpick::-webkit-scrollbar{display:none;}
+.cpick{position:fixed;inset:0;background:var(--bg);z-index:800;display:none;flex-direction:column;overflow:hidden;}
 .cpick.on{display:flex;}
+.cpick-body{flex:1;overflow-y:auto;scrollbar-width:none;min-height:0;}
+.cpick-body::-webkit-scrollbar{display:none;}
 .cpick-hdr{padding:calc(var(--safe-top) + 14px) 20px 16px;}
 .cpick-eye{font-size:10px;letter-spacing:2px;color:var(--teal);font-weight:600;margin-bottom:5px;display:flex;align-items:center;gap:7px;}
 .cpick-eye svg{width:14px;height:14px;stroke:var(--teal);fill:none;stroke-width:1.8;}
@@ -911,7 +916,7 @@ body{background:var(--bg);transition:background .35s;}
 .cat-c.sel .cchk{display:flex;}
 .cnm{font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);}
 .csub{font-size:10px;color:var(--t3);text-transform:uppercase;margin-top:1px;}
-.conf-w{padding:12px 16px calc(var(--safe-bot) + 28px);}
+.conf-w{padding:12px 16px calc(var(--safe-bot) + 20px);background:var(--bg);border-top:1px solid var(--border);flex-shrink:0;box-shadow:0 -8px 20px rgba(13,33,82,.08);}
 .conf-sub{text-align:center;font-size:11px;color:var(--t3);margin-top:7px;}
 
 /* SECURITY/NOTIF */
@@ -1642,6 +1647,7 @@ body{background:var(--bg);transition:background .35s;}
 <!-- ADD TRANSACTION -->
 <div class="moverlay" id="addModal">
   <div class="msheet">
+    <div class="msheet-body">
     <div class="mhandle"></div>
     <div class="mhdr"><div class="mttl" id="m-title">Add Transaction</div><button class="mcls" onclick="closeAddModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
 
@@ -1722,21 +1728,26 @@ body{background:var(--bg);transition:background .35s;}
       <div style="font-size:12px;color:var(--t3);margin-top:4px;" id="tsp-source">Saldo utama</div>
     </div>
 
-    <button class="btn btn-p" onclick="completeTx()" id="m-complete">Complete Transaction</button>
+    </div><!-- end msheet-body -->
+    <div class="msheet-foot">
+      <button class="btn btn-p" onclick="completeTx()" id="m-complete">Complete Transaction</button>
+    </div>
   </div>
 </div>
 
 <!-- CAT PICKER -->
 <div class="cpick" id="catPicker">
-  <div class="cpick-hdr" style="position:relative;">
-    <button onclick="document.getElementById('catPicker').classList.remove('on')" style="position:absolute;top:calc(var(--safe-top) + 14px);right:20px;width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="cpick-eye"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> TRANSACTION CONTEXT</div>
-    <h1 class="cpick-ttl">Choose a <em>Category</em></h1>
-    <p class="cpick-sub" id="cp-sub">Where did your money flow today?</p>
+  <div class="cpick-body">
+    <div class="cpick-hdr" style="position:relative;">
+      <button onclick="document.getElementById('catPicker').classList.remove('on')" style="position:absolute;top:calc(var(--safe-top) + 14px);right:20px;width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="cpick-eye"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> TRANSACTION CONTEXT</div>
+      <h1 class="cpick-ttl">Choose a <em>Category</em></h1>
+      <p class="cpick-sub" id="cp-sub">Where did your money flow today?</p>
+    </div>
+    <div class="cat-grid" id="catGrid"></div>
   </div>
-  <div class="cat-grid" id="catGrid"></div>
   <div class="conf-w"><button class="btn btn-p" onclick="confirmCat()" id="cp-conf">Confirm Selection →</button><p class="conf-sub" id="catConfSub">SELECTED: 0 CATEGORY</p></div>
 </div>
 
@@ -7631,7 +7642,8 @@ function closeAnggaranRiwayat(){
 
 <!-- TAMBAH / EDIT ANGGARAN MODAL -->
 <div class="moverlay" id="anggaranModal">
-  <div class="msheet" style="padding:16px 20px calc(var(--safe-bot) + 28px);">
+  <div class="msheet">
+    <div class="msheet-body">
     <div class="mhandle"></div>
     <div class="mhdr">
       <div class="mttl" id="anggaran-modal-title">Tambah Anggaran</div>
@@ -7667,11 +7679,14 @@ function closeAnggaranRiwayat(){
       onfocus="this.style.borderColor='var(--blue2)'" onblur="this.style.borderColor='transparent'"></textarea>
 
     <input type="hidden" id="anggaran-edit-id" value="">
-    <button onclick="simpanAnggaran()" style="width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,196,.3);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/></svg>
-      Simpan Anggaran
-    </button>
-    <button id="anggaran-delete-btn" onclick="hapusAnggaran()" style="display:none;width:100%;padding:13px;border-radius:14px;background:rgba(239,68,68,.08);color:var(--red);border:1.5px solid rgba(239,68,68,.15);font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;">Hapus Anggaran</button>
+    </div><!-- end msheet-body -->
+    <div class="msheet-foot">
+      <button onclick="simpanAnggaran()" style="width:100%;padding:16px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;font-family:var(--f);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,196,.3);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/></svg>
+        Simpan Anggaran
+      </button>
+      <button id="anggaran-delete-btn" onclick="hapusAnggaran()" style="display:none;width:100%;padding:13px;border-radius:14px;background:rgba(239,68,68,.08);color:var(--red);border:1.5px solid rgba(239,68,68,.15);font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;">Hapus Anggaran</button>
+    </div>
   </div>
 </div>
 

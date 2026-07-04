@@ -4227,7 +4227,7 @@ function getWalletSources(){
 }
 
 let txType = 'expense'; // 'expense' | 'income' | 'transfer'
-let selSource = 'other';
+let selSource = null;
 let selDest   = 'main';   // destination for income/transfer
 let rawAmountNum = 0;
 
@@ -4285,18 +4285,18 @@ function buildSourceGrid() {
   let sources;
   if (txType === 'income') {
     srcLbl.textContent = lang==='id' ? 'SUMBER PEMASUKAN' : 'INCOME SOURCE';
-    sources = [MS_SALARY, ...wSrcs, MS_OTHER];
+    sources = [MS_SALARY, ...wSrcs];
   } else if (txType === 'transfer') {
     srcLbl.textContent = lang==='id' ? 'DARI KARTU' : 'FROM CARD';
-    sources = wSrcs.length ? [...wSrcs, MS_OTHER] : [MS_OTHER];
+    sources = wSrcs;
   } else {
     srcLbl.textContent = lang==='id' ? 'BAYAR DARI' : 'PAY FROM';
-    sources = wSrcs.length ? [...wSrcs, MS_OTHER] : [MS_OTHER];
+    sources = wSrcs;
   }
 
-  // Auto-select first if current not valid
+  // Tidak ada auto-select — biarkan kosong sampai user memilih kartu secara manual
   const keys = sources.map(s=>s.key);
-  if (!keys.includes(selSource)) selSource = sources[0]?.key || 'other';
+  if (!keys.includes(selSource)) selSource = null;
 
   _buildChipGrid(g, sources, selSource, (key) => {
     selSource = key;
@@ -4432,7 +4432,7 @@ function buildCatGrid(){const g=document.getElementById('catGrid');if(!g)return;
 function openAddModal(){
   document.getElementById('addModal').classList.add('on');
   // Reset
-  txType='expense'; selSource='other'; selDest='main'; rawAmountNum=0;
+  txType='expense'; selSource=null; selDest='main'; rawAmountNum=0;
   document.getElementById('amountRaw').value='';
   document.getElementById('amountPreview').textContent='';
   document.getElementById('txSummaryPreview').style.display='none';
@@ -4458,7 +4458,7 @@ function openAddModal(){
 
 function closeAddModal(){
   document.getElementById('addModal').classList.remove('on');
-  rawAmountNum=0;selCat='';selCatIco='';selCatColor='';selDest='main';
+  rawAmountNum=0;selCat='';selCatIco='';selCatColor='';selSource=null;selDest='main';
   document.getElementById('txSummaryPreview').style.display='none';
 }
 
@@ -4472,6 +4472,9 @@ function completeTx(){
   }
   if(!selCat){
     toast('⚠️ '+(lang==='id'?'Pilih kategori dahulu!':'Please select a category!')); return;
+  }
+  if(!selSource && document.querySelectorAll('#sourceGrid .src-chip').length){
+    toast('⚠️ '+(lang==='id'?'Pilih kartu terlebih dahulu!':'Please select a card first!')); return;
   }
 
   const note       = document.getElementById('noteInput').value || T('cat-'+selCat);

@@ -61,8 +61,26 @@ const fsDB   = firebase.firestore();   // Firestore
 // Ambil UID user yang sedang login
 function fbUID(){ return fbAuth.currentUser?.uid || null; }
 
-// — REALTIME DB: simpan seluruh state
-async function fbSaveState(){
+// — Bersihkan objek dari `undefined` sebelum dikirim ke Realtime DB.
+// Firebase RTDB MENOLAK (throw) setiap value yang undefined di dalam object/array,
+// walau hanya 1 field. Ini adalah penyebab paling umum toast
+// "Gagal menyimpan ke cloud" muncul padahal koneksi & rules sudah benar
+// (mis. field opsional seperti `catatan`, `active`, dsb yang belum pernah di-set).
+function _fbSanitize(val){
+  if (val === undefined) return null;
+  if (val === null || typeof val !== 'object') return val;
+  if (Array.isArray(val)) return val.map(_fbSanitize);
+  const out = {};
+  for (const k in val){
+    if (!Object.prototype.hasOwnProperty.call(val, k)) continue;
+    const v = val[k];
+    out[k] = (v === undefined) ? null : _fbSanitize(v);
+  }
+  return out;
+}
+
+// — REALTIME DB: simpan seluruh state (dengan retry otomatis)
+async function fbSaveState(_retryCount){
   const uid = fbUID(); if(!uid) return;
   const ts = Date.now();
   _lastSyncTs = ts;
@@ -75,7 +93,7 @@ async function fbSaveState(){
     return slim;
   });
 
-  const state = {
+  const rawState = {
     balance,
     wallets,
     goals,
@@ -94,13 +112,36 @@ async function fbSaveState(){
     themeColor: (typeof currentThemeId !== 'undefined') ? currentThemeId : 'blue',
     updatedAt: ts
   };
+  // Bersihkan seluruh pohon data dari `undefined` sebelum dikirim.
+  const state = _fbSanitize(rawState);
+
+  // Jika sedang offline, jangan langsung dianggap gagal — tunggu online lagi
+  // lalu simpan ulang otomatis (menghindari toast error palsu saat sinyal hilang).
+  if (navigator.onLine === false){
+    _pendingSaveOnReconnect = true;
+    return;
+  }
+
   try {
     await fbDB.ref(`users/${uid}/state`).set(state);
+    _pendingSaveOnReconnect = false;
   } catch(e){
     console.warn('RTDB save error:', e);
-    toast('⚠️ Gagal menyimpan ke cloud. Cek koneksi internet.');
+    const attempt = _retryCount || 0;
+    if (attempt < 2){
+      // Coba lagi otomatis (network blip / kontensi sesaat) sebelum menampilkan error ke user.
+      setTimeout(()=>{ fbSaveState(attempt+1); }, 1500 * (attempt+1));
+    } else {
+      toast('⚠️ Gagal menyimpan ke cloud. Cek koneksi internet.');
+    }
   }
 }
+
+// Saat koneksi kembali online, simpan ulang perubahan yang tertunda.
+let _pendingSaveOnReconnect = false;
+window.addEventListener('online', ()=>{
+  if (_pendingSaveOnReconnect) fbSaveState();
+});
 
 // — REALTIME DB: baca seluruh state
 async function fbLoadState(){
@@ -366,10 +407,21 @@ function _reconcileTsFromTime(){
 
 // Debounced auto-save (hindari terlalu banyak write)
 let _saveTimer = null;
+let _saveDirty = false;
 function fbAutoSave(){
+  _saveDirty = true;
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(()=>{ fbSaveState(); }, 1200);
+  _saveTimer = setTimeout(()=>{ _saveDirty=false; fbSaveState(); }, 1200);
 }
+// Paksa simpan sekarang juga (dipanggil saat app disembunyikan/ditutup)
+// agar perubahan terakhir tidak hilang hanya karena debounce 1200ms belum selesai.
+function _flushPendingSave(){
+  if(!_saveDirty) return;
+  clearTimeout(_saveTimer);
+  _saveDirty = false;
+  fbSaveState();
+}
+
 </script>
 <style>
 :root{
@@ -2257,7 +2309,7 @@ async function _saveNotifRTDB(){
         ...n,
         time: n.time instanceof Date ? n.time.toISOString() : n.time
       }));
-    await fbDB.ref(`users/${uid}/notifications`).set({ items: toSave, notifId });
+    await fbDB.ref(`users/${uid}/notifications`).set(_fbSanitize({ items: toSave, notifId }));
   } catch(e){ console.warn('RTDB notif save error:', e); }
 }
 
@@ -6021,12 +6073,18 @@ async function showPinLockForgot(){
 
 // Visibility API for auto PIN lock
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='hidden'){ appHidden=true; }
+  if(document.visibilityState==='hidden'){
+    appHidden=true;
+    _flushPendingSave(); // pastikan perubahan terakhir tersimpan sebelum app diminimize/ditutup
+  }
   else if(document.visibilityState==='visible' && appHidden){
     appHidden=false;
     if(savedPin && user && document.getElementById('app').classList.contains('on')) showPinLock();
   }
 });
+// Jaring pengaman tambahan: tab/browser ditutup langsung
+window.addEventListener('pagehide', _flushPendingSave);
+window.addEventListener('beforeunload', _flushPendingSave);
 
 // ============================================================
 // PIN SETUP (override existing pinKey)

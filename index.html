@@ -1122,7 +1122,7 @@ body{background:var(--bg);transition:background .35s;}
         <svg width="60" height="70" viewBox="0 0 60 70" fill="none"><polygon points="30,5 55,65 5,65" fill="rgba(255,255,255,.85)"/></svg>
         <svg style="position:absolute;bottom:0;left:0;right:0;height:60px;width:100%;opacity:.3" viewBox="0 0 340 60" preserveAspectRatio="none"><polyline points="0,55 50,42 90,48 140,28 180,33 220,14 270,18 340,3" stroke="rgba(59,130,246,.5)" stroke-width="2" fill="none"/></svg>
       </div>
-      <div class="sp-gain">↗ +24.5%</div>
+      <div class="sp-gain" id="sp-gain-badge">↗ +24.5%</div>
     </div>
   </div>
   <div class="sp-content">
@@ -3996,8 +3996,12 @@ function updateAllAmounts(){
   const netBulanIni = incBulanIni - expBulanIni;
   // Saldo awal bulan = saldo sekarang - net bulan ini
   const balAwalBulan = balance - netBulanIni;
-  const gainBadge = document.getElementById('h-gain-badge');
-  if (gainBadge) {
+  // ── Terapkan ke SEMUA badge panah+persentase (home & splash/welcome) ──
+  // supaya card di welcome page selalu mengikuti angka riil card total saldo,
+  // bukan lagi nilai statis hardcoded.
+  ['h-gain-badge', 'sp-gain-badge'].forEach(function(id){
+    const gainBadge = document.getElementById(id);
+    if (!gainBadge) return;
     if (balAwalBulan > 0) {
       const pct = (netBulanIni / balAwalBulan) * 100;
       const sign = pct >= 0 ? '+' : '';
@@ -4016,7 +4020,7 @@ function updateAllAmounts(){
       gainBadge.style.background = 'rgba(107,114,128,.1)';
       gainBadge.style.color = 'var(--t3)';
     }
-  }
+  });
 
   // Spending chips — dari historyItems bulan ini
   const cats=['food','transport','rent','fun','shopping','charity','marriage','investasi','tarik'];
@@ -5990,6 +5994,7 @@ async function doLogout(){
   document.getElementById('loginEmail').value='';
   document.getElementById('loginPw').value='';
   clearErrs(['loginEmailErr','loginPwErr']);
+  updateAllAmounts(); // reset card total saldo & badge panah/persentase (home + welcome page)
   goTo('splash');
 }
 

@@ -1107,7 +1107,7 @@ body{background:var(--bg);transition:background .35s;}
 <div class="scr on" id="splash">
   <div class="sp-hdr">
     <div class="logo">maN<em>T</em>apps</div>
-    <button class="ic-btn" onclick="toast('maNTapps v2.5.0')">
+    <button class="ic-btn" onclick="showAppVersionToast()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
     </button>
   </div>
@@ -1670,7 +1670,7 @@ body{background:var(--bg);transition:background .35s;}
         <div class="st-item" onclick="toast('Help Center coming soon!')"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="st-info"><div class="st-nm" id="st-help">Help Center</div><div class="st-sub">FAQs, Contact Support</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item danger" onclick="doLogout()"><div class="st-ico"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="st-info"><div class="st-nm" id="st-logout">Log Out</div><div class="st-sub" id="st-logoutsub">Securely sign out</div></div></div>
       </div>
-      <div class="st-foot"><div class="st-foot-t">MANTAPPS V2.5.0</div><div class="st-foot-t" style="margin-top:3px;" id="st-hcft">HANDCRAFTED FOR FINANCIAL WELLNESS</div></div>
+      <div class="st-foot"><div class="st-foot-t">MANTAPPS <span id="st-foot-version">V2.5.0</span></div><div class="st-foot-t" style="margin-top:3px;" id="st-hcft">HANDCRAFTED FOR FINANCIAL WELLNESS</div></div>
     </div>
   </div>
 
@@ -2153,6 +2153,15 @@ body{background:var(--bg);transition:background .35s;}
 // ============================================================
 // STATE
 // ============================================================
+// APP_VERSION: placeholder ini otomatis diganti oleh GitHub Actions
+// (lihat .github/workflows/deploy.yml) setiap kali push ke branch utama,
+// jadi TIDAK PERLU diedit manual lagi. Nilai lokal ini hanya fallback
+// saat dijalankan langsung dari file (belum lewat CI).
+const APP_VERSION = (function(){
+  const injected = '__APP_VERSION__';
+  return injected.indexOf('__APP_VERSION__') === -1 ? injected : 'V2.5.0-dev';
+})();
+function showAppVersionToast(){ toast('maNTapps ' + APP_VERSION); }
 let lang='id', darkMode=false;
 
 // ============================================================
@@ -5545,6 +5554,7 @@ fbAuth.onAuthStateChanged(async (fu) => {
 buildCatGrid();
 applyLang();
 recalcTotalBalance();
+(function(){ const v=document.getElementById('st-foot-version'); if(v) v.textContent=APP_VERSION; })();
 goTo('splash');
 </script>
 

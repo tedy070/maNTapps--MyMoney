@@ -2026,36 +2026,11 @@ body{background:var(--bg);transition:background .35s;}
     <button class="btn btn-s" onclick="hidePinChange()">Batal</button>
   </div>
 
-  <!-- CHANGE PASSWORD VIEW -->
-  <div id="pwChangeView" style="display:none;padding:0 20px 20px;">
-    <div style="text-align:center;margin-bottom:20px;"><div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;">Ganti Password</div><div style="font-size:12px;color:var(--t3);">Masukkan password lama dan baru Anda</div></div>
-    <div class="fgrp">
-      <label class="flbl">PASSWORD SAAT INI</label>
-      <div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-      <input class="finput" type="password" id="pwCurrent" placeholder="Password saat ini">
-      <span class="ieye" onclick="togglePw('pwCurrent','eyePwC')"><svg viewBox="0 0 24 24" id="eyePwC"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
-      </div>
-      <div class="emsg" id="pwCurrentErr" style="display:none;">Password saat ini salah</div>
-    </div>
-    <div class="fgrp">
-      <label class="flbl">PASSWORD BARU</label>
-      <div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-      <input class="finput" type="password" id="pwNew" placeholder="Password baru (min. 6 karakter)">
-      <span class="ieye" onclick="togglePw('pwNew','eyePwN')"><svg viewBox="0 0 24 24" id="eyePwN"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
-      </div>
-      <div class="emsg" id="pwNewErr" style="display:none;">Password minimal 6 karakter</div>
-    </div>
-    <div class="fgrp">
-      <label class="flbl">KONFIRMASI PASSWORD BARU</label>
-      <div class="iwrap"><span class="iico"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-      <input class="finput" type="password" id="pwConfirm" placeholder="Konfirmasi password baru">
-      <span class="ieye" onclick="togglePw('pwConfirm','eyePwCf')"><svg viewBox="0 0 24 24" id="eyePwCf"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
-      </div>
-      <div class="emsg" id="pwConfirmErr" style="display:none;">Password tidak cocok</div>
-    </div>
-    <button class="btn btn-p" onclick="doChangePassword()" style="margin-bottom:8px;">Simpan Password Baru</button>
-    <button class="btn btn-s" onclick="hidePasswordChange()">Batal</button>
-  </div>
+  <!-- Catatan: view "Ganti Password" versi lama yang pernah ada di sini sudah
+       dihapus karena tidak pernah dipanggil (dead code) dan ID-nya bentrok
+       dengan #pwChangeOverlay (overlay ganti password yang sebenarnya aktif),
+       menyebabkan getElementById() salah sasaran dan fitur ganti password
+       tidak berfungsi (lihat showPasswordChange() / #pwChangeOverlay). -->
 </div>
 
 <!-- NOTIF SETTINGS OVERLAY -->

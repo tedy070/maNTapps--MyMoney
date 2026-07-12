@@ -110,6 +110,7 @@ async function fbSaveState(_retryCount){
     lang,
     darkMode: document.body.classList.contains('dk'),
     themeColor: (typeof currentThemeId !== 'undefined') ? currentThemeId : 'blue',
+    liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity },
     updatedAt: ts
   };
   // Bersihkan seluruh pohon data dari `undefined` sebelum dikirim.
@@ -426,6 +427,7 @@ function _flushPendingSave(){
 <style>
 :root{
   --bg:#EEF1F8;--surface:#fff;--surface2:#F4F6FC;
+  --surface-rgb:255,255,255;--surface2-rgb:244,246,252;
   --navy:#0D2152;--blue:#1A56C4;--blue2:#2A6FD6;
   --teal:#0B7A63;--teal2:#0FA884;
   --t2:#4A5568;--t3:#8896A8;
@@ -436,14 +438,17 @@ function _flushPendingSave(){
   --f:'Sora',sans-serif;--f2:'DM Sans',sans-serif;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bot:env(safe-area-inset-bottom,0px);
+  --lg-alpha:.55;--lg-blur:20px;--lg-border:rgba(255,255,255,.35);
 }
 .dk{
   --bg:#0D1421;--surface:#172035;--surface2:#1E2D47;
+  --surface-rgb:23,32,53;--surface2-rgb:30,45,71;
   --navy:#E0EAFF;--blue2:#5B9BF8;
   --t2:#A0B4CC;--t3:#5A7099;
   --border:rgba(100,140,220,.14);
   --sh:0 4px 24px rgba(0,0,0,.45);
   --sh2:0 2px 8px rgba(0,0,0,.3);
+  --lg-border:rgba(255,255,255,.1);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;font-family:var(--f2);}
@@ -599,6 +604,12 @@ body{background:var(--bg);transition:background .35s;}
   backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px);
 }
+.liquid-glass .bnav{
+  background:rgba(var(--surface-rgb),var(--lg-alpha));
+  backdrop-filter:blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);
+  border-top:1px solid var(--lg-border);
+}
 .nitem{
   display:flex;flex-direction:column;align-items:center;gap:3px;
   padding:6px 10px;cursor:pointer;border-radius:10px;
@@ -686,8 +697,9 @@ body{background:var(--bg);transition:background .35s;}
 .tx-item{
   background:var(--surface);border-radius:14px;padding:13px 15px;
   display:flex;align-items:center;gap:11px;box-shadow:var(--sh2);
-  transition:transform .15s;
+  transition:transform .15s,background .35s;
 }
+.liquid-glass .tx-item{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
 .tx-item:active{transform:scale(.99);}
 .tx-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tx-ico svg{width:20px;height:20px;fill:none;stroke-width:1.8;}
@@ -870,7 +882,8 @@ body{background:var(--bg);transition:background .35s;}
 .bulan-item-count{font-size:11px;color:var(--t3);}
 
 /* SETTINGS */
-.prof-card{background:var(--surface);border-radius:18px;padding:20px;margin:0 16px 18px;text-align:center;box-shadow:var(--sh2);}
+.prof-card{background:var(--surface);border-radius:18px;padding:20px;margin:0 16px 18px;text-align:center;box-shadow:var(--sh2);transition:background .35s;}
+.liquid-glass .prof-card{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
 .pav-wrap{position:relative;display:inline-block;margin-bottom:12px;}
 .pav{width:76px;height:76px;border-radius:50%;background:var(--navy);margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;}
 .pav img{width:100%;height:100%;object-fit:cover;}
@@ -882,7 +895,8 @@ body{background:var(--bg);transition:background .35s;}
 .pbadge{display:inline-flex;align-items:center;gap:5px;background:rgba(11,122,99,.1);color:var(--teal);padding:5px 14px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
 .pbadge svg{width:12px;height:12px;stroke:var(--teal);fill:none;stroke-width:2;}
 .st-lbl{padding:0 16px;margin-bottom:9px;font-size:10px;letter-spacing:2px;color:var(--t3);font-weight:600;text-transform:uppercase;}
-.st-grp{background:var(--surface);border-radius:16px;margin:0 16px 18px;box-shadow:var(--sh2);overflow:hidden;}
+.st-grp{background:var(--surface);border-radius:16px;margin:0 16px 18px;box-shadow:var(--sh2);overflow:hidden;transition:background .35s;}
+.liquid-glass .st-grp{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
 .st-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
 .st-item:last-child{border-bottom:none;}
 .st-item:active{background:var(--surface2);}
@@ -907,7 +921,8 @@ body{background:var(--bg);transition:background .35s;}
 .ovr::-webkit-scrollbar{display:none;}
 .ovr.on{display:flex;}
 .ovr-hdr{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-top) + 14px) 20px 16px;}
-.ovr-back{width:36px;height:36px;background:var(--surface);border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:var(--sh2);}
+.ovr-back{width:36px;height:36px;background:var(--surface);border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:var(--sh2);transition:background .35s;}
+.liquid-glass .ovr-back{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
 .ovr-back svg{width:17px;height:17px;stroke:var(--navy);fill:none;stroke-width:2;}
 .ovr-ttl{font-family:var(--f);font-size:18px;font-weight:700;color:var(--navy);}
 
@@ -1684,7 +1699,11 @@ body{background:var(--bg);transition:background .35s;}
           <div class="st-info"><div class="st-nm">Calculator</div><div class="st-sub">Financial calculator</div></div>
           <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
         </div>
-
+        <div class="st-item" onclick="openLiquidGlassOverlay()">
+          <div class="st-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" fill="none" stroke="#2A6FD6" stroke-width="1.6"><path d="M12 2.5c-3 3.2-6 6.7-6 11a6 6 0 0012 0c0-4.3-3-7.8-6-11z"/><path d="M8.6 14c0 1.8 1.4 3 3 3" stroke-opacity=".55"/></svg></div>
+          <div class="st-info"><div class="st-nm">Liquid Glass</div><div class="st-sub" id="lg-sub">Tampilan kaca transparan</div></div>
+          <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
+        </div>
       </div>
       <div class="st-lbl" id="st-suplbl">SUPPORT & EXIT</div>
       <div class="st-grp">
@@ -2143,6 +2162,42 @@ body{background:var(--bg);transition:background .35s;}
   <div id="themeColorGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 16px 36px;"></div>
 </div>
 
+<div class="ovr" id="liquidGlassOvr">
+  <div class="ovr-hdr"><button class="ovr-back" onclick="closeLiquidGlassOverlay()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Liquid Glass</div></div>
+  <div style="padding:0 16px 4px;font-size:12px;color:var(--t3);line-height:1.5;">Ubah tampilan navbar, card, dan panel jadi material kaca transparan yang membaur dengan warna latar di baliknya — terinspirasi dari desain Liquid Glass di iOS.</div>
+
+  <div class="st-grp" style="margin-top:16px;">
+    <div class="st-item" style="cursor:default;">
+      <div class="st-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" fill="none" stroke="#2A6FD6" stroke-width="1.6"><path d="M12 2.5c-3 3.2-6 6.7-6 11a6 6 0 0012 0c0-4.3-3-7.8-6-11z"/></svg></div>
+      <div class="st-info"><div class="st-nm">Liquid Glass</div><div class="st-sub" id="lg-toggle-sub">Nonaktif</div></div>
+      <button class="tog" id="lgToggle" onclick="toggleLiquidGlass()"></button>
+    </div>
+  </div>
+
+  <div id="lgSubSettings" style="display:none;">
+    <div class="st-lbl">TINGKAT TRANSPARANSI</div>
+    <div class="st-grp" style="padding:18px 16px 20px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">
+        <span>Clear</span><span id="lgIntensityVal">55%</span><span>Tinted</span>
+      </div>
+      <input type="range" id="lgIntensitySlider" min="15" max="90" value="55" step="1" oninput="setLiquidGlassIntensity(this.value)" style="width:100%;accent-color:var(--blue2);">
+      <div style="font-size:11.5px;color:var(--t3);margin-top:10px;line-height:1.5;">Geser ke kiri untuk kaca lebih bening, ke kanan untuk lebih pekat/kontras.</div>
+    </div>
+
+    <div class="st-lbl">PRATINJAU</div>
+    <div id="lgPreviewCard" class="st-grp" style="padding:16px;display:flex;align-items:center;gap:12px;">
+      <div style="width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,var(--blue),var(--blue2));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div>
+        <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Contoh Card</div>
+        <div style="font-size:12px;color:var(--t3);">Begini kira-kira tampilan kaca di card & navbar</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
@@ -2161,6 +2216,49 @@ const _RAW_VERSION = '__APP_VERSION__';
 const APP_VERSION = _RAW_VERSION.startsWith('__') ? 'V2.5.0-dev' : _RAW_VERSION;
 function showAppVersionToast(){ toast('maNTapps ' + APP_VERSION); }
 let lang='id', darkMode=false;
+let liquidGlassEnabled=false, liquidGlassIntensity=55;
+
+// ============================================================
+// LIQUID GLASS — tema kaca transparan (terinspirasi iOS Liquid Glass)
+// ============================================================
+function applyLiquidGlass(enabled, intensity, opts){
+  opts = opts || {};
+  liquidGlassEnabled = enabled;
+  liquidGlassIntensity = intensity;
+  document.body.classList.toggle('liquid-glass', enabled);
+  // Alpha 15%→90% dipetakan ke rentang aman .30–.85 supaya konten tetap kebaca
+  const alpha = (0.30 + (intensity/100) * 0.55).toFixed(2);
+  document.documentElement.style.setProperty('--lg-alpha', alpha);
+  document.documentElement.style.setProperty('--lg-blur', (14 + (intensity/100)*16).toFixed(0)+'px');
+
+  const tog=document.getElementById('lgToggle');
+  const sub=document.getElementById('lgSubSettings');
+  const togSub=document.getElementById('lg-toggle-sub');
+  const listSub=document.getElementById('lg-sub');
+  const slider=document.getElementById('lgIntensitySlider');
+  const val=document.getElementById('lgIntensityVal');
+  if(tog) tog.classList.toggle('on', enabled);
+  if(sub) sub.style.display = enabled ? 'block' : 'none';
+  if(togSub) togSub.textContent = enabled ? 'Aktif' : 'Nonaktif';
+  if(listSub) listSub.textContent = enabled ? 'Aktif · Kaca transparan' : 'Tampilan kaca transparan';
+  if(slider) slider.value = intensity;
+  if(val) val.textContent = intensity+'%';
+
+  if(!opts.silent) fbAutoSave();
+}
+function toggleLiquidGlass(){
+  applyLiquidGlass(!liquidGlassEnabled, liquidGlassIntensity);
+  toast(liquidGlassEnabled ? '🫧 Liquid Glass ON' : 'Liquid Glass OFF');
+}
+function setLiquidGlassIntensity(v){
+  applyLiquidGlass(liquidGlassEnabled, parseInt(v,10));
+}
+function openLiquidGlassOverlay(){
+  document.getElementById('liquidGlassOvr').classList.add('on');
+}
+function closeLiquidGlassOverlay(){
+  document.getElementById('liquidGlassOvr').classList.remove('on');
+}
 
 // ============================================================
 // THEME COLOR — palet warna aksen (gantikan --blue / --blue2)
@@ -2254,6 +2352,21 @@ function cacheLastPhoto(photo){
 }
 function getCachedLastPhoto(){
   try{ return localStorage.getItem(LS_LAST_PHOTO_KEY); }catch(e){ return null; }
+}
+// ── Cache persentase kenaikan welcome page (localStorage) ──
+// Sama alasannya dengan cache foto: angka persentase (sp-gain-badge) baru
+// terhitung setelah balance/historyItems selesai dimuat dari Firebase (async),
+// padahal welcome page sudah tampil duluan. Cache ini KHUSUS welcome page —
+// badge persentase di home page (h-gain-badge) tetap murni dari data resmi.
+const LS_LAST_GAIN_KEY='mm_last_known_gain';
+function cacheLastGain(text, bg, color){
+  try{ localStorage.setItem(LS_LAST_GAIN_KEY, JSON.stringify({text, bg, color})); }catch(e){}
+}
+function getCachedLastGain(){
+  try{
+    const raw=localStorage.getItem(LS_LAST_GAIN_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
 }
 let pinBuf='',pinStp=0,newPinSaved='';
 let goalColor='#1A56C4', walletColorSel='#1A56C4,#2A6FD6', walletTypeSel='Debit', editWalletColorSel='#1A56C4,#2A6FD6';
@@ -4024,24 +4137,28 @@ function updateAllAmounts(){
   ['h-gain-badge', 'sp-gain-badge'].forEach(function(id){
     const gainBadge = document.getElementById(id);
     if (!gainBadge) return;
+    let text, bg, color;
     if (balAwalBulan > 0) {
       const pct = (netBulanIni / balAwalBulan) * 100;
       const sign = pct >= 0 ? '+' : '';
       const arrow = pct >= 0 ? '↗' : '↘';
-      const color = pct >= 0 ? 'var(--green)' : 'var(--red)';
-      gainBadge.textContent = `${arrow} ${sign}${pct.toFixed(1)}%`;
-      gainBadge.style.background = pct >= 0 ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.13)';
-      gainBadge.style.color = color;
+      text  = `${arrow} ${sign}${pct.toFixed(1)}%`;
+      bg    = pct >= 0 ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.13)';
+      color = pct >= 0 ? 'var(--green)' : 'var(--red)';
     } else if (balance > 0 && balAwalBulan <= 0) {
       // Baru mulai bulan ini (belum ada saldo awal)
-      gainBadge.textContent = `↗ Baru`;
-      gainBadge.style.background = 'rgba(34,197,94,.15)';
-      gainBadge.style.color = 'var(--green)';
+      text  = `↗ Baru`;
+      bg    = 'rgba(34,197,94,.15)';
+      color = 'var(--green)';
     } else {
-      gainBadge.textContent = `— 0%`;
-      gainBadge.style.background = 'rgba(107,114,128,.1)';
-      gainBadge.style.color = 'var(--t3)';
+      text  = `— 0%`;
+      bg    = 'rgba(107,114,128,.1)';
+      color = 'var(--t3)';
     }
+    gainBadge.textContent = text;
+    gainBadge.style.background = bg;
+    gainBadge.style.color = color;
+    if (id === 'sp-gain-badge') cacheLastGain(text, bg, color);
   });
 
   // Spending chips — dari historyItems bulan ini
@@ -4273,6 +4390,19 @@ function updateSplashHero(photo){
   const cached=getCachedLastPhoto();
   if(cached){
     updateSplashHero(cached); // hanya tampilan welcome page, variabel photoDataUrl global TIDAK diubah
+  }
+})();
+// ── Terapkan cache persentase secepatnya (khusus welcome page) ──
+// Sama seperti cache foto: jalan instan sebelum balance/historyItems selesai
+// dimuat dari Firebase. Home page (h-gain-badge) TIDAK disentuh — tetap
+// menunggu updateAllAmounts() dengan data resmi seperti biasa.
+(function applyCachedGainInstantly(){
+  const cached=getCachedLastGain();
+  const badge=document.getElementById('sp-gain-badge');
+  if(cached && badge){
+    badge.textContent=cached.text;
+    badge.style.background=cached.bg;
+    badge.style.color=cached.color;
   }
 })();
 function pickAv(el,av){editAvData=av;editPhotoDataUrl=null;document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');updateAvatar('editAvPreview',av,null);}
@@ -5969,6 +6099,9 @@ async function enterApp(initialState){
     if(initialState.lang)     lang     = initialState.lang;
     if(initialState.darkMode) document.body.classList.add('dk');
     applyThemeColor(initialState.themeColor || currentThemeId, {save:false});
+    if(initialState.liquidGlass){
+      applyLiquidGlass(!!initialState.liquidGlass.enabled, initialState.liquidGlass.intensity||55, {silent:true});
+    }
 
   } else {
     // State baru (user baru) — semua sudah di-inisialisasi ke nilai default kosong

@@ -2240,6 +2240,21 @@ let selCat='',selCatIco='',selCatColor='',selCatStroke='';
 let balance=0, exRate=15800;
 let curAv='default', editAvData='default';
 let photoDataUrl=null, editPhotoDataUrl=null;
+// ── Cache foto profil terakhir (localStorage) ──
+// Tujuan: welcome page & layar PIN butuh tahu foto SEBELUM proses login/Firebase
+// selesai (yang berjalan async & baru selesai setelah welcome page tampil).
+// Dengan cache lokal ini, tampilan bisa langsung sinkron sejak awal render,
+// lalu diperbarui lagi begitu data asli dari server selesai dimuat.
+const LS_LAST_PHOTO_KEY='mm_last_known_photo';
+function cacheLastPhoto(photo){
+  try{
+    if(photo) localStorage.setItem(LS_LAST_PHOTO_KEY, photo);
+    else localStorage.removeItem(LS_LAST_PHOTO_KEY);
+  }catch(e){}
+}
+function getCachedLastPhoto(){
+  try{ return localStorage.getItem(LS_LAST_PHOTO_KEY); }catch(e){ return null; }
+}
 let pinBuf='',pinStp=0,newPinSaved='';
 let goalColor='#1A56C4', walletColorSel='#1A56C4,#2A6FD6', walletTypeSel='Debit', editWalletColorSel='#1A56C4,#2A6FD6';
 let editingGoalId=null, editingWalletId=null, openMenuId=null;
@@ -4247,12 +4262,25 @@ function updateSplashHero(photo){
     img.removeAttribute('src');
   }
 }
+// ── Terapkan cache foto secepatnya (khusus welcome page) ──
+// Baris ini jalan sesaat setelah welcome page dirender, TANPA menunggu
+// Firebase auth-check / fsLoadProfile selesai (yang baru resolve belakangan).
+// Layar PIN sengaja TIDAK dimasukkan di sini — ikonnya tetap menunggu
+// data foto resmi dari server (lewat enterApp/saveProfile) seperti semula.
+// Begitu data asli dari server datang, enterApp()/saveProfile() akan
+// memanggil updateSplashHero() lagi dengan nilai final.
+(function applyCachedPhotoInstantly(){
+  const cached=getCachedLastPhoto();
+  if(cached){
+    updateSplashHero(cached); // hanya tampilan welcome page, variabel photoDataUrl global TIDAK diubah
+  }
+})();
 function pickAv(el,av){editAvData=av;editPhotoDataUrl=null;document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');updateAvatar('editAvPreview',av,null);}
 function syncAvPicker(){document.querySelectorAll('.av-opt').forEach(o=>o.classList.toggle('sel',o.getAttribute('data-av')===curAv&&!photoDataUrl));}
 function handlePhotoUpload(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{editPhotoDataUrl=e.target.result;document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));updateAvatar('editAvPreview',editAvData,editPhotoDataUrl);};r.readAsDataURL(f);}
 function openEditProfile(){document.getElementById('editName').value=user?user.name:'Jordan Miller';document.getElementById('editEmail').value=user?user.email:'jordan.miller@curated.io';editAvData=curAv;editPhotoDataUrl=photoDataUrl;updateAvatar('editAvPreview',curAv,photoDataUrl);syncAvPicker();document.getElementById('editProfileOvr').classList.add('on');}
 function closeEditProfile(){document.getElementById('editProfileOvr').classList.remove('on');}
-async function saveProfile(){const name=document.getElementById('editName').value.trim();const em=document.getElementById('editEmail').value.trim();if(!name||!isEmail(em)){toast('⚠️ Please fill valid details');return;}curAv=editAvData;photoDataUrl=editPhotoDataUrl;if(user){user.name=name;user.email=em;user.avatar=curAv;user.photo=photoDataUrl;}document.getElementById('profileName').textContent=name;document.getElementById('profileEmail').textContent=em;updateAvatar('profileAv',curAv,photoDataUrl);updateAvatar('headerAv',curAv,photoDataUrl);updateSplashHero(photoDataUrl);updatePinLockIcon(photoDataUrl);closeEditProfile();addNotif('welcome','Profile Updated','Your profile has been saved successfully.');toast('✅ Profile saved!');// Simpan ke Firebase
+async function saveProfile(){const name=document.getElementById('editName').value.trim();const em=document.getElementById('editEmail').value.trim();if(!name||!isEmail(em)){toast('⚠️ Please fill valid details');return;}curAv=editAvData;photoDataUrl=editPhotoDataUrl;cacheLastPhoto(photoDataUrl);if(user){user.name=name;user.email=em;user.avatar=curAv;user.photo=photoDataUrl;}document.getElementById('profileName').textContent=name;document.getElementById('profileEmail').textContent=em;updateAvatar('profileAv',curAv,photoDataUrl);updateAvatar('headerAv',curAv,photoDataUrl);updateSplashHero(photoDataUrl);updatePinLockIcon(photoDataUrl);closeEditProfile();addNotif('welcome','Profile Updated','Your profile has been saved successfully.');toast('✅ Profile saved!');// Simpan ke Firebase
 await fsSaveProfile(user); fbAutoSave();}
 
 // ============================================================
@@ -5953,6 +5981,7 @@ async function enterApp(initialState){
   if(user){
     curAv        = user.avatar || 'default';
     photoDataUrl = user.photo  || null;
+    cacheLastPhoto(photoDataUrl); // data asli dari server, timpa cache lokal
     document.getElementById('profileName').textContent  = user.name;
     document.getElementById('profileEmail').textContent = user.email;
     document.getElementById('editName').value           = user.name;

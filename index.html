@@ -476,17 +476,21 @@ body{background:var(--bg);transition:background .35s;}
 .sp-badge::before{content:'';width:6px;height:6px;background:var(--teal2);border-radius:50%;}
 .hero-bg{width:100%;height:clamp(180px,45vw,260px);background:linear-gradient(135deg,#061730,#0a2e5c 40%,#0d4a7a 70%,#0b6fa8);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transition:background-image .3s ease;}
 .hero-glow{width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,.55) 0%,transparent 70%);position:absolute;transition:opacity .3s ease;}
-.hero-bg.has-photo{background-size:cover;background-position:center;}
+.hero-bg.has-photo{background:none;}
 .hero-bg.has-photo .hero-glow,
 .hero-bg.has-photo .hero-illust,
 .hero-bg.has-photo .hero-wave{opacity:0;}
+.hero-photo-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:none;}
+.hero-bg.has-photo .hero-photo-img{display:block;}
 .hero-photo-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.12) 0%,rgba(0,0,0,.4) 100%);opacity:0;transition:opacity .3s ease;pointer-events:none;}
 .hero-bg.has-photo .hero-photo-overlay{opacity:1;}
 .sp-badge{transition:background .3s ease,color .3s ease,border-color .3s ease;}
 .sp-badge.on-photo{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.35);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
 .sp-badge.on-photo::before{background:#fff;box-shadow:0 0 6px rgba(255,255,255,.85);}
-.pin-lock-icon{transition:background-image .3s ease,box-shadow .3s ease;background-size:cover;background-position:center;}
+.pin-lock-icon{transition:box-shadow .3s ease;}
 .pin-lock-icon.has-photo{box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.pin-lock-photo-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;border-radius:50%;display:none;}
+.pin-lock-icon.has-photo .pin-lock-photo-img{display:block;}
 .pin-lock-overlay{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(0,0,0,.08) 0%,rgba(0,0,0,.4) 100%);opacity:0;transition:opacity .3s ease;pointer-events:none;}
 .pin-lock-icon.has-photo .pin-lock-overlay{opacity:1;}
 .pin-lock-svg{position:relative;z-index:1;transition:opacity .3s ease;}
@@ -1133,6 +1137,7 @@ body{background:var(--bg);transition:background .35s;}
     <div class="sp-hero">
       <div class="sp-badge" id="s-badge">● SYSTEM ONLINE</div>
       <div class="hero-bg" id="hero-bg">
+        <img id="heroPhotoImg" class="hero-photo-img" alt="">
         <div class="hero-glow"></div>
         <svg class="hero-illust" width="60" height="70" viewBox="0 0 60 70" fill="none"><polygon points="30,5 55,65 5,65" fill="rgba(255,255,255,.85)"/></svg>
         <svg class="hero-wave" style="position:absolute;bottom:0;left:0;right:0;height:60px;width:100%;opacity:.3" viewBox="0 0 340 60" preserveAspectRatio="none"><polyline points="0,55 50,42 90,48 140,28 180,33 220,14 270,18 340,3" stroke="rgba(59,130,246,.5)" stroke-width="2" fill="none"/></svg>
@@ -4215,28 +4220,31 @@ const avSVGs={default:'<svg viewBox="0 0 24 24" fill="white"><path d="M20 21v-2a
 function updateAvatar(id,av,photo){const el=document.getElementById(id);if(!el)return;if(photo)el.innerHTML=`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;">`;else el.innerHTML=avSVGs[av]||avSVGs.default;}
 function updatePinLockIcon(photo){
   const icon=document.getElementById('pinLockIcon');
-  if(!icon)return;
+  const img=document.getElementById('pinLockPhotoImg');
+  if(!icon||!img)return;
   if(photo){
-    icon.style.backgroundImage=`url(${photo})`;
-    icon.classList.add('has-photo');
+    img.onload=()=>icon.classList.add('has-photo');
+    img.onerror=()=>{icon.classList.remove('has-photo');img.removeAttribute('src');};
+    img.src=photo;
   } else {
-    icon.style.backgroundImage='';
     icon.classList.remove('has-photo');
+    img.removeAttribute('src');
   }
 }
 // Sinkronkan tampilan card welcome page dengan foto profil (jika ada)
 function updateSplashHero(photo){
   const heroBg=document.getElementById('hero-bg');
   const badge=document.getElementById('s-badge');
-  if(!heroBg||!badge)return;
+  const img=document.getElementById('heroPhotoImg');
+  if(!heroBg||!badge||!img)return;
   if(photo){
-    heroBg.style.backgroundImage=`url(${photo})`;
-    heroBg.classList.add('has-photo');
-    badge.classList.add('on-photo');
+    img.onload=()=>{heroBg.classList.add('has-photo');badge.classList.add('on-photo');};
+    img.onerror=()=>{heroBg.classList.remove('has-photo');badge.classList.remove('on-photo');img.removeAttribute('src');};
+    img.src=photo;
   } else {
-    heroBg.style.backgroundImage='';
     heroBg.classList.remove('has-photo');
     badge.classList.remove('on-photo');
+    img.removeAttribute('src');
   }
 }
 function pickAv(el,av){editAvData=av;editPhotoDataUrl=null;document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');updateAvatar('editAvPreview',av,null);}
@@ -5623,6 +5631,7 @@ goTo('splash');
 <div id="pinLockScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9000;flex-direction:column;align-items:center;justify-content:center;transition:background .35s;">
   <div style="text-align:center;margin-bottom:32px;">
     <div class="pin-lock-icon" id="pinLockIcon" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue2));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(26,86,196,.35);position:relative;overflow:hidden;">
+      <img id="pinLockPhotoImg" class="pin-lock-photo-img" alt="">
       <svg class="pin-lock-svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
       <div class="pin-lock-overlay"></div>
     </div>

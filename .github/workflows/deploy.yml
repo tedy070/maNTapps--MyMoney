@@ -35,6 +35,16 @@ jobs:
           echo "App version: $VERSION"
           sed -i "s/__APP_VERSION__/${VERSION}/g" index.html
 
+      - name: Verify version stamp
+        # Langkah diagnostik: buktikan di log apakah sed di atas benar-benar
+        # mengganti placeholder atau tidak.
+        run: |
+          echo "== Baris yang mengandung APP_VERSION setelah sed: =="
+          grep -n "APP_VERSION" index.html || echo "(tidak ada baris ditemukan sama sekali!)"
+          echo ""
+          echo "== Sisa jumlah literal __APP_VERSION__ (harus 0): =="
+          grep -o "__APP_VERSION__" index.html | wc -l
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

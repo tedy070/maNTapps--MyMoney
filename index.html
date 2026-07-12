@@ -485,6 +485,12 @@ body{background:var(--bg);transition:background .35s;}
 .sp-badge{transition:background .3s ease,color .3s ease,border-color .3s ease;}
 .sp-badge.on-photo{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.35);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
 .sp-badge.on-photo::before{background:#fff;box-shadow:0 0 6px rgba(255,255,255,.85);}
+.pin-lock-icon{transition:background-image .3s ease,box-shadow .3s ease;background-size:cover;background-position:center;}
+.pin-lock-icon.has-photo{box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.pin-lock-overlay{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(0,0,0,.08) 0%,rgba(0,0,0,.4) 100%);opacity:0;transition:opacity .3s ease;pointer-events:none;}
+.pin-lock-icon.has-photo .pin-lock-overlay{opacity:1;}
+.pin-lock-svg{position:relative;z-index:1;transition:opacity .3s ease;}
+.pin-lock-icon.has-photo .pin-lock-svg{opacity:.55;}
 .sp-gain{position:absolute;bottom:12px;right:12px;background:var(--teal);color:white;padding:5px 11px;border-radius:9px;font-size:12px;font-weight:700;}
 .sp-content{padding:22px 20px 0;}
 .sp-title{font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;color:var(--navy);line-height:1.15;letter-spacing:-1px;margin-bottom:11px;}
@@ -4205,7 +4211,19 @@ function toggleDark(){darkMode=!darkMode;document.body.classList.toggle('dk',dar
 // AVATAR
 // ============================================================
 const avSVGs={default:'<svg viewBox="0 0 24 24" fill="white"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',star:'<svg viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/></svg>',bolt:'<svg viewBox="0 0 24 24" fill="#0FA884"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',chart:'<svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',shield:'<svg viewBox="0 0 24 24" fill="white"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',globe:'<svg viewBox="0 0 24 24" fill="none" stroke="#0FA884" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>',diamond:'<svg viewBox="0 0 24 24" fill="none" stroke="#5B9BF8" stroke-width="1.8"><path d="M6 3h12l4 6-10 13L2 9l4-6z"/></svg>',rocket:'<svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.8"><path d="M9 11l-6 6 3 3 6-6"/><path d="M22 2L11 13"/></svg>',crown:'<svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8"><path d="M2 20h20M4 20V9l8-7 8 7v11"/></svg>',biz:'<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>'};
+// Sinkronkan ikon kunci bulat di layar PIN dengan foto profil (jika ada)
 function updateAvatar(id,av,photo){const el=document.getElementById(id);if(!el)return;if(photo)el.innerHTML=`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;">`;else el.innerHTML=avSVGs[av]||avSVGs.default;}
+function updatePinLockIcon(photo){
+  const icon=document.getElementById('pinLockIcon');
+  if(!icon)return;
+  if(photo){
+    icon.style.backgroundImage=`url(${photo})`;
+    icon.classList.add('has-photo');
+  } else {
+    icon.style.backgroundImage='';
+    icon.classList.remove('has-photo');
+  }
+}
 // Sinkronkan tampilan card welcome page dengan foto profil (jika ada)
 function updateSplashHero(photo){
   const heroBg=document.getElementById('hero-bg');
@@ -4226,7 +4244,7 @@ function syncAvPicker(){document.querySelectorAll('.av-opt').forEach(o=>o.classL
 function handlePhotoUpload(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{editPhotoDataUrl=e.target.result;document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));updateAvatar('editAvPreview',editAvData,editPhotoDataUrl);};r.readAsDataURL(f);}
 function openEditProfile(){document.getElementById('editName').value=user?user.name:'Jordan Miller';document.getElementById('editEmail').value=user?user.email:'jordan.miller@curated.io';editAvData=curAv;editPhotoDataUrl=photoDataUrl;updateAvatar('editAvPreview',curAv,photoDataUrl);syncAvPicker();document.getElementById('editProfileOvr').classList.add('on');}
 function closeEditProfile(){document.getElementById('editProfileOvr').classList.remove('on');}
-async function saveProfile(){const name=document.getElementById('editName').value.trim();const em=document.getElementById('editEmail').value.trim();if(!name||!isEmail(em)){toast('⚠️ Please fill valid details');return;}curAv=editAvData;photoDataUrl=editPhotoDataUrl;if(user){user.name=name;user.email=em;user.avatar=curAv;user.photo=photoDataUrl;}document.getElementById('profileName').textContent=name;document.getElementById('profileEmail').textContent=em;updateAvatar('profileAv',curAv,photoDataUrl);updateAvatar('headerAv',curAv,photoDataUrl);updateSplashHero(photoDataUrl);closeEditProfile();addNotif('welcome','Profile Updated','Your profile has been saved successfully.');toast('✅ Profile saved!');// Simpan ke Firebase
+async function saveProfile(){const name=document.getElementById('editName').value.trim();const em=document.getElementById('editEmail').value.trim();if(!name||!isEmail(em)){toast('⚠️ Please fill valid details');return;}curAv=editAvData;photoDataUrl=editPhotoDataUrl;if(user){user.name=name;user.email=em;user.avatar=curAv;user.photo=photoDataUrl;}document.getElementById('profileName').textContent=name;document.getElementById('profileEmail').textContent=em;updateAvatar('profileAv',curAv,photoDataUrl);updateAvatar('headerAv',curAv,photoDataUrl);updateSplashHero(photoDataUrl);updatePinLockIcon(photoDataUrl);closeEditProfile();addNotif('welcome','Profile Updated','Your profile has been saved successfully.');toast('✅ Profile saved!');// Simpan ke Firebase
 await fsSaveProfile(user); fbAutoSave();}
 
 // ============================================================
@@ -5604,8 +5622,9 @@ goTo('splash');
 <!-- ===== PIN LOCK SCREEN ===== -->
 <div id="pinLockScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9000;flex-direction:column;align-items:center;justify-content:center;transition:background .35s;">
   <div style="text-align:center;margin-bottom:32px;">
-    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue2));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(26,86,196,.35);">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    <div class="pin-lock-icon" id="pinLockIcon" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue2));margin:0 auto 16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(26,86,196,.35);position:relative;overflow:hidden;">
+      <svg class="pin-lock-svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <div class="pin-lock-overlay"></div>
     </div>
     <div style="font-family:var(--f);font-size:20px;font-weight:800;color:var(--navy);">maNTapps</div>
     <div style="font-size:13px;color:var(--t3);margin-top:5px;" id="pinLockSub">Enter your PIN to continue</div>
@@ -5933,6 +5952,7 @@ async function enterApp(initialState){
     updateAvatar('headerAv',      curAv, photoDataUrl);
     updateAvatar('editAvPreview', curAv, photoDataUrl);
     updateSplashHero(photoDataUrl);
+    updatePinLockIcon(photoDataUrl);
     syncAvPicker();
   }
 
@@ -6076,6 +6096,7 @@ function showPinLock(){
   s.style.display='flex';
   document.getElementById('pinLockError').textContent='';
   document.getElementById('pinLockUser').textContent=user?.email||'';
+  updatePinLockIcon(photoDataUrl);
   updateLockPinDisplay();
 }
 function hidePinLock(){ const s=document.getElementById('pinLockScreen'); s.style.display='none'; lockPinBuf=''; }

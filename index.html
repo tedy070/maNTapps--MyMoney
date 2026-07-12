@@ -2132,10 +2132,12 @@ body{background:var(--bg);transition:background .35s;}
 // (lihat .github/workflows/deploy.yml) setiap kali push ke branch utama,
 // jadi TIDAK PERLU diedit manual lagi. Nilai lokal ini hanya fallback
 // saat dijalankan langsung dari file (belum lewat CI).
-const APP_VERSION = (function(){
-  const injected = '__APP_VERSION__';
-  return injected.indexOf('__APP_VERSION__') === -1 ? injected : 'V2.5.0-dev';
-})();
+// PENTING: jangan bandingkan dengan literal '__APP_VERSION__' di sini —
+// sed di CI mengganti SEMUA kemunculan teks itu (termasuk di dalam kode
+// pengecekan ini sendiri), jadi deteksi harus pakai pola generik (awalan
+// underscore ganda), bukan menyalin ulang literal placeholder-nya.
+const _RAW_VERSION = '__APP_VERSION__';
+const APP_VERSION = _RAW_VERSION.startsWith('__') ? 'V2.5.0-dev' : _RAW_VERSION;
 function showAppVersionToast(){ toast('maNTapps ' + APP_VERSION); }
 let lang='id', darkMode=false;
 

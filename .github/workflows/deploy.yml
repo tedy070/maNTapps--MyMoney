@@ -1,21 +1,17 @@
 name: Deploy to GitHub Pages
-
 # Jalan otomatis setiap kali ada push ke branch utama.
 # Ganti "main" di bawah kalau branch utama repo kamu namanya beda (mis. "master").
 on:
   push:
     branches: ["main"]
   workflow_dispatch: {}
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: "pages"
   cancel-in-progress: false
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -25,16 +21,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Stamp app version
-        # Versi = tanggal build (YYYY.MM.DD) + short commit hash, contoh: 2026.07.12-dadde28
+        # Versi = tanggal+jam build WIB (YYYY.MM.DD-HHmm) + short commit hash,
+        # contoh: 2026.07.13-0142-dadde28
+        # Sebelumnya pakai `date -u` (UTC) dengan presisi cuma sampai hari,
+        # jadi kalau push >1x di hari UTC yang sama, tanggalnya kelihatan
+        # "tidak berubah" walau hash-nya sudah beda. Sekarang dipakai:
+        #   - TZ='Asia/Jakarta' → tanggal mengikuti kalender WIB, bukan UTC
+        #   - format %H%M         → presisi jam:menit, jadi tiap deploy
+        #                           (bahkan di hari yang sama) tetap beda stempelnya
         # Placeholder __APP_VERSION__ di index.html otomatis diganti di sini,
         # jadi tidak perlu edit versi manual lagi tiap deploy.
         run: |
-          VERSION="$(date -u +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
-          echo "App version: $VERSION"
+          VERSION="$(TZ='Asia/Jakarta' date +'%Y.%m.%d-%H%M')-$(git rev-parse --short HEAD)"
+          echo "App version (WIB): $VERSION"
           sed -i "s/__APP_VERSION__/${VERSION}/g" index.html
-
       - name: Verify version stamp
         # Langkah diagnostik: buktikan di log apakah sed di atas benar-benar
         # mengganti placeholder atau tidak.
@@ -44,15 +45,12 @@ jobs:
           echo ""
           echo "== Sisa jumlah literal __APP_VERSION__ (harus 0): =="
           grep -o "__APP_VERSION__" index.html | wc -l
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

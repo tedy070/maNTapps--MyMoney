@@ -110,7 +110,7 @@ async function fbSaveState(_retryCount){
     lang,
     darkMode: document.body.classList.contains('dk'),
     themeColor: (typeof currentThemeId !== 'undefined') ? currentThemeId : 'blue',
-    liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity },
+    liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity, collapseOnScroll: liquidGlassCollapseOnScroll },
     updatedAt: ts
   };
   // Bersihkan seluruh pohon data dari `undefined` sebelum dikirim.
@@ -2221,6 +2221,15 @@ body{background:var(--bg);transition:background .35s;}
       <div style="font-size:11.5px;color:var(--t3);margin-top:10px;line-height:1.5;">Geser ke kiri untuk kaca lebih bening, ke kanan untuk lebih pekat/kontras.</div>
     </div>
 
+    <div class="st-lbl">PERILAKU NAVBAR</div>
+    <div class="st-grp" style="margin-bottom:20px;">
+      <div class="st-item" style="cursor:default;">
+        <div class="st-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" fill="none" stroke="#2A6FD6" stroke-width="1.6"><polyline points="7,13 12,18 17,13"/><polyline points="7,6 12,11 17,6"/></svg></div>
+        <div class="st-info"><div class="st-nm">Ciutkan saat Scroll</div><div class="st-sub" id="lg-collapse-sub">Navbar menyusut jadi bulatan saat scroll ke bawah</div></div>
+        <button class="tog" id="lgCollapseToggle" onclick="toggleLiquidGlassCollapse()"></button>
+      </div>
+    </div>
+
     <div class="st-lbl">PRATINJAU</div>
     <div id="lgPreviewCard" class="st-grp" style="padding:16px;display:flex;align-items:center;gap:12px;">
       <div style="width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,var(--blue),var(--blue2));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2253,7 +2262,7 @@ const _RAW_VERSION = '__APP_VERSION__';
 const APP_VERSION = _RAW_VERSION.startsWith('__') ? 'V2.5.0-dev' : _RAW_VERSION;
 function showAppVersionToast(){ toast('maNTapps ' + APP_VERSION); }
 let lang='id', darkMode=false;
-let liquidGlassEnabled=false, liquidGlassIntensity=55;
+let liquidGlassEnabled=false, liquidGlassIntensity=55, liquidGlassCollapseOnScroll=true;
 
 // ============================================================
 // LIQUID GLASS — tema kaca transparan (terinspirasi iOS Liquid Glass)
@@ -2262,6 +2271,7 @@ function applyLiquidGlass(enabled, intensity, opts){
   opts = opts || {};
   liquidGlassEnabled = enabled;
   liquidGlassIntensity = intensity;
+  if(typeof opts.collapseOnScroll === 'boolean') liquidGlassCollapseOnScroll = opts.collapseOnScroll;
   document.body.classList.toggle('liquid-glass', enabled);
   // Alpha 15%→90% dipetakan ke rentang aman .30–.85 supaya konten tetap kebaca
   const alpha = (0.30 + (intensity/100) * 0.55).toFixed(2);
@@ -2274,12 +2284,14 @@ function applyLiquidGlass(enabled, intensity, opts){
   const listSub=document.getElementById('lg-sub');
   const slider=document.getElementById('lgIntensitySlider');
   const val=document.getElementById('lgIntensityVal');
+  const collapseTog=document.getElementById('lgCollapseToggle');
   if(tog) tog.classList.toggle('on', enabled);
   if(sub) sub.style.display = enabled ? 'block' : 'none';
   if(togSub) togSub.textContent = enabled ? 'Aktif' : 'Nonaktif';
   if(listSub) listSub.textContent = enabled ? 'Aktif · Kaca transparan' : 'Tampilan kaca transparan';
   if(slider) slider.value = intensity;
   if(val) val.textContent = intensity+'%';
+  if(collapseTog) collapseTog.classList.toggle('on', liquidGlassCollapseOnScroll);
 
   if(!opts.silent) fbAutoSave();
   // Bentuk pill bnav berubah saat toggle → indikator perlu dihitung ulang
@@ -2296,6 +2308,17 @@ function toggleLiquidGlass(){
 }
 function setLiquidGlassIntensity(v){
   applyLiquidGlass(liquidGlassEnabled, parseInt(v,10));
+}
+function toggleLiquidGlassCollapse(){
+  liquidGlassCollapseOnScroll = !liquidGlassCollapseOnScroll;
+  const collapseTog=document.getElementById('lgCollapseToggle');
+  if(collapseTog) collapseTog.classList.toggle('on', liquidGlassCollapseOnScroll);
+  if(!liquidGlassCollapseOnScroll){
+    const bnav=document.querySelector('.bnav');
+    if(bnav) bnav.classList.remove('collapsed');
+  }
+  toast(liquidGlassCollapseOnScroll ? '🫧 Ciutkan saat Scroll ON' : 'Ciutkan saat Scroll OFF');
+  fbAutoSave();
 }
 function openLiquidGlassOverlay(){
   document.getElementById('liquidGlassOvr').classList.add('on');
@@ -4392,6 +4415,7 @@ window.addEventListener('resize', function(){
   let lastTop=0, idleTimer=null;
   tabc.addEventListener('scroll', function(){
     if(!document.body.classList.contains('liquid-glass')) return;
+    if(!liquidGlassCollapseOnScroll){ bnav.classList.remove('collapsed'); return; }
     const st=tabc.scrollTop;
     const delta=st-lastTop;
     if(st>40 && delta>4){
@@ -6189,7 +6213,7 @@ async function enterApp(initialState){
     if(initialState.darkMode) document.body.classList.add('dk');
     applyThemeColor(initialState.themeColor || currentThemeId, {save:false});
     if(initialState.liquidGlass){
-      applyLiquidGlass(!!initialState.liquidGlass.enabled, initialState.liquidGlass.intensity||55, {silent:true});
+      applyLiquidGlass(!!initialState.liquidGlass.enabled, initialState.liquidGlass.intensity||55, {silent:true, collapseOnScroll: initialState.liquidGlass.collapseOnScroll !== false});
     }
 
   } else {

@@ -27,11 +27,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Stamp app version
-        # Versi = tanggal build + short commit hash, contoh: 20260711-a1b2c3d
+        # Versi = tanggal build (YYYY.MM.DD) + short commit hash, contoh: 2026.07.12-dadde28
         # Placeholder __APP_VERSION__ di index.html otomatis diganti di sini,
         # jadi tidak perlu edit versi manual lagi tiap deploy.
         run: |
-          VERSION="$(date -u +'%Y%m%d')-$(git rev-parse --short HEAD)"
+          VERSION="$(date -u +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
           echo "App version: $VERSION"
           sed -i "s/__APP_VERSION__/${VERSION}/g" index.html
 

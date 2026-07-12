@@ -428,7 +428,7 @@ function _flushPendingSave(){
 :root{
   --bg:#EEF1F8;--surface:#fff;--surface2:#F4F6FC;
   --surface-rgb:255,255,255;--surface2-rgb:244,246,252;
-  --navy:#0D2152;--blue:#1A56C4;--blue2:#2A6FD6;
+  --navy:#0D2152;--blue:#1A56C4;--blue2:#2A6FD6;--blue2-rgb:42,111,214;
   --teal:#0B7A63;--teal2:#0FA884;
   --t2:#4A5568;--t3:#8896A8;
   --green:#22C55E;--red:#EF4444;--orange:#F59E0B;
@@ -443,7 +443,7 @@ function _flushPendingSave(){
 .dk{
   --bg:#0D1421;--surface:#172035;--surface2:#1E2D47;
   --surface-rgb:23,32,53;--surface2-rgb:30,45,71;
-  --navy:#E0EAFF;--blue2:#5B9BF8;
+  --navy:#E0EAFF;--blue2:#5B9BF8;--blue2-rgb:91,155,248;
   --t2:#A0B4CC;--t3:#5A7099;
   --border:rgba(100,140,220,.14);
   --sh:0 4px 24px rgba(0,0,0,.45);
@@ -689,6 +689,39 @@ body{background:var(--bg);transition:background .35s;}
 .dk .bal-card{background:linear-gradient(135deg,#152a5c,#1a3a7a 55%,#2A6FD6);}
 .bal-card::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06);}
 .bal-card::after{content:'';position:absolute;bottom:-30px;left:20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04);}
+
+/* ── Liquid Glass: bal-card jadi gelembung/gel kaca transparan ──
+   Warna navy-blue tetap dipertahankan tapi dibuat translusen +
+   diberi blur, rim-light tepi, glossy highlight, dan sedikit
+   animasi mengambang supaya terasa seperti gel yang hidup. */
+@keyframes lg-bubble-float{
+  0%,100%{ transform:translate(0,0) scale(1); }
+  50%{ transform:translate(6px,-8px) scale(1.03); }
+}
+.liquid-glass .bal-card{
+  border-radius:26px;
+  background:linear-gradient(135deg, rgba(13,33,82,.5), rgba(26,58,122,.4) 55%, rgba(var(--blue2-rgb),.32));
+  backdrop-filter:blur(var(--lg-blur)) saturate(180%);
+  -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);
+  border:1.5px solid rgba(255,255,255,.35);
+  box-shadow:0 14px 34px rgba(13,33,82,.22), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -28px 42px rgba(255,255,255,.05);
+}
+.dk.liquid-glass .bal-card{
+  background:linear-gradient(135deg, rgba(21,42,92,.5), rgba(26,58,122,.4) 55%, rgba(var(--blue2-rgb),.3));
+  border:1.5px solid rgba(255,255,255,.12);
+  box-shadow:0 14px 34px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12), inset 0 -28px 42px rgba(255,255,255,.03);
+}
+.liquid-glass .bal-card::before{
+  width:220px;height:220px;top:-70px;right:-60px;
+  background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.4), rgba(255,255,255,.06) 55%, transparent 70%);
+  filter:blur(2px);
+  animation:lg-bubble-float 8s ease-in-out infinite;
+}
+.liquid-glass .bal-card::after{
+  width:150px;height:150px;
+  background:radial-gradient(circle at 70% 70%, rgba(255,255,255,.16), transparent 70%);
+  animation:lg-bubble-float 9s ease-in-out infinite reverse;
+}
 .bal-lbl{font-size:10px;letter-spacing:2px;opacity:.7;margin-bottom:4px;font-weight:500;}
 .bal-amt{font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;letter-spacing:-1px;margin-bottom:3px;}
 .bal-usd{font-size:12px;opacity:.6;margin-bottom:14px;}
@@ -857,6 +890,31 @@ body{background:var(--bg);transition:background .35s;}
 .wallet-card:active{transform:scale(.97);}
 .wallet-card::before{content:'';position:absolute;top:-25px;right:-25px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);}
 .wallet-card::after{content:'';position:absolute;bottom:-35px;left:10px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.05);}
+
+/* ── Liquid Glass: wallet-card jadi gelembung/gel kaca ──
+   Warna brand tiap bank/e-wallet (di-set inline lewat JS) tetap
+   dipertahankan apa adanya — cukup ditambahkan lapisan glossy
+   highlight (mix-blend-mode) + rim-light + bayangan cembung supaya
+   terlihat seperti gel transparan, tanpa perlu ubah kode JS warna. */
+.liquid-glass .wallet-card{
+  border-radius:24px;
+  border:1.5px solid rgba(255,255,255,.4);
+  box-shadow:0 10px 28px rgba(13,33,82,.2), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -18px 30px rgba(255,255,255,.08);
+  backdrop-filter:saturate(160%);
+  -webkit-backdrop-filter:saturate(160%);
+}
+.liquid-glass .wallet-card::before{
+  top:-35px;right:-25px;width:170px;height:170px;
+  background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.4), rgba(255,255,255,.05) 55%, transparent 70%);
+  mix-blend-mode:overlay;
+  animation:lg-bubble-float 7s ease-in-out infinite;
+}
+.liquid-glass .wallet-card::after{
+  bottom:-40px;left:0;width:130px;height:130px;
+  background:radial-gradient(circle at 70% 70%, rgba(255,255,255,.22), transparent 70%);
+  mix-blend-mode:overlay;
+  animation:lg-bubble-float 8.5s ease-in-out infinite reverse;
+}
 .wc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
 .wc-bank{font-size:11px;font-weight:700;color:rgba(255,255,255,.85);letter-spacing:.8px;text-transform:uppercase;}
 .wc-chip{width:26px;height:20px;border-radius:4px;background:rgba(255,215,0,.55);flex-shrink:0;}

@@ -733,6 +733,27 @@ body{background:var(--bg);transition:background .35s;}
 }
 .liquid-glass .bal-card .topup-btn{color:var(--navy);}
 .liquid-glass .bal-card .topup-btn svg{stroke:var(--navy);}
+/* Sorot gel yang melintas & menimpa teks — meniru kapsul yang
+   bergeser di tabbar. mix-blend-mode membuat sorot ini tetap
+   transparan di atas angka saldo, bukan menutupinya solid. */
+.bal-sheen{position:absolute;inset:0;border-radius:inherit;pointer-events:none;overflow:hidden;}
+@keyframes lg-sheen-sweep{
+  0%{ transform:translateX(-120%) rotate(10deg); }
+  100%{ transform:translateX(120%) rotate(10deg); }
+}
+.liquid-glass .bal-sheen{
+  z-index:5;
+}
+.liquid-glass .bal-sheen::before{
+  content:'';
+  position:absolute;top:-40%;left:-20%;width:70%;height:180%;
+  background:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.05) 38%, rgba(255,255,255,.65) 50%, rgba(255,255,255,.05) 62%, transparent 80%);
+  mix-blend-mode:overlay;
+  animation:lg-sheen-sweep 5s ease-in-out infinite;
+}
+.dk.liquid-glass .bal-sheen::before{
+  background:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.02) 38%, rgba(255,255,255,.28) 50%, rgba(255,255,255,.02) 62%, transparent 80%);
+}
 .liquid-glass .bal-card::before{
   width:220px;height:220px;top:-70px;right:-60px;
   background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.4), rgba(255,255,255,.06) 55%, transparent 70%);
@@ -1391,6 +1412,7 @@ body{background:var(--bg);transition:background .35s;}
       </div>
 
       <div class="bal-card">
+        <div class="bal-sheen"></div>
         <div class="bal-lbl" id="h-ballbl">TOTAL BALANCE</div>
         <div class="bal-amt" id="displayBalance">$12,450.80</div>
         <div class="bal-usd" id="displayBalanceAlt"></div>

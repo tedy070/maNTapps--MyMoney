@@ -111,8 +111,7 @@ async function fbSaveState(_retryCount){
     darkMode: document.body.classList.contains('dk'),
     themeColor: (typeof currentThemeId !== 'undefined') ? currentThemeId : 'blue',
     liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity, collapseOnScroll: liquidGlassCollapseOnScroll },
-    notifSound: { enabled: notifSoundEnabled, choice: notifSoundChoice },
-    notifSoundEnabled,
+    notifSound: { choice: notifSoundChoice },
     updatedAt: ts
   };
   // Bersihkan seluruh pohon data dari `undefined` sebelum dikirim.
@@ -146,7 +145,15 @@ async function fbSaveState(_retryCount){
       // Coba lagi otomatis (network blip / kontensi sesaat) sebelum menampilkan error ke user.
       setTimeout(()=>{ fbSaveState(attempt+1); }, 1500 * (attempt+1));
     } else {
-      toast('⚠️ Gagal menyimpan ke cloud. Cek koneksi internet.');
+      // Firebase RTDB memberi kode error spesifik (mis. "PERMISSION_DENIED" saat
+      // data ditolak oleh Rules/validasi). Ini BUKAN masalah koneksi internet —
+      // jangan tampilkan pesan "cek koneksi" yang menyesatkan untuk kasus ini.
+      const code = (e && e.code) ? String(e.code).toUpperCase() : '';
+      if (code.includes('PERMISSION_DENIED')){
+        toast('⚠️ Gagal menyimpan: data ditolak oleh aturan keamanan Firebase (bukan masalah koneksi). Hubungi developer/admin aplikasi.');
+      } else {
+        toast('⚠️ Gagal menyimpan ke cloud. Cek koneksi internet.');
+      }
     }
   }
 }
@@ -270,11 +277,6 @@ function _applyStateFromDB(data){
   if(data.darkMode !== undefined){
     if(data.darkMode) document.body.classList.add('dk');
     else              document.body.classList.remove('dk');
-  }
-  if(data.notifSoundEnabled !== undefined){
-    notifSoundEnabled = !!data.notifSoundEnabled;
-    const nsTog = document.getElementById('notifSoundToggle');
-    if(nsTog) nsTog.classList.toggle('on', notifSoundEnabled);
   }
   applyThemeColor(data.themeColor || currentThemeId, {save:false});
   refreshAllUI();
@@ -2362,7 +2364,6 @@ body{background:var(--bg);transition:background .35s;}
       <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm">Tujuan Tabungan</div><div class="notif-sub">Pencapaian & penyelesaian target</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
     </div></div>
     <div class="sec-section"><div class="sec-sec-ttl">SUARA NOTIFIKASI</div><div class="sec-grp">
-      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;font-size:18px;display:flex;align-items:center;justify-content:center;">💧</div><div class="notif-info"><div class="notif-nm">Suara Notifikasi</div><div class="notif-sub">Bunyi saat notifikasi baru masuk</div></div><button class="tog on" id="notifSoundToggle" onclick="toggleNotifSound()"></button></div>
       <div id="notifSoundChoices"></div>
     </div></div>
     <div class="sec-section"><div class="sec-sec-ttl">UMUM</div><div class="sec-grp">
@@ -2736,11 +2737,11 @@ function _clearNotifLocal(){
 const _NOTIF_LOCAL_ONLY_TYPES = new Set(['rate']);
 
 // ============================================================
-// SUARA NOTIFIKASI — 5 suara unik, semua disintesis via Web Audio API
+// SUARA NOTIFIKASI — 1 opsi "Default" (suara bawaan device/browser, lewat
+// notifikasi native OS) + 5 suara custom yang disintesis via Web Audio API
 // (tidak pakai file audio eksternal sama sekali, jadi tidak ada
 //  masalah lisensi/aset & tidak nambah berat halaman)
 // ============================================================
-let notifSoundEnabled = true;
 let notifSoundChoice  = 'default'; // key dari NOTIF_SOUNDS di bawah
 let _notifAudioCtx = null;
 
@@ -2861,10 +2862,14 @@ function _sndDing(ctx){
   });
 }
 
-// Katalog suara notifikasi yang tersedia untuk dipilih user
-// "default" = suara bawaan/asli sebelum fitur pilihan suara ini ada (sama seperti "water")
+// Katalog suara notifikasi yang tersedia untuk dipilih user.
+// "default" TIDAK disintesis via Web Audio — ia mewakili suara notifikasi
+// BAWAAN DARI DEVICE/BROWSER itu sendiri (yang otomatis diputar oleh OS saat
+// notifikasi native/push muncul, lewat Notification API — lihat sendPushNotif()
+// & showNotification() di bagian PUSH NOTIFICATIONS). fn:null → tidak ada
+// tone custom yang dimainkan untuk pilihan ini.
 const NOTIF_SOUNDS = {
-  default: { label:'Default',       emoji:'⭐', fn:_sndWater },
+  default: { label:'Default',       emoji:'⭐', fn:null },
   water:   { label:'Tetesan Air',   emoji:'💧', fn:_sndWater },
   chime:   { label:'Lonceng',       emoji:'🔔', fn:_sndChime },
   marimba: { label:'Marimba',       emoji:'🎵', fn:_sndMarimba },
@@ -2872,54 +2877,59 @@ const NOTIF_SOUNDS = {
   ding:    { label:'Ping Digital',  emoji:'📳', fn:_sndDing }
 };
 
-// Dipanggil dari addNotif() — memainkan suara sesuai pilihan user saat ini
+// Dipanggil dari addNotif() — memainkan suara sesuai pilihan user saat ini.
+// Untuk "default", tidak ada tone custom yang dimainkan di sini — suara
+// bawaan device sudah otomatis muncul lewat notifikasi native OS (jika izin
+// notifikasi diberikan), jadi cukup diam di sisi Web Audio.
 function playNotifSound(){
-  if(!notifSoundEnabled) return;
   try{
+    const snd = NOTIF_SOUNDS[notifSoundChoice] || NOTIF_SOUNDS.default;
+    if(!snd.fn) return; // "default" → serahkan ke suara notifikasi native device
     const ctx = _getNotifAudioCtx();
     if(!ctx || ctx.state !== 'running') return; // belum ada interaksi user → skip, jangan error
-    const snd = NOTIF_SOUNDS[notifSoundChoice] || NOTIF_SOUNDS.water;
     snd.fn(ctx);
   } catch(e){ console.warn('notif sound error:', e); }
 }
 
-// Toggle master ON/OFF di layar Pengaturan Notifikasi
-function toggleNotifSound(){
-  notifSoundEnabled = !notifSoundEnabled;
-  const tog = document.getElementById('notifSoundToggle');
-  if(tog) tog.classList.toggle('on', notifSoundEnabled);
-  if(notifSoundEnabled) playNotifSound(); // preview biar user langsung dengar
-  toast(notifSoundEnabled ? '🔊 Suara notifikasi ON' : '🔇 Suara notifikasi OFF');
-  fbAutoSave();
-}
-
-/* ── Pilih suara notifikasi dari daftar ──
-   Diklik → langsung diputar sebagai pratinjau (terlepas dari toggle
-   ON/OFF, supaya user tetap bisa dengar contoh suaranya walau master
-   toggle sedang mati) SEBELUM benar-benar dipakai untuk notifikasi
-   berikutnya, lalu jadi pilihan aktif. ── */
-function selectNotifSound(key){
+/* ── Pratinjau suara (tap baris) ──
+   HANYA memutar contoh suaranya, TIDAK mengubah pilihan aktif dan TIDAK
+   otomatis menyalakan tombol on/off. User harus menekan tombol toggle-nya
+   sendiri untuk benar-benar memilih/mengaktifkan suara tsb. ── */
+function previewNotifSound(key){
   const snd = NOTIF_SOUNDS[key]; if(!snd) return;
-  notifSoundChoice = key;
-  renderNotifSoundChoices();
+  if(!snd.fn){
+    // "Default" — tidak ada tone custom untuk dipreview, hanya info ke user
+    toast(lang==='id'
+      ? '🔔 Menggunakan suara notifikasi bawaan device/browser Anda'
+      : "🔔 Uses your device/browser's built-in notification sound");
+    return;
+  }
   try{
     const ctx = _getNotifAudioCtx();
     if(ctx && ctx.state === 'running') snd.fn(ctx);
   } catch(e){}
-  toast(`🔈 ${snd.label} dipilih`);
+}
+
+/* ── Pilih/aktifkan suara notifikasi (tap tombol toggle) ──
+   Menyalakan satu tombol otomatis mematikan tombol suara lainnya, karena
+   hanya 1 suara yang aktif dipakai pada satu waktu. ── */
+function selectNotifSound(key){
+  const snd = NOTIF_SOUNDS[key]; if(!snd) return;
+  notifSoundChoice = key;
+  renderNotifSoundChoices();
+  toast(`🔈 ${snd.label} ${lang==='id'?'dipilih':'selected'}`);
   fbAutoSave();
 }
 
-// Render daftar pilihan suara di overlay Pengaturan Notifikasi
-// Setiap suara punya tombol on/off sendiri — menyalakan salah satu otomatis
-// mematikan yang lain (hanya 1 suara aktif dalam satu waktu untuk diputar).
+// Render daftar pilihan suara di overlay Pengaturan Notifikasi.
+// Tap baris → preview saja. Tap tombol toggle → pilih/aktifkan suara itu.
 function renderNotifSoundChoices(){
   const c = document.getElementById('notifSoundChoices');
   if(!c) return;
   c.innerHTML = Object.entries(NOTIF_SOUNDS).map(([key,snd])=>`
-    <div class="notif-row snd-choice${key===notifSoundChoice?' active':''}" onclick="selectNotifSound('${key}')">
+    <div class="notif-row snd-choice${key===notifSoundChoice?' active':''}" onclick="previewNotifSound('${key}')">
       <div class="notif-ico" style="background:#EEF1F8;font-size:18px;display:flex;align-items:center;justify-content:center;">${snd.emoji}</div>
-      <div class="notif-info"><div class="notif-nm">${snd.label}</div><div class="notif-sub">${lang==='id'?'Ketuk untuk dengar & pilih':'Tap to preview & select'}</div></div>
+      <div class="notif-info"><div class="notif-nm">${snd.label}</div><div class="notif-sub">${lang==='id'?'Ketuk untuk dengar contoh':'Tap to preview'}</div></div>
       <button class="tog${key===notifSoundChoice?' on':''}" onclick="event.stopPropagation(); selectNotifSound('${key}')"></button>
     </div>`).join('');
 }
@@ -6716,13 +6726,8 @@ async function enterApp(initialState){
     if(initialState.liquidGlass){
       applyLiquidGlass(!!initialState.liquidGlass.enabled, initialState.liquidGlass.intensity||55, {silent:true, collapseOnScroll: initialState.liquidGlass.collapseOnScroll !== false});
     }
-    if(initialState.notifSound){
-      notifSoundEnabled = initialState.notifSound.enabled !== false;
-      if(initialState.notifSound.choice && NOTIF_SOUNDS[initialState.notifSound.choice]){
-        notifSoundChoice = initialState.notifSound.choice;
-      }
-      const nsTog = document.getElementById('notifSoundToggle');
-      if(nsTog) nsTog.classList.toggle('on', notifSoundEnabled);
+    if(initialState.notifSound && initialState.notifSound.choice && NOTIF_SOUNDS[initialState.notifSound.choice]){
+      notifSoundChoice = initialState.notifSound.choice;
     }
 
   } else {

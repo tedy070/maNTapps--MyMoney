@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Stamp app version
         # Versi = tanggal+jam build WIB (YYYY.MM.DD-HHmm) + short commit hash,
-        # contoh: 2026.07.13-0142-dadde28
+        # contoh: 2026.07.13-01:42-dadde28
         # Sebelumnya pakai `date -u` (UTC) dengan presisi cuma sampai hari,
         # jadi kalau push >1x di hari UTC yang sama, tanggalnya kelihatan
         # "tidak berubah" walau hash-nya sudah beda. Sekarang dipakai:
@@ -33,7 +33,7 @@ jobs:
         # Placeholder __APP_VERSION__ di index.html otomatis diganti di sini,
         # jadi tidak perlu edit versi manual lagi tiap deploy.
         run: |
-          VERSION="$(TZ='Asia/Jakarta' date +'%Y.%m.%d-%H%M')-$(git rev-parse --short HEAD)"
+          VERSION="$(TZ='Asia/Jakarta' date +'%Y.%m.%d-%H:%M')-$(git rev-parse --short HEAD)"
           echo "App version (WIB): $VERSION"
           sed -i "s/__APP_VERSION__/${VERSION}/g" index.html
       - name: Verify version stamp

@@ -2709,31 +2709,59 @@ function _clearNotifLocal(){
 // 'rate' = notifikasi kurs & emas diperbarui → tetap lokal saja
 const _NOTIF_LOCAL_ONLY_TYPES = new Set(['rate']);
 
-/* ── Simpan notifikasi ke RTDB (hanya non-rate) ── */
-async function _saveNotifRTDB(){
+/* ── Simpan/patch SEBAGIAN data notifikasi ke RTDB lewat .update() ──
+   PENTING: pakai .update() (partial write per-path), BUKAN .set() (yang
+   nulis ULANG SELURUH koleksi). Sebelumnya tiap ada 1 notif baru / status
+   dibaca berubah, seluruh array notifikasi ditulis ulang dari state lokal
+   tab ini. Kalau app kebuka di 2 tab/device bersamaan, tab yang nulis
+   belakangan bisa menimpa total notifikasi dari tab lain yang belum
+   sempat ke-load ke tab ini — race condition "last write wins" klasik,
+   penyebab notifikasi hilang tanpa error apapun. Dengan .update() +
+   key per-notifikasi (items/{id}), tiap tab cuma menyentuh notifikasi
+   miliknya sendiri; notifikasi dari tab/device lain yang belum diketahui
+   tab ini tidak ikut terhapus/tertimpa. ── */
+async function _patchNotifRTDB(patch){
   const uid = fbUID(); if(!uid) return;
   try{
-    // Filter: hanya simpan notifikasi yang bukan tipe lokal-only
-    const toSave = notifications
-      .filter(n => !_NOTIF_LOCAL_ONLY_TYPES.has(n.type))
-      .slice(0, 150)
-      .map(n => ({
-        ...n,
-        time: n.time instanceof Date ? n.time.toISOString() : n.time
-      }));
-    await fbDB.ref(`users/${uid}/notifications`).set(_fbSanitize({ items: toSave, notifId }));
-  } catch(e){ console.warn('RTDB notif save error:', e); }
+    await fbDB.ref(`users/${uid}/notifications`).update(_fbSanitize(patch));
+  } catch(e){ console.warn('RTDB notif patch error:', e); }
 }
 
-/* ── Load notifikasi dari RTDB + localStorage (merge, dedup by id) ── */
+/* ── Simpan 1 notifikasi baru ke RTDB (dipanggil dari addNotif) ──
+   Key-nya pakai id notifikasi itu sendiri (bukan posisi di array), jadi
+   antar tab tidak pernah rebutan slot yang sama. ── */
+function _addNotifToRTDB(item){
+  const safeItem = { ...item, time: item.time instanceof Date ? item.time.toISOString() : item.time };
+  _patchNotifRTDB({ [`items/${item.id}`]: safeItem, notifId });
+}
+
+/* ── Tandai sejumlah notifikasi (berdasarkan id yang diketahui device ini)
+   sebagai sudah dibaca di RTDB — cuma nyentuh field "unread" milik id
+   tersebut, tidak menimpa seluruh koleksi. ── */
+function _markReadRTDB(ids){
+  if(!ids || !ids.length) return;
+  const patch = {};
+  ids.forEach(id => { patch[`items/${id}/unread`] = false; });
+  _patchNotifRTDB(patch);
+}
+
+/* ── Load notifikasi dari RTDB + localStorage (merge, dedup by id) ──
+   items sekarang disimpan sebagai map {id: notif}, tapi data lama (dari
+   sebelum perbaikan format ini) masih berupa array berindeks posisi —
+   Object.values() aman untuk baca dua-duanya sekaligus. Dedup by id
+   membersihkan kalau ada 1 notifikasi yang kebetulan pernah tersimpan
+   di format lama & baru berbarengan. ── */
 async function _loadNotifFromRTDB(){
   const uid = fbUID(); if(!uid) return;
   try{
     const snap = await fbDB.ref(`users/${uid}/notifications`).once('value');
     const data = snap.val();
-    if(!data || !Array.isArray(data.items)) return;
-    // Parse time ke Date
-    const rtdbNotifs = data.items.map(n => ({ ...n, time: new Date(n.time) }));
+    if(!data || !data.items) return;
+    const rawItems = Array.isArray(data.items) ? data.items : Object.values(data.items);
+    // Parse time ke Date + dedup berdasarkan id
+    const byId = new Map();
+    rawItems.filter(Boolean).forEach(n => byId.set(n.id, { ...n, time: new Date(n.time) }));
+    const rtdbNotifs = [...byId.values()];
     // Merge dengan notifikasi lokal (kurs dll) yang sudah ada
     const localOnlyNotifs = notifications.filter(n => _NOTIF_LOCAL_ONLY_TYPES.has(n.type));
     // Gabung: RTDB (utama) + lokal-only, dedup berdasarkan id
@@ -2748,10 +2776,26 @@ async function _loadNotifFromRTDB(){
     const rtdbId = parseInt(data.notifId || '0');
     notifId = Math.max(notifId, rtdbId, notifications.length);
     updateNotifBadge();
+
+    // ── Migrasi diam-diam: kalau format lama (array berindeks posisi, atau
+    //    ada duplikat) masih tersimpan, rapikan sekali jadi map {id: notif}
+    //    murni. Aman dilakukan di sini karena datanya baru saja ditarik dari
+    //    server (bukan overwrite dari state lokal yang mungkin sudah basi). ──
+    const looksLegacy = Array.isArray(data.items) || rawItems.length !== byId.size;
+    if(looksLegacy){
+      const cleanItems = {};
+      rtdbNotifs.forEach(n => {
+        cleanItems[n.id] = { ...n, time: n.time instanceof Date ? n.time.toISOString() : n.time };
+      });
+      fbDB.ref(`users/${uid}/notifications`).set(_fbSanitize({ items: cleanItems, notifId }))
+        .catch(e => console.warn('notif format migrate error:', e));
+    }
   } catch(e){ console.warn('RTDB notif load error:', e); }
 }
 
-/* ── Hapus notifikasi dari RTDB saat logout ── */
+/* ── Hapus notifikasi dari RTDB — TIDAK dipakai saat logout lagi (lihat
+      doLogout()). Disimpan untuk kebutuhan lain di masa depan, mis. fitur
+      "Hapus Akun", di mana data memang harus benar-benar dihapus. ── */
 async function _clearNotifRTDB(){
   const uid = fbUID(); if(!uid) return;
   try{
@@ -2760,12 +2804,14 @@ async function _clearNotifRTDB(){
 }
 
 function addNotif(type,title,msg){
-  notifications.unshift({id:notifId++, type, title, msg, time:new Date(), unread:true});
+  const item = {id:notifId++, type, title, msg, time:new Date(), unread:true};
+  notifications.unshift(item);
   updateNotifBadge();
   _saveNotifLocal();
-  // Simpan ke RTDB jika bukan tipe lokal-only (kurs/emas)
+  // Simpan ke RTDB jika bukan tipe lokal-only (kurs/emas) — cuma kirim
+  // notifikasi yang baru dibuat (partial patch), bukan seluruh array.
   if(!_NOTIF_LOCAL_ONLY_TYPES.has(type)){
-    _saveNotifRTDB();
+    _addNotifToRTDB(item);
   }
 }
 
@@ -2779,8 +2825,9 @@ function updateNotifBadge(){
 function markAllRead(){
   notifications.forEach(n=>n.unread=false);
   _saveNotifLocal();
-  // Simpan status "sudah dibaca" ke RTDB untuk notif non-lokal
-  _saveNotifRTDB();
+  // Simpan status "sudah dibaca" ke RTDB — cuma field unread milik id yang
+  // memang diketahui device ini, bukan menimpa seluruh koleksi.
+  _markReadRTDB(notifications.filter(n=>!_NOTIF_LOCAL_ONLY_TYPES.has(n.type)).map(n=>n.id));
   updateNotifBadge();renderNotifCenter();toast('All notifications marked as read');
 }
 
@@ -2799,7 +2846,7 @@ function openNotifCenter(){
   setTimeout(()=>{
     notifications.forEach(n=>n.unread=false);
     _saveNotifLocal();
-    _saveNotifRTDB(); // persist status dibaca ke RTDB
+    _markReadRTDB(notifications.filter(n=>!_NOTIF_LOCAL_ONLY_TYPES.has(n.type)).map(n=>n.id)); // persist status dibaca ke RTDB
     updateNotifBadge();
   },1500);
 }
@@ -6548,8 +6595,15 @@ async function doLogout(){
 
   // ③ Reset seluruh state lokal
   user=null;
-  _clearNotifLocal(); // hapus notifikasi kurs dari localStorage
-  await _clearNotifRTDB(); // hapus notifikasi histori dari RTDB
+  _clearNotifLocal(); // hapus cache notifikasi kurs di localStorage (device-local, bukan data akun)
+  // Catatan: notifikasi RTDB (/users/{uid}/notifications) SENGAJA TIDAK dihapus
+  // di sini lagi. Sebelumnya doLogout() memanggil _clearNotifRTDB() yang
+  // me-remove seluruh riwayat notifikasi user dari cloud setiap kali logout —
+  // beda perlakuan dari balance/wallets/goals/historyItems di bawah ini, yang
+  // cuma direset di memori lokal dan TETAP UTUH di RTDB. Notifikasi sekarang
+  // ikut pola yang sama: variabel lokal direset, data cloud-nya tetap ada,
+  // jadi begitu user login lagi (di device manapun), riwayat notifikasinya
+  // kembali termuat lewat _loadNotifFromRTDB(), tidak hilang lagi.
   notifications=[]; historyItems=[]; goals=[]; wallets=[];
   balance=0; savedPin=''; lockPinBuf='';
 

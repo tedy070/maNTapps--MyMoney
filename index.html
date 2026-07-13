@@ -614,17 +614,14 @@ body{background:var(--bg);transition:background .35s;}
   height:60px;
   padding:0 6px;
   border-radius:30px;
-  background:linear-gradient(160deg, rgba(var(--blue2-rgb),.4), rgba(var(--blue2-rgb),.18) 55%, rgba(255,255,255,.3));
+  background:rgba(var(--surface-rgb),var(--lg-alpha));
   backdrop-filter:blur(var(--lg-blur)) saturate(180%);
   -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);
   border:1px solid var(--lg-border);
   box-shadow:0 10px 30px rgba(13,33,82,.18), inset 0 1px 0 rgba(255,255,255,.45);
   transition:max-width .4s cubic-bezier(.34,1.3,.64,1), border-radius .4s ease, background .35s ease, padding .4s ease;
 }
-.dk.liquid-glass .bnav{
-  background:rgba(var(--surface-rgb),var(--lg-alpha));
-  box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
-}
+.dk.liquid-glass .bnav{ box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08); }
 /* Collapse saat scroll: menyusut jadi bulatan kecil berisi tab aktif saja,
    lalu melebar lagi begitu user berhenti/scroll ke atas — sama seperti
    perilaku "compact on scroll" di tab bar iOS 26. */
@@ -850,7 +847,48 @@ body{background:var(--bg);transition:background .35s;}
   display:flex;align-items:center;gap:11px;box-shadow:var(--sh2);
   transition:transform .15s,background .35s;
 }
-.liquid-glass .tx-item{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
+.liquid-glass .tx-item,
+.liquid-glass .prof-card,
+.liquid-glass .st-grp,
+.liquid-glass .ovr-back,
+.liquid-glass .cc,
+.liquid-glass .sv-hc,
+.liquid-glass .goal-card,
+.liquid-glass .nc-item,
+.liquid-glass .estat-month-row,
+.liquid-glass .sec-grp{
+  background:linear-gradient(160deg, rgba(255,255,255,.35), rgba(255,255,255,.08) 60%, rgba(255,255,255,.2));
+  backdrop-filter:blur(var(--lg-blur)) saturate(160%);
+  -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(160%);
+  border:1px solid rgba(255,255,255,.5);
+  box-shadow:0 6px 20px rgba(13,33,82,.12), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.dk.liquid-glass .tx-item,
+.dk.liquid-glass .prof-card,
+.dk.liquid-glass .st-grp,
+.dk.liquid-glass .ovr-back,
+.dk.liquid-glass .cc,
+.dk.liquid-glass .sv-hc,
+.dk.liquid-glass .goal-card,
+.dk.liquid-glass .nc-item,
+.dk.liquid-glass .estat-month-row,
+.dk.liquid-glass .sec-grp{
+  background:linear-gradient(160deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 60%, rgba(255,255,255,.07));
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:0 6px 20px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.15);
+}
+/* ── Item list yang di-generate lewat JS (tagihan, kategori anggaran,
+   riwayat) — pakai inline style, jadi override cuma background-nya
+   saja (!important) supaya border status warna (terlambat/lunas)
+   tetap dipertahankan apa adanya. ── */
+.liquid-glass .lg-list-card{
+  background:linear-gradient(160deg, rgba(255,255,255,.35), rgba(255,255,255,.08) 60%, rgba(255,255,255,.2)) !important;
+  backdrop-filter:blur(var(--lg-blur)) saturate(160%) !important;
+  -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(160%) !important;
+}
+.dk.liquid-glass .lg-list-card{
+  background:linear-gradient(160deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 60%, rgba(255,255,255,.07)) !important;
+}
 .tx-item:active{transform:scale(.99);}
 .tx-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .tx-ico svg{width:20px;height:20px;fill:none;stroke-width:1.8;}
@@ -1059,7 +1097,7 @@ body{background:var(--bg);transition:background .35s;}
 
 /* SETTINGS */
 .prof-card{background:var(--surface);border-radius:18px;padding:20px;margin:0 16px 18px;text-align:center;box-shadow:var(--sh2);transition:background .35s;}
-.liquid-glass .prof-card{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
+
 .pav-wrap{position:relative;display:inline-block;margin-bottom:12px;}
 .pav{width:76px;height:76px;border-radius:50%;background:var(--navy);margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;}
 .pav img{width:100%;height:100%;object-fit:cover;}
@@ -1072,7 +1110,7 @@ body{background:var(--bg);transition:background .35s;}
 .pbadge svg{width:12px;height:12px;stroke:var(--teal);fill:none;stroke-width:2;}
 .st-lbl{padding:0 16px;margin-bottom:9px;font-size:10px;letter-spacing:2px;color:var(--t3);font-weight:600;text-transform:uppercase;}
 .st-grp{background:var(--surface);border-radius:16px;margin:0 16px 18px;box-shadow:var(--sh2);overflow:hidden;transition:background .35s;}
-.liquid-glass .st-grp{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
+
 .st-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
 .st-item:last-child{border-bottom:none;}
 .st-item:active{background:var(--surface2);}
@@ -1098,7 +1136,7 @@ body{background:var(--bg);transition:background .35s;}
 .ovr.on{display:flex;}
 .ovr-hdr{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-top) + 14px) 20px 16px;}
 .ovr-back{width:36px;height:36px;background:var(--surface);border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:var(--sh2);transition:background .35s;}
-.liquid-glass .ovr-back{background:rgba(var(--surface-rgb),var(--lg-alpha));backdrop-filter:blur(var(--lg-blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--lg-blur)) saturate(180%);border:1px solid var(--lg-border);}
+
 .ovr-back svg{width:17px;height:17px;stroke:var(--navy);fill:none;stroke-width:2;}
 .ovr-ttl{font-family:var(--f);font-size:18px;font-weight:700;color:var(--navy);}
 
@@ -7167,7 +7205,7 @@ function renderTagihanList() {
     const catBg  = t.catColor || '#EBF3FE';
     const catIco = t.catIco  || `<svg viewBox="0 0 24 24" fill="none" stroke="#1A56C4" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
 
-    return `<div style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;box-shadow:var(--sh2);${cardBorder}display:flex;align-items:center;gap:13px;cursor:pointer;" onclick="openEditTagihan(${t.id})">
+    return `<div class="lg-list-card" style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;box-shadow:var(--sh2);${cardBorder}display:flex;align-items:center;gap:13px;cursor:pointer;" onclick="openEditTagihan(${t.id})">
       <div style="width:44px;height:44px;border-radius:12px;background:${catBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
         <div style="width:22px;height:22px;">${catIco}</div>
       </div>
@@ -7241,7 +7279,7 @@ function renderTagihanRiwayat() {
       const hapusOnclick = r.isSekali
         ? `hapusRiwayatTagihan(${r.tagihanId})`
         : `hapusRiwayatBulanan(${r.id})`;
-      return `<div style="background:var(--surface);border-radius:13px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:11px;box-shadow:var(--sh2);border:1.5px solid rgba(34,197,94,0.2);opacity:0.88;">
+      return `<div class="lg-list-card" style="background:var(--surface);border-radius:13px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:11px;box-shadow:var(--sh2);border:1.5px solid rgba(34,197,94,0.2);opacity:0.88;">
         <div style="width:40px;height:40px;border-radius:11px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;">
           <div style="width:18px;height:18px;">${catIco}</div>
           <div style="position:absolute;bottom:-3px;right:-3px;width:14px;height:14px;background:#22C55E;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);">
@@ -7815,7 +7853,7 @@ function renderAnggaranList(){
     const cardOpacity = isActive ? '1' : '0.6';
     const cardFilter  = isActive ? '' : 'filter:grayscale(.5);';
 
-    return `<div style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);${cardBorder}opacity:${cardOpacity};${cardFilter}">
+    return `<div class="lg-list-card" style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);${cardBorder}opacity:${cardOpacity};${cardFilter}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isActive?10:0}px;cursor:pointer;" onclick="openAnggaranRiwayat(${b.id})">
         <div style="width:40px;height:40px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>

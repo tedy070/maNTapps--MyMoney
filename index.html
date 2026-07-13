@@ -696,8 +696,8 @@ body{background:var(--bg);transition:background .35s;}
   box-shadow:0 12px 32px rgba(13,33,82,.32);
 }
 .dk .bal-card{background:linear-gradient(135deg,#152a5c,#1a3a7a 55%,#2A6FD6);}
-.bal-card::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06);}
-.bal-card::after{content:'';position:absolute;bottom:-30px;left:20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04);}
+.bal-card::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none;}
+.bal-card::after{content:'';position:absolute;bottom:-30px;left:20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none;}
 
 /* ── Liquid Glass: bal-card jadi gelembung/gel kaca transparan ──
    Warna navy-blue tetap dipertahankan tapi dibuat translusen +
@@ -795,11 +795,13 @@ body{background:var(--bg);transition:background .35s;}
   background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.4), rgba(255,255,255,.06) 55%, transparent 70%);
   filter:blur(2px);
   animation:lg-bubble-float 8s ease-in-out infinite;
+  pointer-events:none;
 }
 .liquid-glass .bal-card::after{
   width:150px;height:150px;
   background:radial-gradient(circle at 70% 70%, rgba(255,255,255,.16), transparent 70%);
   animation:lg-bubble-float 9s ease-in-out infinite reverse;
+  pointer-events:none;
 }
 .bal-lbl{font-size:10px;letter-spacing:2px;opacity:.7;margin-bottom:4px;font-weight:500;}
 .bal-amt{font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;letter-spacing:-1px;margin-bottom:3px;}
@@ -856,7 +858,8 @@ body{background:var(--bg);transition:background .35s;}
 .liquid-glass .goal-card,
 .liquid-glass .nc-item,
 .liquid-glass .estat-month-row,
-.liquid-glass .sec-grp{
+.liquid-glass .sec-grp,
+.liquid-glass .rate-banner{
   background:linear-gradient(160deg, rgba(255,255,255,.35), rgba(255,255,255,.08) 60%, rgba(255,255,255,.2));
   backdrop-filter:blur(var(--lg-blur)) saturate(160%);
   -webkit-backdrop-filter:blur(var(--lg-blur)) saturate(160%);
@@ -872,7 +875,8 @@ body{background:var(--bg);transition:background .35s;}
 .dk.liquid-glass .goal-card,
 .dk.liquid-glass .nc-item,
 .dk.liquid-glass .estat-month-row,
-.dk.liquid-glass .sec-grp{
+.dk.liquid-glass .sec-grp,
+.dk.liquid-glass .rate-banner{
   background:linear-gradient(160deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 60%, rgba(255,255,255,.07));
   border:1px solid rgba(255,255,255,.15);
   box-shadow:0 6px 20px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.15);
@@ -938,11 +942,33 @@ body{background:var(--bg);transition:background .35s;}
 .dk .br.i{background:#243450;}
 .blbl{font-size:9px;color:var(--t3);font-weight:500;}
 .tip-card{background:linear-gradient(135deg,#0D2152,var(--blue2));border-radius:18px;padding:18px;margin:0 16px 18px;color:white;position:relative;overflow:hidden;}
-.tip-ico-bg{position:absolute;bottom:-10px;right:6px;opacity:.1;}
+.tip-ico-bg{position:absolute;bottom:-10px;right:6px;opacity:.1;pointer-events:none;}
 .tip-ico-bg svg{width:75px;height:75px;fill:white;}
 .tip-ttl{font-family:var(--f);font-size:15px;font-weight:700;margin-bottom:8px;}
 .tip-txt{font-size:12px;line-height:1.65;opacity:.85;margin-bottom:13px;}
 .tip-btn{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:white;padding:9px 16px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--f2);}
+/* ── Liquid Glass: tip-card (Tips Hemat Cerdas) jadi gel bening,
+   resep sama persis dengan bal-card supaya konsisten. ── */
+.liquid-glass .tip-card{
+  border-radius:22px;
+  background:linear-gradient(160deg, rgba(255,255,255,.4), rgba(255,255,255,.1) 60%, rgba(255,255,255,.24));
+  backdrop-filter:blur(calc(var(--lg-blur) + 6px)) saturate(140%);
+  -webkit-backdrop-filter:blur(calc(var(--lg-blur) + 6px)) saturate(140%);
+  border:1.5px solid rgba(255,255,255,.65);
+  box-shadow:0 10px 28px rgba(13,33,82,.15), inset 0 1px 0 rgba(255,255,255,.8), inset 0 -20px 34px rgba(255,255,255,.15);
+  color:var(--navy);
+}
+.dk.liquid-glass .tip-card{
+  background:linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.03) 60%, rgba(255,255,255,.09));
+  border:1.5px solid rgba(255,255,255,.2);
+  box-shadow:0 10px 28px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -20px 34px rgba(255,255,255,.06);
+}
+.liquid-glass .tip-card .tip-ttl,
+.liquid-glass .tip-card .tip-txt{text-shadow:0 1px 2px rgba(255,255,255,.55);}
+.dk.liquid-glass .tip-card .tip-ttl,
+.dk.liquid-glass .tip-card .tip-txt{text-shadow:0 1px 3px rgba(0,0,0,.5);}
+.liquid-glass .tip-card .tip-btn{color:var(--navy);border-color:rgba(13,33,82,.25);}
+.dk.liquid-glass .tip-card .tip-btn{color:var(--blue2);}
 
 /* ===== SAVINGS ===== */
 .sv-tabs{display:flex;gap:0;margin:0 16px 16px;background:var(--surface2);border-radius:12px;padding:4px;}
@@ -1673,6 +1699,7 @@ body{background:var(--bg);transition:background .35s;}
       </div>
 
       <div class="tip-card">
+        <div class="bal-sheen"></div>
         <div class="tip-ico-bg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
         <div class="tip-ttl" id="a-stip">Smart Savings Tip</div>
         <div class="tip-txt" id="a-tiptext">You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!</div>
@@ -1764,8 +1791,9 @@ body{background:var(--bg);transition:background .35s;}
             </div>
           </div>
 
-          <!-- Monthly Spending -->
-          <div style="margin:0 16px 14px;background:var(--surface);border-radius:16px;padding:16px;box-shadow:var(--sh2);">
+          <!-- Monthly Spending (liquid glass: gel bening) -->
+          <div class="anggaran-summary-card" style="margin:0 16px 14px;">
+            <div class="bal-sheen"></div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
               <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);" data-i18n="tg-monthly-spending">Pengeluaran Bulan Ini</div>
               <button onclick="openTagihanBudgetEdit()" style="background:none;border:none;cursor:pointer;color:var(--t3);">
@@ -3466,12 +3494,12 @@ function renderWalletSummary(){
       const bank=w.bank||'Wallet', num=w.num||'0000';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,${col[0]},${col[1]||col[0]});"></div><span style="font-size:13px;color:var(--t2);">${bank} ••••${num}</span></div><span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${fmt(typeof w.balance==='number'&&!isNaN(w.balance)?w.balance:0)}</span></div>`;
     }).join('');
-    e.innerHTML=`<div style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${list.length} cards</div></div>${rows}</div>`;
+    e.innerHTML=`<div class="lg-list-card" style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${list.length} cards</div></div>${rows}</div>`;
   }catch(err){
     console.error('renderWalletSummary error:', err);
     // Jangan biarkan kosong sama sekali — tampilkan fallback minimal
     // supaya section tidak "hilang" total kalau ada data bermasalah.
-    e.innerHTML=`<div style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">Rp 0</div></div>`;
+    e.innerHTML=`<div class="lg-list-card" style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">Rp 0</div></div>`;
   }
 }
 function openWalletModal(){document.getElementById('walletBank').value='';document.getElementById('walletNum').value='';document.getElementById('walletBal').value='';walletColorSel='#1A56C4,#2A6FD6';walletTypeSel='Debit';updateWCP();updateWtypeBtns();document.getElementById('walletModal').classList.add('on');}

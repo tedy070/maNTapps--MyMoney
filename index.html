@@ -6554,6 +6554,17 @@ self.addEventListener('notificationclick', e => { e.notification.close(); client
   } catch(e){ console.warn('SW register error:', e); }
 }
 
+/* ── Cegah suara dobel antara tone custom & notifikasi native OS ──
+   Kalau user memilih suara custom (water/chime/marimba/pop/ding), tone
+   itu SUDAH dimainkan lewat playNotifSound() di addNotif(). Notifikasi
+   native OS/browser (Notification API) juga punya suara sistemnya sendiri
+   secara default — kalau tidak di-silent-kan, akan terdengar 2 suara
+   sekaligus. Jadi: silent HANYA false (suara OS ikut bunyi) saat pilihan
+   user adalah "default"; selain itu native notif di-silent-kan. ── */
+function _nativeNotifSilent(){
+  return notifSoundChoice !== 'default';
+}
+
 // Kirim push notification (in-app + browser native)
 function sendPushNotif(title, body, tag){
   // 1. In-app notification (selalu jalan)
@@ -6565,10 +6576,11 @@ function sendPushNotif(title, body, tag){
         _swReg.showNotification(title, {
           body, icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%230D2152"/><text y=".9em" font-size="90" x="5">💰</text></svg>',
           tag: tag||'mantapps', renotify: true, vibrate:[200,100,200],
+          silent: _nativeNotifSilent(),
           data: { url: window.location.href }
         });
       } else {
-        new Notification(title, { body, icon: '💰', tag: tag||'mantapps' });
+        new Notification(title, { body, icon: '💰', tag: tag||'mantapps', silent: _nativeNotifSilent() });
       }
     } catch(e){}
   }
@@ -7876,6 +7888,7 @@ async function _fireNativeNotif(title, body, tag) {
         renotify: true,
         vibrate: [300, 100, 300, 100, 300],
         requireInteraction: true,
+        silent: _nativeNotifSilent(),
         data: { url: window.location.href, type: 'tagihan' }
       });
     } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -7883,7 +7896,8 @@ async function _fireNativeNotif(title, body, tag) {
         body,
         icon: _notifIcon,
         tag: tag || ('tagihan-' + Date.now()),
-        requireInteraction: true
+        requireInteraction: true,
+        silent: _nativeNotifSilent()
       });
       setTimeout(() => n.close(), 10000);
     }
@@ -7994,10 +8008,11 @@ window.addNotif = function(type, title, msg){
           tag: 'tx-'+Date.now(),
           renotify: true,
           icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%230D2152"/><text y=".9em" font-size="90" x="5">💰</text></svg>',
-          vibrate: [200, 100, 200]
+          vibrate: [200, 100, 200],
+          silent: _nativeNotifSilent()
         });
       } else if(typeof Notification !== 'undefined' && Notification.permission==='granted'){
-        new Notification(title, {body: msg});
+        new Notification(title, {body: msg, silent: _nativeNotifSilent()});
       }
     } catch(e){}
   }

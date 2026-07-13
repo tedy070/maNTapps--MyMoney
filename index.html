@@ -111,10 +111,23 @@ async function fbSaveState(_retryCount){
     darkMode: document.body.classList.contains('dk'),
     themeColor: (typeof currentThemeId !== 'undefined') ? currentThemeId : 'blue',
     liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity, collapseOnScroll: liquidGlassCollapseOnScroll },
+    notifSound: { enabled: notifSoundEnabled, choice: notifSoundChoice },
+    notifSoundEnabled,
     updatedAt: ts
   };
   // Bersihkan seluruh pohon data dari `undefined` sebelum dikirim.
   const state = _fbSanitize(rawState);
+  // Catat snapshot JSON yang AKAN dikirim, SEBELUM di-write. Ini penting:
+  // listener realtime (fbStartRealtimeSync) akan menerima echo dari tulisan
+  // kita sendiri sesaat setelah .set() ini selesai. Tanpa baris ini,
+  // _lastSnapJson di listener masih berisi snapshot LAMA (dari update
+  // sebelumnya), sehingga echo tulisan sendiri selalu terlihat "berbeda"
+  // dan memicu _applyStateFromDB() + refreshAllUI() SEKALI LAGI secara
+  // percuma — full re-render (goals, wallets, history, chart, analytics,
+  // dll) dobel setiap kali ada 1 aksi user, bikin app terasa lag/delay.
+  // Dengan di-set di sini, echo dari tulisan sendiri akan cocok persis
+  // dengan _lastSnapJson dan di-skip oleh listener (guard dataChanged).
+  _lastSnapJson = JSON.stringify(state);
 
   // Jika sedang offline, jangan langsung dianggap gagal — tunggu online lagi
   // lalu simpan ulang otomatis (menghindari toast error palsu saat sinyal hilang).
@@ -186,7 +199,6 @@ function fbStartRealtimeSync(){
     _rtdbRef.off('value', _rtdbListener);
   }
   _rtdbRef = fbDB.ref(`users/${uid}/state`);
-  let _lastSnapJson = null;
   _rtdbListener = _rtdbRef.on('value', snap => {
     const data = snap.val();
     if(!data) return;
@@ -203,6 +215,7 @@ function fbStartRealtimeSync(){
   });
 }
 let _lastSyncTs = 0;
+let _lastSnapJson = null;
 
 function fbStopRealtimeSync(){
   if(_rtdbRef && _rtdbListener){
@@ -257,6 +270,11 @@ function _applyStateFromDB(data){
   if(data.darkMode !== undefined){
     if(data.darkMode) document.body.classList.add('dk');
     else              document.body.classList.remove('dk');
+  }
+  if(data.notifSoundEnabled !== undefined){
+    notifSoundEnabled = !!data.notifSoundEnabled;
+    const nsTog = document.getElementById('notifSoundToggle');
+    if(nsTog) nsTog.classList.toggle('on', notifSoundEnabled);
   }
   applyThemeColor(data.themeColor || currentThemeId, {save:false});
   refreshAllUI();
@@ -1264,6 +1282,10 @@ body{background:var(--bg);transition:background .35s;}
 .pin-key:active{background:var(--border);}
 .pin-key.emp{visibility:hidden;}
 .notif-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.snd-choice{cursor:pointer;transition:background .15s;}
+.snd-choice:active{background:var(--surface2);}
+.snd-choice.active{background:var(--surface2);}
+.snd-check{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--blue2);flex-shrink:0;}
 .notif-row:last-child{border-bottom:none;}
 .notif-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;}
 .notif-ico svg{width:17px;height:17px;fill:none;stroke-width:1.8;}
@@ -1950,6 +1972,11 @@ body{background:var(--bg);transition:background .35s;}
           <div class="st-info"><div class="st-nm">Liquid Glass</div><div class="st-sub" id="lg-sub">Tampilan kaca transparan</div></div>
           <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
         </div>
+        <div class="st-item" style="cursor:default;">
+          <div class="st-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" fill="none" stroke="#2A6FD6" stroke-width="1.8"><path d="M12 2.5c-2.5 3-5 6.2-5 9.8a5 5 0 0010 0c0-3.6-2.5-6.8-5-9.8z"/><circle cx="10" cy="13" r="1" fill="#2A6FD6" stroke="none" opacity=".5"/></svg></div>
+          <div class="st-info"><div class="st-nm">Suara Notifikasi</div><div class="st-sub">Tetesan air saat notifikasi masuk</div></div>
+          <button class="tog on" id="notifSoundToggle" onclick="toggleNotifSound()"></button>
+        </div>
       </div>
       <div class="st-lbl" id="st-suplbl">SUPPORT & EXIT</div>
       <div class="st-grp">
@@ -2339,6 +2366,10 @@ body{background:var(--bg);transition:background .35s;}
       <div class="notif-row"><div class="notif-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="notif-info"><div class="notif-nm">Peringatan Batas Pengeluaran</div><div class="notif-sub">Peringatan saat 80% anggaran terpakai</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
       <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm">Tujuan Tabungan</div><div class="notif-sub">Pencapaian & penyelesaian target</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
     </div></div>
+    <div class="sec-section"><div class="sec-sec-ttl">SUARA NOTIFIKASI</div><div class="sec-grp">
+      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;font-size:18px;display:flex;align-items:center;justify-content:center;">💧</div><div class="notif-info"><div class="notif-nm">Suara Notifikasi</div><div class="notif-sub">Bunyi saat notifikasi baru masuk</div></div><button class="tog on" id="notifSoundToggle" onclick="toggleNotifSound()"></button></div>
+      <div id="notifSoundChoices"></div>
+    </div></div>
     <div class="sec-section"><div class="sec-sec-ttl">UMUM</div><div class="sec-grp">
       <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm">Notifikasi Harga Emas</div><div class="notif-sub">Update harga emas real-time (dalam aplikasi)</div></div><button class="tog on" id="goldNotifToggle" onclick="this.classList.toggle('on')"></button></div>
       <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm">Tips & Wawasan</div><div class="notif-sub">Saran keuangan mingguan</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
@@ -2709,6 +2740,191 @@ function _clearNotifLocal(){
 // 'rate' = notifikasi kurs & emas diperbarui → tetap lokal saja
 const _NOTIF_LOCAL_ONLY_TYPES = new Set(['rate']);
 
+// ============================================================
+// SUARA NOTIFIKASI — 5 suara unik, semua disintesis via Web Audio API
+// (tidak pakai file audio eksternal sama sekali, jadi tidak ada
+//  masalah lisensi/aset & tidak nambah berat halaman)
+// ============================================================
+let notifSoundEnabled = true;
+let notifSoundChoice  = 'water'; // key dari NOTIF_SOUNDS di bawah
+let _notifAudioCtx = null;
+
+// Browser modern menahan AudioContext dalam status "suspended" sampai ada
+// interaksi user (klik/tap) — jadi kita buat & "unlock" sekali di interaksi
+// pertama, supaya notifikasi yang muncul otomatis (mis. dari realtime sync)
+// tetap bisa bunyi tanpa nunggu klik lagi saat itu terjadi.
+function _getNotifAudioCtx(){
+  if(!_notifAudioCtx){
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return null;
+    _notifAudioCtx = new Ctx();
+  }
+  if(_notifAudioCtx.state === 'suspended') _notifAudioCtx.resume().catch(()=>{});
+  return _notifAudioCtx;
+}
+document.addEventListener('click', ()=>_getNotifAudioCtx(), {once:true});
+document.addEventListener('touchstart', ()=>_getNotifAudioCtx(), {once:true, passive:true});
+
+/* ── "Tetesan Air" — 2 lapis nada sine pitch turun cepat: lapis pertama
+   nada tinggi & singkat (bunyi "tik" saat tetesan menyentuh), lapis kedua
+   nada lebih rendah menyusul sepersekian detik kemudian dengan ekor lebih
+   panjang (resonansi "plop"-nya). ── */
+function _sndWater(ctx){
+  const now = ctx.currentTime;
+  const osc1=ctx.createOscillator(), g1=ctx.createGain();
+  osc1.type='sine';
+  osc1.frequency.setValueAtTime(1400, now);
+  osc1.frequency.exponentialRampToValueAtTime(500, now+0.09);
+  g1.gain.setValueAtTime(0.0001, now);
+  g1.gain.exponentialRampToValueAtTime(0.30, now+0.006);
+  g1.gain.exponentialRampToValueAtTime(0.0001, now+0.22);
+  osc1.connect(g1); g1.connect(ctx.destination);
+  osc1.start(now); osc1.stop(now+0.24);
+
+  const t2 = now+0.045;
+  const osc2=ctx.createOscillator(), g2=ctx.createGain();
+  osc2.type='sine';
+  osc2.frequency.setValueAtTime(650, t2);
+  osc2.frequency.exponentialRampToValueAtTime(160, t2+0.32);
+  g2.gain.setValueAtTime(0.0001, t2);
+  g2.gain.exponentialRampToValueAtTime(0.16, t2+0.02);
+  g2.gain.exponentialRampToValueAtTime(0.0001, t2+0.4);
+  osc2.connect(g2); g2.connect(ctx.destination);
+  osc2.start(t2); osc2.stop(t2+0.42);
+}
+
+/* ── "Lonceng" — fundamental + 2 overtone inharmonik ala lonceng kecil,
+   decay panjang & lembut. ── */
+function _sndChime(ctx){
+  const now = ctx.currentTime;
+  const partials = [ {f:1046.50, g:0.22, d:1.10}, {f:1568.00, g:0.12, d:0.90}, {f:2093.00, g:0.07, d:0.70} ];
+  partials.forEach(p=>{
+    const osc=ctx.createOscillator(), g=ctx.createGain();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(p.f, now);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(p.g, now+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+p.d);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(now); osc.stop(now+p.d+0.05);
+  });
+}
+
+/* ── "Marimba" — nada kayu singkat (attack cepat, decay cepat) + thump
+   rendah menyertai, mirip pukulan bilah marimba. ── */
+function _sndMarimba(ctx){
+  const now = ctx.currentTime;
+  const osc=ctx.createOscillator(), g=ctx.createGain();
+  osc.type='sine';
+  osc.frequency.setValueAtTime(523.25, now); // C5
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.35, now+0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(now); osc.stop(now+0.38);
+
+  const osc2=ctx.createOscillator(), g2=ctx.createGain();
+  osc2.type='sine';
+  osc2.frequency.setValueAtTime(150, now);
+  g2.gain.setValueAtTime(0.0001, now);
+  g2.gain.exponentialRampToValueAtTime(0.15, now+0.004);
+  g2.gain.exponentialRampToValueAtTime(0.0001, now+0.12);
+  osc2.connect(g2); g2.connect(ctx.destination);
+  osc2.start(now); osc2.stop(now+0.14);
+}
+
+/* ── "Gelembung Pop" — pitch naik sangat cepat lalu berhenti mendadak,
+   mirip gelembung pecah. ── */
+function _sndPop(ctx){
+  const now = ctx.currentTime;
+  const osc=ctx.createOscillator(), g=ctx.createGain();
+  osc.type='sine';
+  osc.frequency.setValueAtTime(300, now);
+  osc.frequency.exponentialRampToValueAtTime(900, now+0.03);
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.28, now+0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+0.09);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(now); osc.stop(now+0.1);
+}
+
+/* ── "Ping Digital" — 2 nada pendek naik berurutan, ala notifikasi digital
+   klasik ("ding-dong" singkat). ── */
+function _sndDing(ctx){
+  const now = ctx.currentTime;
+  const notes = [ {f:880.00, t:0}, {f:1174.66, t:0.11} ]; // A5 lalu D6
+  notes.forEach(n=>{
+    const t = now + n.t;
+    const osc=ctx.createOscillator(), g=ctx.createGain();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(n.f, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26, t+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.28);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t+0.3);
+  });
+}
+
+// Katalog suara notifikasi yang tersedia untuk dipilih user
+const NOTIF_SOUNDS = {
+  water:   { label:'Tetesan Air',   emoji:'💧', fn:_sndWater },
+  chime:   { label:'Lonceng',       emoji:'🔔', fn:_sndChime },
+  marimba: { label:'Marimba',       emoji:'🎵', fn:_sndMarimba },
+  pop:     { label:'Gelembung Pop', emoji:'🫧', fn:_sndPop },
+  ding:    { label:'Ping Digital',  emoji:'📳', fn:_sndDing }
+};
+
+// Dipanggil dari addNotif() — memainkan suara sesuai pilihan user saat ini
+function playNotifSound(){
+  if(!notifSoundEnabled) return;
+  try{
+    const ctx = _getNotifAudioCtx();
+    if(!ctx || ctx.state !== 'running') return; // belum ada interaksi user → skip, jangan error
+    const snd = NOTIF_SOUNDS[notifSoundChoice] || NOTIF_SOUNDS.water;
+    snd.fn(ctx);
+  } catch(e){ console.warn('notif sound error:', e); }
+}
+
+// Toggle master ON/OFF di layar Pengaturan Notifikasi
+function toggleNotifSound(){
+  notifSoundEnabled = !notifSoundEnabled;
+  const tog = document.getElementById('notifSoundToggle');
+  if(tog) tog.classList.toggle('on', notifSoundEnabled);
+  if(notifSoundEnabled) playNotifSound(); // preview biar user langsung dengar
+  toast(notifSoundEnabled ? '🔊 Suara notifikasi ON' : '🔇 Suara notifikasi OFF');
+  fbAutoSave();
+}
+
+/* ── Pilih suara notifikasi dari daftar ──
+   Diklik → langsung diputar sebagai pratinjau (terlepas dari toggle
+   ON/OFF, supaya user tetap bisa dengar contoh suaranya walau master
+   toggle sedang mati) SEBELUM benar-benar dipakai untuk notifikasi
+   berikutnya, lalu jadi pilihan aktif. ── */
+function selectNotifSound(key){
+  const snd = NOTIF_SOUNDS[key]; if(!snd) return;
+  notifSoundChoice = key;
+  renderNotifSoundChoices();
+  try{
+    const ctx = _getNotifAudioCtx();
+    if(ctx && ctx.state === 'running') snd.fn(ctx);
+  } catch(e){}
+  toast(`🔈 ${snd.label} dipilih`);
+  fbAutoSave();
+}
+
+// Render daftar pilihan suara di overlay Pengaturan Notifikasi
+function renderNotifSoundChoices(){
+  const c = document.getElementById('notifSoundChoices');
+  if(!c) return;
+  c.innerHTML = Object.entries(NOTIF_SOUNDS).map(([key,snd])=>`
+    <div class="notif-row snd-choice${key===notifSoundChoice?' active':''}" onclick="selectNotifSound('${key}')">
+      <div class="notif-ico" style="background:#EEF1F8;font-size:18px;display:flex;align-items:center;justify-content:center;">${snd.emoji}</div>
+      <div class="notif-info"><div class="notif-nm">${snd.label}</div><div class="notif-sub">${lang==='id'?'Ketuk untuk dengar & pilih':'Tap to preview & select'}</div></div>
+      <div class="snd-check">${key===notifSoundChoice?'✓':''}</div>
+    </div>`).join('');
+}
+
 /* ── Simpan/patch SEBAGIAN data notifikasi ke RTDB lewat .update() ──
    PENTING: pakai .update() (partial write per-path), BUKAN .set() (yang
    nulis ULANG SELURUH koleksi). Sebelumnya tiap ada 1 notif baru / status
@@ -2808,6 +3024,7 @@ function addNotif(type,title,msg){
   notifications.unshift(item);
   updateNotifBadge();
   _saveNotifLocal();
+  playNotifSound();
   // Simpan ke RTDB jika bukan tipe lokal-only (kurs/emas) — cuma kirim
   // notifikasi yang baru dibuat (partial patch), bukan seluruh array.
   if(!_NOTIF_LOCAL_ONLY_TYPES.has(type)){
@@ -4816,6 +5033,7 @@ await fsSaveProfile(user); fbAutoSave();}
 function openSecOverlay(){document.getElementById('secOvr').classList.add('on');}
 function openNotifSettingsOverlay(){
   document.getElementById('notifSettingsOvr').classList.add('on');
+  renderNotifSoundChoices();
   // Show/hide permission banner
   const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
   const banner = document.getElementById('pushPermBanner');
@@ -6498,6 +6716,14 @@ async function enterApp(initialState){
     applyThemeColor(initialState.themeColor || currentThemeId, {save:false});
     if(initialState.liquidGlass){
       applyLiquidGlass(!!initialState.liquidGlass.enabled, initialState.liquidGlass.intensity||55, {silent:true, collapseOnScroll: initialState.liquidGlass.collapseOnScroll !== false});
+    }
+    if(initialState.notifSound){
+      notifSoundEnabled = initialState.notifSound.enabled !== false;
+      if(initialState.notifSound.choice && NOTIF_SOUNDS[initialState.notifSound.choice]){
+        notifSoundChoice = initialState.notifSound.choice;
+      }
+      const nsTog = document.getElementById('notifSoundToggle');
+      if(nsTog) nsTog.classList.toggle('on', notifSoundEnabled);
     }
 
   } else {

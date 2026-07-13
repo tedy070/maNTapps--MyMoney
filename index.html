@@ -1972,11 +1972,6 @@ body{background:var(--bg);transition:background .35s;}
           <div class="st-info"><div class="st-nm">Liquid Glass</div><div class="st-sub" id="lg-sub">Tampilan kaca transparan</div></div>
           <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
         </div>
-        <div class="st-item" style="cursor:default;">
-          <div class="st-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" fill="none" stroke="#2A6FD6" stroke-width="1.8"><path d="M12 2.5c-2.5 3-5 6.2-5 9.8a5 5 0 0010 0c0-3.6-2.5-6.8-5-9.8z"/><circle cx="10" cy="13" r="1" fill="#2A6FD6" stroke="none" opacity=".5"/></svg></div>
-          <div class="st-info"><div class="st-nm">Suara Notifikasi</div><div class="st-sub">Tetesan air saat notifikasi masuk</div></div>
-          <button class="tog on" id="notifSoundToggle" onclick="toggleNotifSound()"></button>
-        </div>
       </div>
       <div class="st-lbl" id="st-suplbl">SUPPORT & EXIT</div>
       <div class="st-grp">
@@ -2746,7 +2741,7 @@ const _NOTIF_LOCAL_ONLY_TYPES = new Set(['rate']);
 //  masalah lisensi/aset & tidak nambah berat halaman)
 // ============================================================
 let notifSoundEnabled = true;
-let notifSoundChoice  = 'water'; // key dari NOTIF_SOUNDS di bawah
+let notifSoundChoice  = 'default'; // key dari NOTIF_SOUNDS di bawah
 let _notifAudioCtx = null;
 
 // Browser modern menahan AudioContext dalam status "suspended" sampai ada
@@ -2867,7 +2862,9 @@ function _sndDing(ctx){
 }
 
 // Katalog suara notifikasi yang tersedia untuk dipilih user
+// "default" = suara bawaan/asli sebelum fitur pilihan suara ini ada (sama seperti "water")
 const NOTIF_SOUNDS = {
+  default: { label:'Default',       emoji:'⭐', fn:_sndWater },
   water:   { label:'Tetesan Air',   emoji:'💧', fn:_sndWater },
   chime:   { label:'Lonceng',       emoji:'🔔', fn:_sndChime },
   marimba: { label:'Marimba',       emoji:'🎵', fn:_sndMarimba },
@@ -2914,6 +2911,8 @@ function selectNotifSound(key){
 }
 
 // Render daftar pilihan suara di overlay Pengaturan Notifikasi
+// Setiap suara punya tombol on/off sendiri — menyalakan salah satu otomatis
+// mematikan yang lain (hanya 1 suara aktif dalam satu waktu untuk diputar).
 function renderNotifSoundChoices(){
   const c = document.getElementById('notifSoundChoices');
   if(!c) return;
@@ -2921,7 +2920,7 @@ function renderNotifSoundChoices(){
     <div class="notif-row snd-choice${key===notifSoundChoice?' active':''}" onclick="selectNotifSound('${key}')">
       <div class="notif-ico" style="background:#EEF1F8;font-size:18px;display:flex;align-items:center;justify-content:center;">${snd.emoji}</div>
       <div class="notif-info"><div class="notif-nm">${snd.label}</div><div class="notif-sub">${lang==='id'?'Ketuk untuk dengar & pilih':'Tap to preview & select'}</div></div>
-      <div class="snd-check">${key===notifSoundChoice?'✓':''}</div>
+      <button class="tog${key===notifSoundChoice?' on':''}" onclick="event.stopPropagation(); selectNotifSound('${key}')"></button>
     </div>`).join('');
 }
 

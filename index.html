@@ -754,6 +754,19 @@ body{background:var(--bg);transition:background .35s;}
 .dk.liquid-glass .bal-sheen::before{
   background:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.02) 38%, rgba(255,255,255,.28) 50%, rgba(255,255,255,.02) 62%, transparent 80%);
 }
+/* Gel statis yang diam di tempat (tidak ikut bergerak) — melengkapi
+   sheen yang melintas, supaya selalu ada "kilau tetap" di permukaan
+   kaca, bukan cuma pas sorot yang lewat saja. */
+.liquid-glass .bal-sheen::after{
+  content:'';
+  position:absolute;top:-6%;left:22%;width:46%;height:42%;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.85), rgba(255,255,255,.25) 55%, transparent 75%);
+  mix-blend-mode:overlay;
+}
+.dk.liquid-glass .bal-sheen::after{
+  background:radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.35), rgba(255,255,255,.08) 55%, transparent 75%);
+}
 .liquid-glass .bal-card::before{
   width:220px;height:220px;top:-70px;right:-60px;
   background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.4), rgba(255,255,255,.06) 55%, transparent 70%);

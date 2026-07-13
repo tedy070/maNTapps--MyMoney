@@ -1034,8 +1034,8 @@ body{background:var(--bg);transition:background .35s;}
   display:flex;flex-direction:column;justify-content:space-between;
 }
 .wallet-card:active{transform:scale(.97);}
-.wallet-card::before{content:'';position:absolute;top:-25px;right:-25px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);}
-.wallet-card::after{content:'';position:absolute;bottom:-35px;left:10px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.05);}
+.wallet-card::before{content:'';position:absolute;top:-25px;right:-25px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none;}
+.wallet-card::after{content:'';position:absolute;bottom:-35px;left:10px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none;}
 
 /* ── Liquid Glass: wallet-card jadi gelembung/gel kaca ──
    Warna brand tiap bank/e-wallet (di-set inline lewat JS) tetap
@@ -6486,21 +6486,29 @@ async function enterApp(initialState){
   switchTab('home');
   fetchRate();
 
-  // ④ Render semua UI
-  refreshAllUI();
-
-  // ⑤ Mulai realtime sync lintas device
-  fbStartRealtimeSync();
-
-  // ⑥ Push notifications
-  initPushNotifications();
-
-  // ⑦ Schedule tagihan reminders (after SW registration)
-  initTagihanScheduler();
-
-  // ⑧ Load notifikasi: RTDB dulu (histori/transaksi), lalu localStorage (kurs lokal)
+  // ④ Load notifikasi SEBELUM render: RTDB dulu (histori/transaksi), lalu
+  //    localStorage (kurs lokal). Sengaja dipindah ke sini (sebelumnya
+  //    dijalankan setelah refreshAllUI()) karena refreshAllUI() ikut
+  //    memanggil updateNotifBadge() — kalau notifikasi belum sempat dimuat
+  //    saat itu, badge/notif center akan render dari array kosong dan
+  //    terlihat seperti "notifikasi hilang" tiap kali app di-refresh,
+  //    padahal datanya sebenarnya masih ada di RTDB, cuma belum sempat
+  //    kebaca. Dengan await di sini, saat refreshAllUI() jalan, data
+  //    notifikasi sudah pasti sudah siap.
   await _loadNotifFromRTDB();
   _loadNotifLocal();
+
+  // ⑤ Render semua UI
+  refreshAllUI();
+
+  // ⑥ Mulai realtime sync lintas device
+  fbStartRealtimeSync();
+
+  // ⑦ Push notifications
+  initPushNotifications();
+
+  // ⑧ Schedule tagihan reminders (after SW registration)
+  initTagihanScheduler();
 
   // ⑨ Auto-refresh gold + exchange rate every 5 minutes
   if(window._goldRefreshInterval) clearInterval(window._goldRefreshInterval);

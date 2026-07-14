@@ -61,6 +61,28 @@ const fsDB   = firebase.firestore();   // Firestore
 // Ambil UID user yang sedang login
 function fbUID(){ return fbAuth.currentUser?.uid || null; }
 
+// ═══════════════════════════════════════════════════════
+// KEAMANAN — escapeHtml()
+// Banyak nilai yang diketik bebas oleh user (nama wallet/kartu, nama
+// tujuan tabungan, deskripsi transaksi, nama tagihan, judul/pesan
+// notifikasi, dsb) dirender lewat template literal ke `innerHTML`.
+// Tanpa di-escape, user bisa mengetik markup HTML/JS (mis.
+// `<img src=x onerror=...>`) yang akan IKUT DIEKSEKUSI saat dirender
+// kembali (stored XSS). Fungsi ini WAJIB dipakai untuk membungkus
+// setiap nilai bebas-teks milik user sebelum masuk ke innerHTML.
+// Nilai yang sepenuhnya dikontrol app (SVG ikon bawaan, label bahasa,
+// warna, dsb) TIDAK perlu di-escape.
+// ═══════════════════════════════════════════════════════
+function escapeHtml(str){
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // — Bersihkan objek dari `undefined` sebelum dikirim ke Realtime DB.
 // Firebase RTDB MENOLAK (throw) setiap value yang undefined di dalam object/array,
 // walau hanya 1 field. Ini adalah penyebab paling umum toast
@@ -175,8 +197,12 @@ async function fbLoadState(){
 }
 
 // — FIRESTORE: simpan profil user
+// Mengembalikan {ok:true} jika berhasil, atau {ok:false, code} jika gagal —
+// supaya pemanggil (saveProfile) bisa menampilkan toast yang JUJUR, bukan
+// selalu "berhasil" walau write sebenarnya ditolak Firestore Rules
+// (mis. karena field `photo` kelewat besar).
 async function fsSaveProfile(data){
-  const uid = fbUID(); if(!uid) return;
+  const uid = fbUID(); if(!uid) return { ok:false, code:'no-auth' };
   try {
     await fsDB.collection('users').doc(uid).set({
       name:      data.name  || '',
@@ -185,7 +211,11 @@ async function fsSaveProfile(data){
       photo:     data.photo  || null,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
-  } catch(e){ console.warn('Firestore profile error:', e); }
+    return { ok:true };
+  } catch(e){
+    console.warn('Firestore profile error:', e);
+    return { ok:false, code: e && e.code };
+  }
 }
 
 // — FIRESTORE: baca profil user
@@ -1423,7 +1453,7 @@ body{background:var(--bg);transition:background .35s;}
         <svg class="hero-wave" style="position:absolute;bottom:0;left:0;right:0;height:60px;width:100%;opacity:.3" viewBox="0 0 340 60" preserveAspectRatio="none"><polyline points="0,55 50,42 90,48 140,28 180,33 220,14 270,18 340,3" stroke="rgba(59,130,246,.5)" stroke-width="2" fill="none"/></svg>
         <div class="hero-photo-overlay"></div>
       </div>
-      <div class="sp-gain" id="sp-gain-badge">↗ +24.5%</div>
+      <div class="sp-gain" id="sp-gain-badge">↗ +0%</div>
     </div>
   </div>
   <div class="sp-content">
@@ -2661,6 +2691,43 @@ let selCat='',selCatIco='',selCatColor='',selCatStroke='';
 let balance=0, exRate=15800;
 let curAv='default', editAvData='default';
 let photoDataUrl=null, editPhotoDataUrl=null;
+
+// ── Kompresi foto profil sebelum disimpan ──
+// Foto langsung dari kamera HP bisa 2-8MB (base64-nya jadi jutaan
+// karakter). Rule Firestore membatasi field `photo` maks 500.000
+// karakter — kalau dikirim mentah, Firestore MENOLAK write (dan tanpa
+// perbaikan di saveProfile(), user tidak akan tahu fotonya gagal
+// tersimpan). Fungsi ini me-resize foto ke maksimal 512x512px dan
+// meng-encode ulang sebagai JPEG kualitas 0.75, yang biasanya
+// menghasilkan puluhan KB saja — jauh di bawah batas rules.
+const PROFILE_PHOTO_MAX_DIM = 512;
+const PROFILE_PHOTO_QUALITY = 0.75;
+function _compressImageFile(file, maxDim = PROFILE_PHOTO_MAX_DIM, quality = PROFILE_PHOTO_QUALITY){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read-failed'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('decode-failed'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+          else { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        try {
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (err) { reject(err); }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 // ── Cache foto profil terakhir (localStorage) ──
 // Tujuan: welcome page & layar PIN butuh tahu foto SEBELUM proses login/Firebase
 // selesai (yang berjalan async & baru selesai setelah welcome page tampil).
@@ -3226,7 +3293,7 @@ function renderNotifCenter(){
 }
 
 function renderNI(n){
-  return`<div class="nc-item${n.unread?' unread':''}"><div class="nc-ico" style="background:${nBg[n.type]||'#EBF3FE'};fill:none;stroke-width:1.8;">${nIco[n.type]||nIco.tip}</div><div class="nc-body"><div class="nc-nm">${n.title}</div><div class="nc-msg">${n.msg}</div><div class="nc-time">${timeAgo(n.time)}</div></div></div>`;
+  return`<div class="nc-item${n.unread?' unread':''}"><div class="nc-ico" style="background:${nBg[n.type]||'#EBF3FE'};fill:none;stroke-width:1.8;">${nIco[n.type]||nIco.tip}</div><div class="nc-body"><div class="nc-nm">${escapeHtml(n.title)}</div><div class="nc-msg">${escapeHtml(n.msg)}</div><div class="nc-time">${timeAgo(n.time)}</div></div></div>`;
 }
 
 // ============================================================
@@ -3278,8 +3345,8 @@ function renderGoals(){
           </div>
         </button>
       </div>
-      <div class="goal-nm">${g.name}</div>
-      <div class="goal-sub">${g.desc}</div>
+      <div class="goal-nm">${escapeHtml(g.name)}</div>
+      <div class="goal-sub">${escapeHtml(g.desc)}</div>
       <div class="goal-ams">
         <span class="goal-cur">${fmt(g.current)}</span>
         <span class="goal-tgt">${lblOf} ${fmt(g.target)}</span>
@@ -3744,7 +3811,7 @@ function renderWallets(){
     // ── GOLD (emas) ──
     if(isGold){
       div.style.background = w.customColor ? `linear-gradient(135deg,${w.customColor.split(',')[0]},${w.customColor.split(',')[1]})` : 'linear-gradient(135deg,#7c3c0e,#c47a1a 45%,#e8a820)';
-      const goldLogo=`<svg viewBox="0 0 130 26" xmlns="http://www.w3.org/2000/svg"><text x="1" y="20" font-family="Arial Black,Arial" font-weight="900" font-size="18" fill="white">${w.bank}</text></svg>`;
+      const goldLogo=`<svg viewBox="0 0 130 26" xmlns="http://www.w3.org/2000/svg"><text x="1" y="20" font-family="Arial Black,Arial" font-weight="900" font-size="18" fill="white">${escapeHtml(w.bank)}</text></svg>`;
       const goldSub = lang==='id'?'LOGAM MULIA':'PRECIOUS METAL';
       div.innerHTML=`
         <svg style="position:absolute;right:-18px;top:-18px;opacity:.1;pointer-events:none" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="55" fill="none" stroke="white" stroke-width="18"/><circle cx="60" cy="60" r="32" fill="none" stroke="white" stroke-width="10"/></svg>
@@ -3758,7 +3825,7 @@ function renderWallets(){
             <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
           </div>
         </div>
-        <div class="wc-num">•••• •••• •••• ${w.num}</div>
+        <div class="wc-num">•••• •••• •••• ${escapeHtml(w.num)}</div>
         <div class="wc-footer">
           <div>
             <div style="font-size:8px;color:rgba(255,215,0,.6);letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">${lang==='id'?'NILAI INVESTASI':'INVESTED'}</div>
@@ -3773,14 +3840,14 @@ function renderWallets(){
       // Pakai customColor jika user sudah pilih warna manual, else pakai brand gradient
       div.style.background = w.customColor ? `linear-gradient(135deg,${w.customColor.split(',')[0]},${w.customColor.split(',')[1]})` : brand.grad;
       const chipHtml  = brand.chip  ? `<div class="wc-chip"></div>` : '';
-      const numHtml   = brand.hidNum? '' : `<div class="wc-num">•••• •••• •••• ${w.num}</div>`;
+      const numHtml   = brand.hidNum? '' : `<div class="wc-num">•••• •••• •••• ${escapeHtml(w.num)}</div>`;
       div.innerHTML=`
         ${brand.deco||''}
         <div class="wc-top">
           <div class="wc-brand-logo">
             ${brand.logo}
             <div class="wc-brand-sub">${brand.sub||''}</div>
-            <div class="wc-brand-name-fallback">${w.bank}</div>
+            <div class="wc-brand-name-fallback">${escapeHtml(w.bank)}</div>
           </div>
           <div style="flex-shrink:0;display:flex;align-items:center;gap:6px;margin-top:1px;">
             ${chipHtml}
@@ -3802,13 +3869,13 @@ function renderWallets(){
       div.style.background = `linear-gradient(135deg,${c1},${c2})`;
       div.innerHTML=`
         <div class="wc-top">
-          <div class="wc-bank">${w.bank}</div>
+          <div class="wc-bank">${escapeHtml(w.bank)}</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="wc-chip"></div>
             <button class="wc-more" onclick="toggleWalletMenu(event,${w.id})">⋮</button>
           </div>
         </div>
-        <div class="wc-num">•••• •••• •••• ${w.num}</div>
+        <div class="wc-num">•••• •••• •••• ${escapeHtml(w.num)}</div>
         <div class="wc-footer"><div><div class="wc-bal">${fmt(w.balance)}</div><div class="wc-type">${w.type}</div></div></div>`;
     }
     c.appendChild(div);
@@ -3825,7 +3892,7 @@ function renderWalletSummary(){
     const t=list.reduce((s,w)=>s+(typeof w.balance==='number'&&!isNaN(w.balance)?w.balance:0),0);
     const rows=list.map(w=>{
       const col=(w.color||'#1A56C4,#2A6FD6').split(',');
-      const bank=w.bank||'Wallet', num=w.num||'0000';
+      const bank=escapeHtml(w.bank||'Wallet'), num=escapeHtml(w.num||'0000');
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,${col[0]},${col[1]||col[0]});"></div><span style="font-size:13px;color:var(--t2);">${bank} ••••${num}</span></div><span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${fmt(typeof w.balance==='number'&&!isNaN(w.balance)?w.balance:0)}</span></div>`;
     }).join('');
     e.innerHTML=`<div class="lg-list-card" style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${list.length} cards</div></div>${rows}</div>`;
@@ -4071,7 +4138,7 @@ function renderHistory(){
   }
 
   c.innerHTML = filtered.map(h => {
-    const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
+    const nm = escapeHtml(h.langKey ? (T(h.langKey)||h.name) : h.name);
     const isTarik = isTarikTx(h);
     const icon = isTarik
       ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
@@ -4079,8 +4146,8 @@ function renderHistory(){
         ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
         : '<svg viewBox="0 0 24 24" stroke="var(--red)"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>';
     const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:${isTarik?'#6B7280':'#1A56C4'};border-radius:6px;padding:2px 6px;margin-left:6px;">${T('cat-'+h.cat)||h.cat}</span>` : '';
-    const srcInfo  = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${h.src}</span>` : '';
-    const destInfo = isTarik && h.dest ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">→ ${h.dest}</span>` : '';
+    const srcInfo  = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${escapeHtml(h.src)}</span>` : '';
+    const destInfo = isTarik && h.dest ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">→ ${escapeHtml(h.dest)}</span>` : '';
     const amtColor = isTarik ? 'color:#6B7280;' : '';
     const amtSign  = isTarik ? '🏧 ' : (h.pos ? '+' : '-');
     return `<div class="h-item">
@@ -4741,6 +4808,26 @@ async function fetchRate(){
   if(_rateBannerTimer) clearInterval(_rateBannerTimer);
   _rateBannerTimer = setInterval(autoRotateBanner, 5000);
 } // exRate hanya untuk konversi tampilan USD
+// Satu-satunya tempat rumus badge panah+persentase dihitung — dipakai
+// baik oleh card "Total Saldo" (h-gain-badge) MAUPUN card welcome page
+// (sp-gain-badge), supaya keduanya DIJAMIN selalu sama persis (tidak ada
+// lagi 2 salinan rumus yang bisa diam-diam berbeda/tidak sinkron).
+function computeGainBadgeState(balance, balAwalBulan, netBulanIni){
+  if (balAwalBulan > 0) {
+    const pct = (netBulanIni / balAwalBulan) * 100;
+    const sign = pct >= 0 ? '+' : '';
+    const arrow = pct >= 0 ? '↗' : '↘';
+    return {
+      text:  `${arrow} ${sign}${pct.toFixed(1)}%`,
+      bg:    pct >= 0 ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.13)',
+      color: pct >= 0 ? 'var(--green)' : 'var(--red)'
+    };
+  } else if (balance > 0 && balAwalBulan <= 0) {
+    // Baru mulai bulan ini (belum ada saldo awal)
+    return { text: '↗ Baru', bg: 'rgba(34,197,94,.15)', color: 'var(--green)' };
+  }
+  return { text: '— 0%', bg: 'rgba(107,114,128,.1)', color: 'var(--t3)' };
+}
 function updateAllAmounts(){
   const rp=isModeRp();
   // Show rate banner always (now includes Gold/IDR and Gold/USD for both languages)
@@ -4772,31 +4859,14 @@ function updateAllAmounts(){
   // ── Terapkan ke SEMUA badge panah+persentase (home & splash/welcome) ──
   // supaya card di welcome page selalu mengikuti angka riil card total saldo,
   // bukan lagi nilai statis hardcoded.
+  const gainState = computeGainBadgeState(balance, balAwalBulan, netBulanIni);
   ['h-gain-badge', 'sp-gain-badge'].forEach(function(id){
     const gainBadge = document.getElementById(id);
     if (!gainBadge) return;
-    let text, bg, color;
-    if (balAwalBulan > 0) {
-      const pct = (netBulanIni / balAwalBulan) * 100;
-      const sign = pct >= 0 ? '+' : '';
-      const arrow = pct >= 0 ? '↗' : '↘';
-      text  = `${arrow} ${sign}${pct.toFixed(1)}%`;
-      bg    = pct >= 0 ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.13)';
-      color = pct >= 0 ? 'var(--green)' : 'var(--red)';
-    } else if (balance > 0 && balAwalBulan <= 0) {
-      // Baru mulai bulan ini (belum ada saldo awal)
-      text  = `↗ Baru`;
-      bg    = 'rgba(34,197,94,.15)';
-      color = 'var(--green)';
-    } else {
-      text  = `— 0%`;
-      bg    = 'rgba(107,114,128,.1)';
-      color = 'var(--t3)';
-    }
-    gainBadge.textContent = text;
-    gainBadge.style.background = bg;
-    gainBadge.style.color = color;
-    if (id === 'sp-gain-badge') cacheLastGain(text, bg, color);
+    gainBadge.textContent = gainState.text;
+    gainBadge.style.background = gainState.bg;
+    gainBadge.style.color = gainState.color;
+    if (id === 'sp-gain-badge') cacheLastGain(gainState.text, gainState.bg, gainState.color);
   });
 
   // Spending chips — dari historyItems bulan ini
@@ -5080,22 +5150,76 @@ function updateSplashHero(photo){
 // Sama seperti cache foto: jalan instan sebelum balance/historyItems selesai
 // dimuat dari Firebase. Home page (h-gain-badge) TIDAK disentuh — tetap
 // menunggu updateAllAmounts() dengan data resmi seperti biasa.
+// Kalau BELUM ADA cache sama sekali (kunjungan pertama / cache pernah
+// dibersihkan), JANGAN biarkan teks placeholder hardcoded di HTML — pakai
+// computeGainBadgeState() dengan balance=0 (nilai awal sebelum data resmi
+// dimuat), yang akan menghasilkan "— 0%" senada dengan default card Total
+// Saldo, bukan angka demo yang tidak berarti apa-apa.
 (function applyCachedGainInstantly(){
   const cached=getCachedLastGain();
   const badge=document.getElementById('sp-gain-badge');
-  if(cached && badge){
-    badge.textContent=cached.text;
-    badge.style.background=cached.bg;
-    badge.style.color=cached.color;
-  }
+  if(!badge) return;
+  const state = cached || computeGainBadgeState(balance, 0, 0);
+  badge.textContent=state.text;
+  badge.style.background=state.bg;
+  badge.style.color=state.color;
 })();
 function pickAv(el,av){editAvData=av;editPhotoDataUrl=null;document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');updateAvatar('editAvPreview',av,null);}
 function syncAvPicker(){document.querySelectorAll('.av-opt').forEach(o=>o.classList.toggle('sel',o.getAttribute('data-av')===curAv&&!photoDataUrl));}
-function handlePhotoUpload(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{editPhotoDataUrl=e.target.result;document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));updateAvatar('editAvPreview',editAvData,editPhotoDataUrl);};r.readAsDataURL(f);}
+async function handlePhotoUpload(input){
+  const f = input.files[0]; if(!f) return;
+  if (!f.type || !f.type.startsWith('image/')) { toast('⚠️ ' + (lang==='id'?'File harus berupa gambar':'File must be an image')); input.value=''; return; }
+  // Batas wajar untuk file sumber sebelum diproses (guard sederhana, bukan pengganti kompresi)
+  if (f.size > 20 * 1024 * 1024) { toast('⚠️ ' + (lang==='id'?'Ukuran foto terlalu besar (maks 20MB)':'Photo too large (max 20MB)')); input.value=''; return; }
+  try {
+    const compressed = await _compressImageFile(f);
+    editPhotoDataUrl = compressed;
+    document.querySelectorAll('.av-opt').forEach(o=>o.classList.remove('sel'));
+    updateAvatar('editAvPreview', editAvData, editPhotoDataUrl);
+  } catch(e){
+    console.warn('Photo compress error:', e);
+    toast('⚠️ ' + (lang==='id'?'Gagal memproses foto, coba foto lain':'Failed to process photo, try another'));
+  } finally {
+    input.value = '';
+  }
+}
 function openEditProfile(){document.getElementById('editName').value=user?user.name:'Jordan Miller';document.getElementById('editEmail').value=user?user.email:'jordan.miller@curated.io';editAvData=curAv;editPhotoDataUrl=photoDataUrl;updateAvatar('editAvPreview',curAv,photoDataUrl);syncAvPicker();document.getElementById('editProfileOvr').classList.add('on');}
 function closeEditProfile(){document.getElementById('editProfileOvr').classList.remove('on');}
-async function saveProfile(){const name=document.getElementById('editName').value.trim();const em=document.getElementById('editEmail').value.trim();if(!name||!isEmail(em)){toast('⚠️ Please fill valid details');return;}curAv=editAvData;photoDataUrl=editPhotoDataUrl;cacheLastPhoto(photoDataUrl);if(user){user.name=name;user.email=em;user.avatar=curAv;user.photo=photoDataUrl;}document.getElementById('profileName').textContent=name;document.getElementById('profileEmail').textContent=em;updateAvatar('profileAv',curAv,photoDataUrl);updateAvatar('headerAv',curAv,photoDataUrl);updateSplashHero(photoDataUrl);updatePinLockIcon(photoDataUrl);closeEditProfile();addNotif('welcome','Profile Updated','Your profile has been saved successfully.');toast('✅ Profile saved!');// Simpan ke Firebase
-await fsSaveProfile(user); fbAutoSave(); if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();}
+async function saveProfile(){
+  const name = document.getElementById('editName').value.trim();
+  const em   = document.getElementById('editEmail').value.trim();
+  if(!name || !isEmail(em)){ toast('⚠️ Please fill valid details'); return; }
+
+  curAv = editAvData; photoDataUrl = editPhotoDataUrl;
+  cacheLastPhoto(photoDataUrl);
+  if(user){ user.name=name; user.email=em; user.avatar=curAv; user.photo=photoDataUrl; }
+
+  // Update tampilan lokal dulu (terasa instan), TAPI toast sukses/gagal
+  // ditentukan oleh hasil write ke Firestore, bukan ditampilkan lebih dulu.
+  document.getElementById('profileName').textContent = name;
+  document.getElementById('profileEmail').textContent = em;
+  updateAvatar('profileAv', curAv, photoDataUrl);
+  updateAvatar('headerAv', curAv, photoDataUrl);
+  updateSplashHero(photoDataUrl);
+  updatePinLockIcon(photoDataUrl);
+  closeEditProfile();
+
+  // Simpan ke Firebase — tunggu hasilnya sebelum bilang "berhasil" ke user.
+  const result = await fsSaveProfile(user);
+  fbAutoSave();
+  if (isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
+
+  if (result && result.ok) {
+    addNotif('welcome','Profile Updated','Your profile has been saved successfully.');
+    toast('✅ Profile saved!');
+  } else {
+    const code = (result && result.code) ? String(result.code).toLowerCase() : '';
+    const msg = code.includes('permission')
+      ? (lang==='id' ? '⚠️ Gagal menyimpan: data ditolak oleh aturan keamanan (mungkin foto terlalu besar). Coba foto lain.' : '⚠️ Save rejected by security rules (photo may be too large). Try another photo.')
+      : (lang==='id' ? '⚠️ Gagal menyimpan profil ke cloud. Perubahan tersimpan di perangkat ini saja.' : '⚠️ Failed to save profile to cloud. Changes are saved on this device only.');
+    toast(msg);
+  }
+}
 
 // ============================================================
 // SECURITY
@@ -5601,7 +5725,7 @@ function renderRecentTxList(){
       : (h.catIco || (isPos
         ? '<svg viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
         : '<svg viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'));
-    const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
+    const nm = escapeHtml(h.langKey ? (T(h.langKey)||h.name) : h.name);
     const amtStyle = isTarik ? 'color:#6B7280;' : '';
     item.innerHTML = `<div class="tx-ico" style="background:${catColor};">${catIco}</div>
       <div style="flex:1"><div class="tx-name">${nm}</div><div class="tx-meta">${fmtItemTime(h)}</div></div>
@@ -7774,7 +7898,7 @@ function renderTagihanList() {
         <div style="width:22px;height:22px;">${catIco}</div>
       </div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.nama}${freqBadge}</div>
+        <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.nama)}${freqBadge}</div>
         <div style="display:flex;align-items:center;gap:4px;color:${subColor};font-size:11px;font-weight:600;">
           ${subIcon}
           <span>${subText}</span>
@@ -7851,7 +7975,7 @@ function renderTagihanRiwayat() {
           </div>
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t2);margin-bottom:2px;text-decoration:line-through;">${r.nama}${frekBadge}</div>
+          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t2);margin-bottom:2px;text-decoration:line-through;">${escapeHtml(r.nama)}${frekBadge}</div>
           <div style="font-size:11px;color:var(--t3);">Dibayar ${bayarDate}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
@@ -7911,7 +8035,7 @@ function _buildBayarItem(t, now) {
       <div style="width:20px;height:20px;">${catIco}</div>
     </div>
     <div style="flex:1;min-width:0;">
-      <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.nama}</div>
+      <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.nama)}</div>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${urgencyHtml}${bulananBadge}</div>
     </div>
     <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
@@ -8606,8 +8730,8 @@ function openAnggaranRiwayat(id){
     </div>`;
   } else {
     listEl.innerHTML = txs.map(h => {
-      const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
-      const srcInfo = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${h.src}</span>` : '';
+      const nm = escapeHtml(h.langKey ? (T(h.langKey)||h.name) : h.name);
+      const srcInfo = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${escapeHtml(h.src)}</span>` : '';
       return `<div class="h-item">
         <div class="h-ico">${c.svg ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>` : ''}</div>
         <div style="flex:1;">

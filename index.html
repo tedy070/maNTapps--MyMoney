@@ -4976,6 +4976,14 @@ function updateAllAmounts(){
   ['h-gain-badge', 'sp-gain-badge'].forEach(function(id){
     const gainBadge = document.getElementById(id);
     if (!gainBadge) return;
+    // Badge welcome page (sp-gain-badge) HANYA boleh ditulis ulang saat user
+    // benar-benar sedang login (data balance sudah pasti data riil-nya).
+    // Kalau tidak (mis. saat doLogout() reset balance=0 sebelum kembali ke
+    // welcome page, atau saat applyLang()/updateAllAmounts() sempat terpanggil
+    // sebelum login), JANGAN timpa badge & cache-nya dengan state "reset/0%" —
+    // biarkan tetap menampilkan angka riil terakhir (dari cache) supaya selalu
+    // konsisten mengikuti card Total Saldo, bukan malah balik ke "0%".
+    if (id === 'sp-gain-badge' && !user) return;
     gainBadge.textContent = gainState.text;
     gainBadge.style.background = gainState.bg;
     gainBadge.style.color = gainState.color;

@@ -128,6 +128,8 @@ async function fbSaveState(_retryCount){
       const s = Object.assign({}, r); delete s.catIco; return s;
     }),
     budgets: (typeof budgets !== 'undefined') ? budgets : [],
+    customCategories: (typeof customCategories !== 'undefined') ? customCategories : [],
+    debts: (typeof debts !== 'undefined') ? debts : [],
     savedPin,
     lang,
     darkMode: document.body.classList.contains('dk'),
@@ -1811,6 +1813,20 @@ body{background:var(--bg);transition:background .35s;}
               E-Statement
             </button>
           </div>
+          <!-- Pencarian & filter transaksi -->
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+            <div style="flex:1;display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:12px;padding:8px 12px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.2" style="flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="hist-search-input" type="text" placeholder="Cari transaksi…" oninput="onHistSearchInput(this.value)"
+                style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:var(--f);font-size:13px;color:var(--navy);">
+              <svg id="hist-search-clear" onclick="clearHistSearch()" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2.2" style="flex-shrink:0;cursor:pointer;display:none;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <select id="hist-search-cat" onchange="onHistSearchCatChange(this.value)"
+              style="background:var(--surface2);border:none;border-radius:12px;padding:8px 10px;font-family:var(--f);font-size:12px;font-weight:600;color:var(--navy);max-width:110px;">
+              <option value="">Semua Kategori</option>
+            </select>
+          </div>
+          <div id="hist-search-info" style="font-size:11px;color:var(--t3);margin-top:6px;display:none;"></div>
         </div>
       </div><!-- /savings sticky nav -->
       <!-- Goals/Tagihan Content -->
@@ -2004,6 +2020,7 @@ body{background:var(--bg);transition:background .35s;}
       <div class="st-grp">
         <div class="st-item" onclick="openEditProfile()"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="st-info"><div class="st-nm" id="st-editp">Edit Profile</div><div class="st-sub" id="st-editpsub">Name, Avatar, Email</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" onclick="openSecOverlay()"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="st-info"><div class="st-nm" id="st-sec">Keamanan</div><div class="st-sub">2FA, PIN, Biometrik</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="st-item" onclick="openDevicesOverlay()"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" fill="none" stroke="#1A56C4" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="st-info"><div class="st-nm">Kelola Perangkat</div><div class="st-sub">Lihat & cabut akses Masuk Cepat</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" onclick="openNotifSettingsOverlay()"><div class="st-ico" style="background:#FFFBEB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="st-info"><div class="st-nm" id="st-notif">Notifications</div><div class="st-sub">Alerts, News, Transactions</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" style="cursor:default;"><div class="st-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="st-info"><div class="st-nm" id="st-dark">Dark Mode</div><div class="st-sub" id="st-darksub">Adjust visual theme</div></div><button class="tog" id="darkToggle" onclick="toggleDark()"></button></div>
         <div class="st-item" onclick="openThemeColorOverlay()"><div class="st-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#DC2626"><circle cx="13.5" cy="6.5" r=".5" fill="#DC2626"/><circle cx="17.5" cy="10.5" r=".5" fill="#DC2626"/><circle cx="8.5" cy="7.5" r=".5" fill="#DC2626"/><circle cx="6.5" cy="12.5" r=".5" fill="#DC2626"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C22 6.012 17.461 2 12 2z"/></svg></div><div class="st-info"><div class="st-nm" id="st-themecolor">Warna Tema</div><div class="st-sub" id="curThemeLbl">Biru (Default)</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
@@ -2020,6 +2037,16 @@ body{background:var(--bg);transition:background .35s;}
         <div class="st-item" onclick="openLiquidGlassOverlay()">
           <div class="st-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" fill="none" stroke="#2A6FD6" stroke-width="1.6"><path d="M12 2.5c-3 3.2-6 6.7-6 11a6 6 0 0012 0c0-4.3-3-7.8-6-11z"/><path d="M8.6 14c0 1.8 1.4 3 3 3" stroke-opacity=".55"/></svg></div>
           <div class="st-info"><div class="st-nm">Liquid Glass</div><div class="st-sub" id="lg-sub">Tampilan kaca transparan</div></div>
+          <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
+        </div>
+        <div class="st-item" onclick="openCustomCatOverlay()">
+          <div class="st-ico" style="background:#FEF0F7;"><svg viewBox="0 0 24 24" fill="none" stroke="#EC4899" stroke-width="1.8"><path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z"/><circle cx="6.5" cy="6.5" r="1.5" fill="#EC4899" stroke="none"/></svg></div>
+          <div class="st-info"><div class="st-nm">Kategori Kustom</div><div class="st-sub">Tambah kategori transaksi sendiri</div></div>
+          <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
+        </div>
+        <div class="st-item" onclick="openDebtsOverlay()">
+          <div class="st-ico" style="background:#FFFBEB;"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+          <div class="st-info"><div class="st-nm">Utang &amp; Piutang</div><div class="st-sub">Catat siapa berutang ke siapa</div></div>
           <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
         </div>
       </div>
@@ -4119,20 +4146,82 @@ function addHistoryItem(name,usd,pos,extra={}){
   fbAutoSave();
 }
 
+// ── Pencarian & filter transaksi ──
+let histSearchQuery = '';
+let histSearchCat = '';
+
+function _histSearchActive(){ return !!(histSearchQuery.trim() || histSearchCat); }
+
+function onHistSearchInput(val){
+  histSearchQuery = val || '';
+  const clearBtn = document.getElementById('hist-search-clear');
+  if(clearBtn) clearBtn.style.display = histSearchQuery ? 'block' : 'none';
+  renderHistory();
+}
+function onHistSearchCatChange(val){
+  histSearchCat = val || '';
+  renderHistory();
+}
+function clearHistSearch(){
+  histSearchQuery = '';
+  const input = document.getElementById('hist-search-input');
+  if(input) input.value = '';
+  const clearBtn = document.getElementById('hist-search-clear');
+  if(clearBtn) clearBtn.style.display = 'none';
+  renderHistory();
+}
+// Isi dropdown kategori pencarian dari daftar `cats` bawaan + kategori kustom user
+function populateHistSearchCatOptions(){
+  const sel = document.getElementById('hist-search-cat');
+  if(!sel) return;
+  const curVal = sel.value;
+  const allCats = cats.concat(customCategories || []);
+  sel.innerHTML = '<option value="">Semua Kategori</option>' +
+    allCats.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(T('cat-'+c.id) || c.name || c.id)}</option>`).join('');
+  sel.value = curVal;
+}
+
 function renderHistory(){
   const c = document.getElementById('historyContainer');
   if(!c) return;
 
-  // Filter berdasarkan bulan yang dipilih
-  const filtered = historyItems.filter(h => {
-    const d = new Date(h.ts || 0);
-    return d.getFullYear()===histFilterYear && d.getMonth()===histFilterMonth;
-  });
+  const searchActive = _histSearchActive();
+  const q = histSearchQuery.trim().toLowerCase();
+  const info = document.getElementById('hist-search-info');
+
+  let filtered;
+  if(searchActive){
+    // Mode pencarian: cari lintas SEMUA bulan (bukan cuma bulan yang sedang dilihat)
+    filtered = historyItems.filter(h => {
+      if(histSearchCat && h.cat !== histSearchCat) return false;
+      if(q){
+        const nm = (h.langKey ? (T(h.langKey)||h.name) : h.name) || '';
+        const hay = (nm + ' ' + (h.src||'') + ' ' + (h.dest||'')).toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    if(info){
+      info.style.display = 'block';
+      info.textContent = lang==='id'
+        ? `${filtered.length} transaksi ditemukan (semua bulan)`
+        : `${filtered.length} transactions found (all months)`;
+    }
+  } else {
+    // Mode normal: filter berdasarkan bulan yang dipilih
+    filtered = historyItems.filter(h => {
+      const d = new Date(h.ts || 0);
+      return d.getFullYear()===histFilterYear && d.getMonth()===histFilterMonth;
+    });
+    if(info){ info.style.display = 'none'; }
+  }
 
   if(!filtered.length){
     c.innerHTML = `<div style="text-align:center;padding:30px 16px;color:var(--t3);font-size:13px;">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px"><path d="M21 4H3M16 9H3M21 14H3M16 19H3"/></svg>
-      ${lang==='id'?`Tidak ada transaksi di ${monthName(histFilterMonth)} ${histFilterYear}`:`No transactions in ${monthName(histFilterMonth)} ${histFilterYear}`}
+      ${searchActive
+        ? (lang==='id'?'Tidak ada transaksi yang cocok':'No matching transactions')
+        : (lang==='id'?`Tidak ada transaksi di ${monthName(histFilterMonth)} ${histFilterYear}`:`No transactions in ${monthName(histFilterMonth)} ${histFilterYear}`)}
     </div>`;
     return;
   }
@@ -4145,16 +4234,17 @@ function renderHistory(){
       : h.pos
         ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
         : '<svg viewBox="0 0 24 24" stroke="var(--red)"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>';
-    const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:${isTarik?'#6B7280':'#1A56C4'};border-radius:6px;padding:2px 6px;margin-left:6px;">${T('cat-'+h.cat)||h.cat}</span>` : '';
+    const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:${isTarik?'#6B7280':'#1A56C4'};border-radius:6px;padding:2px 6px;margin-left:6px;">${catDisplayName(h.cat)}</span>` : '';
     const srcInfo  = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${escapeHtml(h.src)}</span>` : '';
     const destInfo = isTarik && h.dest ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">→ ${escapeHtml(h.dest)}</span>` : '';
     const amtColor = isTarik ? 'color:#6B7280;' : '';
     const amtSign  = isTarik ? '🏧 ' : (h.pos ? '+' : '-');
+    const dateBadge = searchActive ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${new Date(h.ts||0).toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'})}</span>` : '';
     return `<div class="h-item">
       <div class="h-ico" style="${isTarik?'background:#F4F6FC;':''}">${icon}</div>
       <div style="flex:1;">
         <div class="h-nm">${nm}${catBadge}</div>
-        <div class="h-t">${fmtItemTime(h)}${srcInfo}${destInfo}</div>
+        <div class="h-t">${fmtItemTime(h)}${srcInfo}${destInfo}${dateBadge}</div>
       </div>
       <div class="h-a ${h.pos?'pos':'neg'}" style="${amtColor}">${amtSign}${fmt(Math.abs(h.amt))}</div>
     </div>`;
@@ -4179,7 +4269,7 @@ function switchSvTab(t){
   const fab = document.getElementById('fab-tambah-tagihan');
   if(fab) fab.style.display='none';
   if(t==='wallets'){ switchWalletSubTab('kartu'); }
-  if(t==='history'){ updateHistNavbarLabel(); renderHistory(); }
+  if(t==='history'){ updateHistNavbarLabel(); populateHistSearchCatOptions(); renderHistory(); }
 }
 
 // KARTU / ANGGARAN SUB TABS
@@ -4330,7 +4420,7 @@ function downloadEStatXLSX(year, month){
       return [
         d.toLocaleDateString('id-ID'),
         (h.langKey ? (T(h.langKey)||h.name) : h.name),
-        T('cat-'+h.cat)||h.cat||'',
+        catDisplayName(h.cat)||'',
         h.src||(h.pos?(lang==='id'?'Saldo Utama':'Main Balance'):(lang==='id'?'Saldo Utama':'Main Balance')),
         (h.pos?1:-1)*Math.abs(h.amt)
       ];
@@ -4359,7 +4449,7 @@ function downloadEStatXLSXYear(year){
         d.toLocaleDateString('id-ID'),
         monthName(d.getMonth()),
         (h.langKey?(T(h.langKey)||h.name):h.name),
-        T('cat-'+h.cat)||h.cat||'',
+        catDisplayName(h.cat)||'',
         h.src||(lang==='id'?'Saldo Utama':'Main Balance'),
         (h.pos?1:-1)*Math.abs(h.amt)
       ];
@@ -4403,7 +4493,7 @@ function _pdfDownload(items, periodLabel, filename){
   const rows = sorted.map(h=>{
     const d   = new Date(h.ts||0);
     const nm  = h.langKey?(T(h.langKey)||h.name):h.name;
-    const cat = T('cat-'+h.cat)||h.cat||'-';
+    const cat = catDisplayName(h.cat)||'-';
     const asal= h.src||(lang==='id'?'Saldo Utama':'Main Balance');
     const amt = (h.pos?'+':'-')+fmt(Math.abs(h.amt));
     const clr = h.pos?'#0B7A63':'#EF4444';
@@ -5277,6 +5367,29 @@ const cats=[
   {id:'emergency',stroke:'#EF4444',bg:'#FEF2F2',svg:'<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'},
 ];
 
+// ── Kategori Kustom: helper gabungan ──
+// Semua tempat pemilihan kategori (transaksi, anggaran, tagihan) memakai
+// fungsi ini alih-alih membaca `cats` langsung, supaya kategori buatan
+// user ikut muncul di mana pun tanpa harus menduplikasi logika 3x.
+function allPickableCats(){
+  return cats.concat(customCategories || []);
+}
+// Kategori bawaan pakai SVG (c.svg ada); kategori kustom pakai emoji (c.icon).
+// Fungsi ini merender ikon yang sesuai untuk keduanya di dalam wadah bulat yang sama.
+function catIconInnerHtml(c, size){
+  size = size || 18;
+  if(c.svg) return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>`;
+  return `<span style="font-size:${size}px;line-height:1;">${escapeHtml(c.icon||'🏷️')}</span>`;
+}
+function catLabel(c){
+  return T('cat-'+c.id) || c.name || c.id;
+}
+function catDisplayName(catId){
+  if(!catId) return '';
+  const c = allPickableCats().find(x => x.id === catId);
+  return c ? catLabel(c) : catId;
+}
+
 // Money source definitions — ID maps to wallet ID (null = main balance)
 // Static sources — hanya Salary dan Other. Wallet cards diambil LANGSUNG dari wallets[] dinamis.
 const MS_SALARY = {key:'salary', labelID:'Gaji / Salary', labelEN:'Salary', icon:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>', walletId:null, isIncome:true};
@@ -5487,7 +5600,7 @@ function updateTxSummary() {
   preview.style.display = 'block';
 }
 
-function buildCatGrid(){const g=document.getElementById('catGrid');if(!g)return;g.innerHTML='';cats.forEach(c=>{const d=document.createElement('div');d.className='cat-c'+(selCat===c.id?' sel':'');d.onclick=()=>selectCat(d,c);d.innerHTML=`<div class="cico-w"><div class="cico" style="background:${c.bg};"><svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg></div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${T('cat-'+c.id)}</div><div class="csub">${T('cat-'+c.id+'-sub')}</div>`;g.appendChild(d);});}
+function buildCatGrid(){const g=document.getElementById('catGrid');if(!g)return;g.innerHTML='';allPickableCats().forEach(c=>{const d=document.createElement('div');d.className='cat-c'+(selCat===c.id?' sel':'');d.onclick=()=>selectCat(d,c);d.innerHTML=`<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(c.svg?T('cat-'+c.id+'-sub'):(lang==='id'?'Kategori Kustom':'Custom Category'))}</div>`;g.appendChild(d);});}
 
 function openAddModal(){
   document.getElementById('addModal').classList.add('on');
@@ -5523,8 +5636,8 @@ function closeAddModal(){
 }
 
 function openCatPicker(){document.getElementById('catPicker').classList.add('on');}
-function selectCat(el,c){document.querySelectorAll('.cat-c').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');selCat=c.id;selCatIco=`<svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>`;selCatColor=c.bg;document.getElementById('catConfSub').textContent='SELECTED: 1 CATEGORY';}
-function confirmCat(){if(!selCat)return;const t=document.getElementById('catSelTxt');t.textContent=T('cat-'+selCat);t.classList.add('sel');document.getElementById('catPicker').classList.remove('on');}
+function selectCat(el,c){document.querySelectorAll('.cat-c').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');selCat=c.id;selCatIco=catIconInnerHtml(c);selCatColor=c.bg||c.color;document.getElementById('catConfSub').textContent='SELECTED: 1 CATEGORY';}
+function confirmCat(){if(!selCat)return;const t=document.getElementById('catSelTxt');const cObj=allPickableCats().find(x=>x.id===selCat);t.textContent=cObj?catLabel(cObj):T('cat-'+selCat);t.classList.add('sel');document.getElementById('catPicker').classList.remove('on');}
 
 function completeTx(){
   if(!rawAmountNum || rawAmountNum <= 0){
@@ -5687,6 +5800,12 @@ function completeTx(){
     ? `${fmt(rp)} ${srcLabel} → ${destLabel}`
     : `-${fmt(rp)} ${lang==='id'?'dari':'from'} ${srcLabel}`;
   addNotif(notifType, notifTitle, notifMsg);
+
+  // ── Cek peringatan anggaran (hanya relevan untuk expense) ──
+  if(isExpense){
+    const periodeKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    checkBudgetAlerts(selCat, periodeKey);
+  }
 
   // ── Analytics: refresh realtime ─────────────────────────
   refreshAnalytics()
@@ -6931,6 +7050,18 @@ async function enterApp(initialState){
       if(budgets.length > 0) budgetIdCtr = Math.max(...budgets.map(b=>b.id||0)) + 1;
     }
 
+    // ── Kategori Kustom ──
+    if(Array.isArray(initialState.customCategories)){
+      customCategories = initialState.customCategories;
+      if(customCategories.length > 0) customCatIdCtr = Math.max(...customCategories.map(c=>c.id||0)) + 1;
+    }
+
+    // ── Utang & Piutang ──
+    if(Array.isArray(initialState.debts)){
+      debts = initialState.debts;
+      if(debts.length > 0) debtIdCtr = Math.max(...debts.map(x=>x.id||0)) + 1;
+    }
+
     if(initialState.savedPin) savedPin = initialState.savedPin;
     if(initialState.lang)     lang     = initialState.lang;
     if(initialState.darkMode) document.body.classList.add('dk');
@@ -6944,11 +7075,14 @@ async function enterApp(initialState){
     if(initialState.quickLoginEnabled !== undefined){
       quickLoginEnabled = !!initialState.quickLoginEnabled;
     }
+    // Cek apakah device ini masih diizinkan (belum dicabut lewat "Kelola Perangkat"
+    // di device lain). Kalau sudah dicabut, Masuk Cepat lokal otomatis dimatikan.
+    checkDeviceRevocation();
 
   } else {
     // State baru (user baru) — semua sudah di-inisialisasi ke nilai default kosong
     historyItems=[]; goals=[]; wallets=[]; notifications=[]; balance=0;
-    tagihan=[]; tagihanRiwayatBulanan=[]; budgets=[];
+    tagihan=[]; tagihanRiwayatBulanan=[]; budgets=[]; customCategories=[]; debts=[];
     applyThemeColor(currentThemeId, {save:false});
   }
 
@@ -7326,6 +7460,7 @@ function toggleQuickLogin(){
       ? 'Aktif · ketuk foto profil di halaman masuk untuk masuk cepat'
       : 'Active · tap your profile photo on the login page to sign in fast';
     toast(lang==='id' ? '✅ Masuk Cepat diaktifkan' : '✅ Quick Login enabled');
+    registerThisDevice();
     fbAutoSave();
   } else {
     removeQuickLoginProfile();
@@ -7333,6 +7468,8 @@ function toggleQuickLogin(){
     tog.classList.remove('on');
     if(lbl) lbl.textContent = lang==='id' ? 'Ketuk untuk aktifkan Masuk Cepat' : 'Tap to enable Quick Login';
     toast(lang==='id' ? '🚫 Masuk Cepat dinonaktifkan' : '🚫 Quick Login disabled');
+    const _uidNow = fbUID();
+    if(_uidNow){ fbDB.ref(`users/${_uidNow}/devices/${getOrCreateDeviceId()}`).remove().catch(()=>{}); }
     fbAutoSave();
   }
 }
@@ -7698,19 +7835,20 @@ function openTagihanCatPicker() {
 function _buildTagihanCatGrid() {
   const grid = document.getElementById('tagihanCatGrid'); if (!grid) return;
   grid.innerHTML = '';
-  cats.forEach(c => {
+  allPickableCats().forEach(c => {
     const d = document.createElement('div');
     d.className = 'cat-c';
     if (c.id === selTagihanCat) d.classList.add('on');
-    d.innerHTML = `<div class="cat-ico" style="background:${c.bg};border:2px solid ${c.id===selTagihanCat?c.stroke:'transparent'};"><svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg></div><div class="cat-nm">${T('cat-'+c.id)||c.id}</div>`;
+    const bg = c.bg||c.color;
+    d.innerHTML = `<div class="cat-ico" style="background:${bg};border:2px solid ${c.id===selTagihanCat?(c.stroke||bg):'transparent'};">${catIconInnerHtml(c)}</div><div class="cat-nm">${escapeHtml(catLabel(c))}</div>`;
     d.onclick = () => {
       grid.querySelectorAll('.cat-c').forEach(x => { x.classList.remove('on'); x.querySelector('.cat-ico').style.border='2px solid transparent'; });
       d.classList.add('on');
-      d.querySelector('.cat-ico').style.border = `2px solid ${c.stroke}`;
+      d.querySelector('.cat-ico').style.border = `2px solid ${c.stroke||bg}`;
       selTagihanCat      = c.id;
-      selTagihanCatColor = c.bg;
-      selTagihanCatIco   = `<svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>`;
-      document.getElementById('tagihanCatConfSub').textContent = T('cat-'+c.id) || c.id;
+      selTagihanCatColor = bg;
+      selTagihanCatIco   = catIconInnerHtml(c);
+      document.getElementById('tagihanCatConfSub').textContent = catLabel(c);
     };
     grid.appendChild(d);
   });
@@ -8383,6 +8521,17 @@ window.addNotif = function(type, title, msg){
 let budgets = [];
 let budgetIdCtr = 1;
 
+// ── Kategori Kustom ──
+// customCategories: array of { id, name, icon (1 karakter emoji), color (hex bg) }
+// Digabung dengan `cats` bawaan lewat allPickableCats() di manapun user memilih kategori.
+let customCategories = [];
+let customCatIdCtr = 1;
+
+// ── Utang & Piutang ──
+// debts: array of { id, type ('utang'|'piutang'), nama, nominal, tanggal (opsional), lunas, catatan }
+let debts = [];
+let debtIdCtr = 1;
+
 // Current month navigation for Anggaran
 let anggaranYear  = new Date().getFullYear();
 let anggaranMonth = new Date().getMonth(); // 0-based
@@ -8423,8 +8572,8 @@ function getBudgetsForMonth(){
 function matchAnggaranCatId(histItem){
   if(!histItem || histItem.pos) return null;
   const catId = histItem.cat || '';
-  if(catId && cats.find(c => c.id === catId)) return catId;
-  // Fallback: icon fingerprint
+  if(catId && allPickableCats().find(c => c.id === catId)) return catId;
+  // Fallback: icon fingerprint (hanya relevan untuk kategori bawaan lama yang belum punya field `cat`)
   const ico = (histItem.catIco || '').replace(/<svg[^>]*>|<\/svg>/g,'').trim();
   if(ico){
     for(const c of cats){
@@ -8436,18 +8585,420 @@ function matchAnggaranCatId(histItem){
 
 // Calculate total spent per cat ID for the selected month
 function calcAnggaranSpent(){
-  const key = _anggaranPeriodeKey();
+  return calcSpentForPeriode(_anggaranPeriodeKey());
+}
+
+// Versi umum: hitung total pengeluaran per catId untuk periode (YYYY-MM) apa pun.
+// Dipakai oleh renderAnggaranList (bulan yang sedang dilihat) dan checkBudgetAlerts
+// (bulan dari transaksi yang baru saja dicatat — belum tentu sama dgn bulan yg sedang dilihat).
+function calcSpentForPeriode(periodeKey){
   const spent = {};
   historyItems.forEach(h => {
     if(h.pos || isTarikTx(h)) return;
     const d = new Date(h.ts || 0);
     const hKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    if(hKey !== key) return;
+    if(hKey !== periodeKey) return;
     const cid = matchAnggaranCatId(h);
     if(cid) spent[cid] = (spent[cid]||0) + Math.abs(h.amt||0);
   });
   return spent;
 }
+
+// ── Peringatan Anggaran ──
+// Dipanggil setelah transaksi expense berhasil dicatat. Mengecek apakah
+// pengeluaran kategori tsb di bulan berjalan sudah menyentuh 80% (Waspada)
+// atau ≥100% (Over Budget) dari anggaran yang diset user, lalu kirim
+// notifikasi SEKALI SAJA per ambang batas per bulan (pakai flag
+// alerted80/alerted100 di objek budget, di-reset tiap kali budget
+// dibuat/diedit). Threshold 80%/100% sengaja disamakan dengan yang
+// sudah dipakai di renderAnggaranList() supaya konsisten dgn UI.
+function checkBudgetAlerts(catId, periodeKey){
+  if(!catId || !periodeKey) return;
+  const b = budgets.find(x => x.catId===catId && x.periode===periodeKey && x.active!==false);
+  if(!b || !b.nominal) return;
+  const spent = calcSpentForPeriode(periodeKey)[catId] || 0;
+  const pct = Math.round((spent / b.nominal) * 100);
+  const c = allPickableCats().find(x => x.id === catId);
+  const catName = c ? catLabel(c) : catId;
+
+  if(pct >= 100 && !b.alerted100){
+    b.alerted100 = true; b.alerted80 = true; // >100% otomatis melewati 80% juga
+    addNotif('tip', '🔴 ' + (lang==='id'?'Anggaran Terlampaui':'Budget Exceeded'),
+      lang==='id'
+        ? `Pengeluaran "${catName}" bulan ini ${fmt(spent)} — melebihi anggaran ${fmt(b.nominal)}.`
+        : `"${catName}" spending this month is ${fmt(spent)} — over your ${fmt(b.nominal)} budget.`);
+  } else if(pct >= 80 && !b.alerted80){
+    b.alerted80 = true;
+    addNotif('tip', '⚠️ ' + (lang==='id'?'Anggaran Hampir Habis':'Budget Almost Reached'),
+      lang==='id'
+        ? `Pengeluaran "${catName}" sudah ${pct}% (${fmt(spent)}) dari anggaran ${fmt(b.nominal)} bulan ini.`
+        : `"${catName}" spending has reached ${pct}% (${fmt(spent)}) of this month's ${fmt(b.nominal)} budget.`);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// KATEGORI KUSTOM
+// ════════════════════════════════════════════════════════════
+const CC_ICONS = ['🎓','📚','💊','🏥','🎮','🎵','✈️','🐶','🧴','💡','📱','🛠️','👶','🚿','🎁','⚽','☕','🧾'];
+const CC_COLORS = ['#F59E0B','#EF4444','#1A56C4','#9333EA','#EC4899','#22C55E','#0EA5E9','#6B7280','#F472B6','#14B8A6','#F97316','#84CC16'];
+let ccSelIcon = CC_ICONS[0];
+let ccSelColor = CC_COLORS[0];
+let ccEditId = 0;
+
+function openCustomCatOverlay(){
+  document.getElementById('customcat-overlay').style.display = 'flex';
+  renderCustomCatList();
+}
+function closeCustomCatOverlay(){
+  document.getElementById('customcat-overlay').style.display = 'none';
+}
+
+function renderCustomCatList(){
+  const list = document.getElementById('customcat-list');
+  if(!list) return;
+  if(!customCategories.length){
+    list.innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--t3);font-size:13px;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" style="display:block;margin:0 auto 10px"><path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z"/></svg>
+      Belum ada kategori kustom. Tambahkan kategori Anda sendiri di luar daftar bawaan.
+    </div>`;
+    return;
+  }
+  list.innerHTML = customCategories.map(c => `
+    <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:var(--sh2);">
+      <div style="width:40px;height:40px;border-radius:12px;background:${c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="font-size:20px;">${escapeHtml(c.icon)}</span>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
+        <div style="font-size:11px;color:var(--t3);">Kategori Kustom</div>
+      </div>
+      <button onclick="deleteCustomCat(${c.id})" style="background:#FEEBEB;border:none;border-radius:10px;padding:8px;cursor:pointer;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+function openAddCustomCatForm(){
+  ccEditId = 0;
+  ccSelIcon = CC_ICONS[0];
+  ccSelColor = CC_COLORS[0];
+  document.getElementById('cc-name-input').value = '';
+  buildCcIconGrid();
+  buildCcColorGrid();
+  document.getElementById('customCatFormModal').classList.add('on');
+}
+function closeCustomCatForm(){
+  document.getElementById('customCatFormModal').classList.remove('on');
+}
+
+function buildCcIconGrid(){
+  const g = document.getElementById('cc-icon-grid');
+  if(!g) return;
+  g.innerHTML = CC_ICONS.map(ic => `
+    <div onclick="selectCcIcon('${ic}')" style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--surface2);border:2px solid ${ic===ccSelIcon?'var(--blue)':'transparent'};cursor:pointer;font-size:19px;">${ic}</div>
+  `).join('');
+}
+function buildCcColorGrid(){
+  const g = document.getElementById('cc-color-grid');
+  if(!g) return;
+  g.innerHTML = CC_COLORS.map(col => `
+    <div onclick="selectCcColor('${col}')" style="aspect-ratio:1;border-radius:12px;background:${col};border:3px solid ${col===ccSelColor?'var(--navy)':'transparent'};cursor:pointer;"></div>
+  `).join('');
+}
+function selectCcIcon(ic){ ccSelIcon = ic; buildCcIconGrid(); }
+function selectCcColor(col){ ccSelColor = col; buildCcColorGrid(); }
+
+function saveCustomCat(){
+  const name = document.getElementById('cc-name-input').value.trim();
+  if(!name){ toast('⚠️ Masukkan nama kategori dahulu'); return; }
+  if(name.length > 30){ toast('⚠️ Nama kategori maks 30 karakter'); return; }
+  // customId diberi prefix supaya TIDAK PERNAH bentrok dengan id kategori bawaan (mis. 'food','tarik', dst)
+  const newId = 'custom_' + (customCatIdCtr++);
+  customCategories.push({ id:newId, name, icon:ccSelIcon, color:ccSelColor });
+  toast('✅ Kategori "'+name+'" ditambahkan');
+  closeCustomCatForm();
+  renderCustomCatList();
+  fbAutoSave();
+}
+
+function deleteCustomCat(id){
+  if(!confirm('Hapus kategori ini? Transaksi lama yang sudah memakai kategori ini tetap tersimpan, hanya labelnya yang akan menampilkan ID mentah.')) return;
+  customCategories = customCategories.filter(c => c.id !== id);
+  renderCustomCatList();
+  fbAutoSave();
+}
+
+// ════════════════════════════════════════════════════════════
+// UTANG & PIUTANG
+// ════════════════════════════════════════════════════════════
+let debtActiveTab = 'utang'; // 'utang' | 'piutang'
+let debtSelType = 'utang';
+
+function openDebtsOverlay(){
+  document.getElementById('debts-overlay').style.display = 'flex';
+  switchDebtTab('utang');
+}
+function closeDebtsOverlay(){
+  document.getElementById('debts-overlay').style.display = 'none';
+}
+
+function switchDebtTab(t){
+  debtActiveTab = t;
+  const utangBtn = document.getElementById('debt-tab-utang');
+  const piutangBtn = document.getElementById('debt-tab-piutang');
+  if(t==='utang'){
+    utangBtn.style.background='var(--surface)'; utangBtn.style.color='var(--navy)'; utangBtn.style.boxShadow='var(--sh2)';
+    piutangBtn.style.background='transparent'; piutangBtn.style.color='var(--t3)'; piutangBtn.style.boxShadow='none';
+  } else {
+    piutangBtn.style.background='var(--surface)'; piutangBtn.style.color='var(--navy)'; piutangBtn.style.boxShadow='var(--sh2)';
+    utangBtn.style.background='transparent'; utangBtn.style.color='var(--t3)'; utangBtn.style.boxShadow='none';
+  }
+  renderDebtList();
+}
+
+function updateDebtTotals(){
+  const totalUtang   = debts.filter(d=>d.type==='utang'   && !d.lunas).reduce((s,d)=>s+(d.nominal||0),0);
+  const totalPiutang = debts.filter(d=>d.type==='piutang' && !d.lunas).reduce((s,d)=>s+(d.nominal||0),0);
+  const elU = document.getElementById('debt-total-utang');
+  const elP = document.getElementById('debt-total-piutang');
+  if(elU) elU.textContent = fmt(totalUtang);
+  if(elP) elP.textContent = fmt(totalPiutang);
+}
+
+function renderDebtList(){
+  updateDebtTotals();
+  const list = document.getElementById('debt-list');
+  if(!list) return;
+  const items = debts.filter(d => d.type === debtActiveTab)
+    .sort((a,b) => (a.lunas===b.lunas ? 0 : a.lunas ? 1 : -1)); // yang belum lunas duluan
+  if(!items.length){
+    list.innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--t3);font-size:13px;">
+      Belum ada catatan ${debtActiveTab==='utang'?'utang':'piutang'}.
+    </div>`;
+    return;
+  }
+  list.innerHTML = items.map(d => {
+    const overdue = d.tanggal && !d.lunas && new Date(d.tanggal) < new Date(new Date().toDateString());
+    return `
+    <div style="background:var(--surface);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:var(--sh2);${d.lunas?'opacity:.55;':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);${d.lunas?'text-decoration:line-through;':''}">${escapeHtml(d.nama)}</div>
+        <div style="font-family:var(--f);font-size:15px;font-weight:800;color:${debtActiveTab==='utang'?'#DC2626':'#059669'};">${fmt(d.nominal)}</div>
+      </div>
+      ${d.catatan ? `<div style="font-size:12px;color:var(--t3);margin-bottom:6px;">${escapeHtml(d.catatan)}</div>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:11px;color:${overdue?'#DC2626':'var(--t3)'};font-weight:${overdue?'700':'400'};">
+          ${d.lunas ? '✅ Lunas' : d.tanggal ? (overdue?'⚠️ Lewat jatuh tempo: ':'Jatuh tempo: ') + new Date(d.tanggal).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) : 'Tanpa jatuh tempo'}
+        </div>
+        <div style="display:flex;gap:6px;">
+          ${!d.lunas ? `<button onclick="toggleDebtLunas(${d.id})" style="background:#EBFEF3;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:#059669;cursor:pointer;">Tandai Lunas</button>` : `<button onclick="toggleDebtLunas(${d.id})" style="background:var(--surface2);border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--t3);cursor:pointer;">Batal Lunas</button>`}
+          <button onclick="editDebt(${d.id})" style="background:var(--surface2);border:none;border-radius:8px;padding:6px 8px;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button onclick="deleteDebt(${d.id})" style="background:#FEEBEB;border:none;border-radius:8px;padding:6px 8px;cursor:pointer;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectDebtType(t){
+  debtSelType = t;
+  const uBtn = document.getElementById('debt-type-utang');
+  const pBtn = document.getElementById('debt-type-piutang');
+  uBtn.style.background = t==='utang' ? 'var(--blue)' : 'var(--surface2)';
+  uBtn.style.color = t==='utang' ? '#fff' : 'var(--navy)';
+  pBtn.style.background = t==='piutang' ? 'var(--blue)' : 'var(--surface2)';
+  pBtn.style.color = t==='piutang' ? '#fff' : 'var(--navy)';
+}
+
+function openAddDebtForm(){
+  document.getElementById('debt-edit-id').value = '';
+  document.getElementById('debt-form-title').textContent = 'Catat Utang/Piutang';
+  document.getElementById('debt-nama-input').value = '';
+  document.getElementById('debt-nominal-input').value = '';
+  document.getElementById('debt-tanggal-input').value = '';
+  document.getElementById('debt-catatan-input').value = '';
+  selectDebtType(debtActiveTab);
+  document.getElementById('debtFormModal').classList.add('on');
+}
+function closeDebtForm(){
+  document.getElementById('debtFormModal').classList.remove('on');
+}
+
+function editDebt(id){
+  const d = debts.find(x => x.id === id);
+  if(!d) return;
+  document.getElementById('debt-edit-id').value = d.id;
+  document.getElementById('debt-form-title').textContent = 'Edit Utang/Piutang';
+  document.getElementById('debt-nama-input').value = d.nama;
+  document.getElementById('debt-nominal-input').value = (d.nominal||0).toLocaleString('id-ID');
+  document.getElementById('debt-tanggal-input').value = d.tanggal || '';
+  document.getElementById('debt-catatan-input').value = d.catatan || '';
+  selectDebtType(d.type);
+  document.getElementById('debtFormModal').classList.add('on');
+}
+
+function saveDebt(){
+  const nama = document.getElementById('debt-nama-input').value.trim();
+  if(!nama){ toast('⚠️ Masukkan nama orang dahulu'); return; }
+  const nominalRaw = document.getElementById('debt-nominal-input').value.replace(/[^0-9]/g,'');
+  const nominal = parseInt(nominalRaw) || 0;
+  if(!nominal){ toast('⚠️ Masukkan jumlah yang valid'); return; }
+  const tanggal = document.getElementById('debt-tanggal-input').value || '';
+  const catatan = document.getElementById('debt-catatan-input').value.trim();
+  const editId = parseInt(document.getElementById('debt-edit-id').value) || 0;
+
+  if(editId){
+    const d = debts.find(x => x.id === editId);
+    if(d){ d.type=debtSelType; d.nama=nama; d.nominal=nominal; d.tanggal=tanggal; d.catatan=catatan; }
+    toast('✅ Catatan diperbarui');
+  } else {
+    debts.push({ id:debtIdCtr++, type:debtSelType, nama, nominal, tanggal, catatan, lunas:false });
+    toast('✅ Catatan ditambahkan');
+  }
+  closeDebtForm();
+  switchDebtTab(debtSelType);
+  fbAutoSave();
+}
+
+function toggleDebtLunas(id){
+  const d = debts.find(x => x.id === id);
+  if(!d) return;
+  d.lunas = !d.lunas;
+  renderDebtList();
+  fbAutoSave();
+}
+
+function deleteDebt(id){
+  if(!confirm('Hapus catatan ini secara permanen?')) return;
+  debts = debts.filter(x => x.id !== id);
+  renderDebtList();
+  fbAutoSave();
+}
+
+// ════════════════════════════════════════════════════════════
+// KELOLA PERANGKAT (Device Management untuk fitur Masuk Cepat)
+// ════════════════════════════════════════════════════════════
+// Setiap device yang mengaktifkan Masuk Cepat mendapat deviceId acak yang
+// disimpan permanen di localStorage device itu sendiri (BUKAN dianggap
+// data sensitif — hanya pengenal acak, tidak bisa dipakai untuk masuk).
+// Saat diaktifkan, device menulis metadata (nama, waktu aktif) ke RTDB
+// di /users/{uid}/devices/{deviceId} supaya bisa dilihat & dicabut dari
+// device lain. Mencabut = menghapus node itu; device yang dicabut akan
+// otomatis ke-logout dari Masuk Cepat saat berikutnya membuka app
+// (lihat checkDeviceRevocation, dipanggil saat enterApp).
+const LS_DEVICE_ID_KEY = 'mm_device_id';
+
+function getOrCreateDeviceId(){
+  try{
+    let id = localStorage.getItem(LS_DEVICE_ID_KEY);
+    if(!id){
+      id = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,10);
+      localStorage.setItem(LS_DEVICE_ID_KEY, id);
+    }
+    return id;
+  }catch(e){ return 'dev_fallback_' + Date.now(); }
+}
+
+function _deviceLabel(){
+  const ua = navigator.userAgent || '';
+  let name = 'Perangkat Tidak Dikenal';
+  if(/iphone/i.test(ua)) name = 'iPhone';
+  else if(/ipad/i.test(ua)) name = 'iPad';
+  else if(/android/i.test(ua)) name = 'Android';
+  else if(/macintosh/i.test(ua)) name = 'Mac';
+  else if(/windows/i.test(ua)) name = 'Windows PC';
+  else if(/linux/i.test(ua)) name = 'Linux';
+  return name + ' · ' + (lang==='id'?'Browser':'Browser');
+}
+
+// Dipanggil saat user MENGAKTIFKAN Masuk Cepat di device ini (hook dari
+// fungsi toggle yang sudah ada — lihat pemanggilan di dekat quickLoginEnabled).
+async function registerThisDevice(){
+  const uid = fbUID(); if(!uid) return;
+  const deviceId = getOrCreateDeviceId();
+  try{
+    await fbDB.ref(`users/${uid}/devices/${deviceId}`).set({
+      name: _deviceLabel(),
+      lastActive: Date.now()
+    });
+  }catch(e){ console.warn('Gagal mendaftarkan device:', e); }
+}
+
+// Dipanggil tiap kali app dibuka & user sudah login, supaya "lastActive" tetap update
+// dan supaya kita bisa cek apakah device ini masih diizinkan (belum dicabut dari device lain).
+async function checkDeviceRevocation(){
+  const uid = fbUID(); if(!uid || !quickLoginEnabled) return;
+  const deviceId = getOrCreateDeviceId();
+  try{
+    const snap = await fbDB.ref(`users/${uid}/devices/${deviceId}`).once('value');
+    if(snap.exists()){
+      // Masih diizinkan — perbarui lastActive
+      fbDB.ref(`users/${uid}/devices/${deviceId}/lastActive`).set(Date.now()).catch(()=>{});
+    } else {
+      // Device ini sudah dicabut aksesnya dari device lain — matikan Masuk Cepat lokal
+      try{ localStorage.removeItem(LS_QUICK_LOGIN_KEY); }catch(e){}
+      quickLoginEnabled = false;
+    }
+  }catch(e){ /* offline atau permission — abaikan, jangan paksa logout */ }
+}
+
+function openDevicesOverlay(){
+  document.getElementById('devices-overlay').style.display = 'flex';
+  renderDevicesList();
+}
+function closeDevicesOverlay(){
+  document.getElementById('devices-overlay').style.display = 'none';
+}
+
+async function renderDevicesList(){
+  const list = document.getElementById('devices-list');
+  if(!list) return;
+  list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--t3);font-size:13px;">Memuat…</div>`;
+  const uid = fbUID();
+  if(!uid){ list.innerHTML = ''; return; }
+  const myDeviceId = getOrCreateDeviceId();
+  try{
+    const snap = await fbDB.ref(`users/${uid}/devices`).once('value');
+    const data = snap.val() || {};
+    const deviceIds = Object.keys(data);
+    if(!deviceIds.length){
+      list.innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--t3);font-size:13px;">
+        Belum ada perangkat yang mengaktifkan Masuk Cepat.
+      </div>`;
+      return;
+    }
+    list.innerHTML = deviceIds.map(devId => {
+      const d = data[devId];
+      const isThis = devId === myDeviceId;
+      const lastActiveStr = d.lastActive ? new Date(d.lastActive).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+      return `<div style="display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:var(--sh2);">
+        <div style="width:40px;height:40px;border-radius:12px;background:#EBF3FE;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A56C4" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">${escapeHtml(d.name||'Perangkat')}${isThis?' <span style="font-size:10px;color:var(--blue2);font-weight:700;">(Perangkat ini)</span>':''}</div>
+          <div style="font-size:11px;color:var(--t3);">Aktif terakhir: ${lastActiveStr}</div>
+        </div>
+        <button onclick="revokeDevice('${devId}')" style="background:#FEEBEB;border:none;border-radius:10px;padding:8px 12px;font-size:11px;font-weight:700;color:#EF4444;cursor:pointer;flex-shrink:0;">Cabut</button>
+      </div>`;
+    }).join('');
+  }catch(e){
+    list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--t3);font-size:13px;">Gagal memuat daftar perangkat. Cek koneksi internet.</div>`;
+  }
+}
+
+async function revokeDevice(devId){
+  const uid = fbUID(); if(!uid) return;
+  if(!confirm('Cabut akses Masuk Cepat perangkat ini? Perangkat tsb harus login penuh lagi.')) return;
+  try{
+    await fbDB.ref(`users/${uid}/devices/${devId}`).remove();
+    toast('✅ Akses perangkat dicabut');
+    renderDevicesList();
+  }catch(e){
+    toast('⚠️ Gagal mencabut akses, coba lagi');
+  }
+}
+
 
 function renderAnggaranList(){
   updateAnggaranBulanLabel();
@@ -8493,9 +9044,9 @@ function renderAnggaranList(){
   }
 
   list.innerHTML = monthBudgets.map(b => {
-    const c = cats.find(x => x.id === b.catId);
+    const c = allPickableCats().find(x => x.id === b.catId);
     if(!c) return '';
-    const catName  = T('cat-'+c.id) || c.id;
+    const catName  = catLabel(c);
     const spentAmt = spent[b.catId] || 0;
     const sisa     = b.nominal - spentAmt;
     const isOver   = sisa < 0;
@@ -8546,8 +9097,8 @@ function renderAnggaranList(){
 
     return `<div class="lg-list-card" style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);${cardBorder}opacity:${cardOpacity};${cardFilter}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isActive?10:0}px;cursor:pointer;" onclick="openAnggaranRiwayat(${b.id})">
-        <div style="width:40px;height:40px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>
+        <div style="width:40px;height:40px;border-radius:12px;background:${c.bg||c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          ${catIconInnerHtml(c, 20)}
         </div>
         <div style="flex:1;">
           <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">${catName}</div>
@@ -8615,11 +9166,11 @@ function buildAnggaranCatGrid(){
   const g = document.getElementById('anggaran-cat-grid');
   if(!g) return;
   g.innerHTML = '';
-  cats.forEach(c => {
+  allPickableCats().forEach(c => {
     const d = document.createElement('div');
     d.className = 'cat-c' + (selAnggaranCat === c.id ? ' sel' : '');
     d.onclick = () => selectAnggaranCat(d, c);
-    d.innerHTML = `<div class="cico-w"><div class="cico" style="background:${c.bg};"><svg viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg></div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${T('cat-'+c.id)}</div><div class="csub">${T('cat-'+c.id+'-sub')}</div>`;
+    d.innerHTML = `<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(c.svg?T('cat-'+c.id+'-sub'):(lang==='id'?'Kategori Kustom':'Custom Category'))}</div>`;
     g.appendChild(d);
   });
 }
@@ -8652,12 +9203,12 @@ function simpanAnggaran(){
 
   if(editId){
     const b = budgets.find(x => x.id === editId);
-    if(b){ b.catId=selAnggaranCat; b.nominal=nominal; b.periode=periodeRaw; b.catatan=catatan; }
+    if(b){ b.catId=selAnggaranCat; b.nominal=nominal; b.periode=periodeRaw; b.catatan=catatan; b.alerted80=false; b.alerted100=false; }
     toast('✅ Anggaran diperbarui');
   } else {
     const existing = budgets.find(b => b.catId===selAnggaranCat && b.periode===periodeRaw);
     if(existing){ toast('⚠️ Anggaran untuk kategori ini sudah ada di bulan ini'); return; }
-    budgets.push({ id:budgetIdCtr++, catId:selAnggaranCat, nominal, periode:periodeRaw, catatan });
+    budgets.push({ id:budgetIdCtr++, catId:selAnggaranCat, nominal, periode:periodeRaw, catatan, alerted80:false, alerted100:false });
     toast('✅ Anggaran ditambahkan');
   }
   closeAnggaranModal();
@@ -8698,9 +9249,9 @@ function hapusAnggaran(){
 function openAnggaranRiwayat(id){
   const b = budgets.find(x => x.id === id);
   if(!b) return;
-  const c = cats.find(x => x.id === b.catId);
+  const c = allPickableCats().find(x => x.id === b.catId);
   if(!c) return;
-  const catName = T('cat-'+c.id) || c.id;
+  const catName = catLabel(c);
   const key = b.periode || _anggaranPeriodeKey();
   const [yy, mm] = key.split('-').map(Number);
 
@@ -8926,6 +9477,132 @@ function closeAnggaranRiwayat(){
     Download Sekarang
   </button>
   <button onclick="closeDlConfirm()" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--t3);border:1.5px solid var(--border);font-family:var(--f);font-size:14px;font-weight:600;cursor:pointer;">Batal</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     KATEGORI KUSTOM — overlay
+════════════════════════════════════════════════════════════ -->
+<div id="customcat-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
+  <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">
+    <button onclick="closeCustomCatOverlay()" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <div style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);flex:1;">Kategori Kustom</div>
+  </div>
+  <div style="padding:14px 16px 4px;">
+    <button onclick="openAddCustomCatForm()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--navy);color:white;border:none;border-radius:14px;padding:13px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Tambah Kategori
+    </button>
+  </div>
+  <div id="customcat-list" style="flex:1;overflow-y:auto;padding:14px 16px;"></div>
+</div>
+
+<!-- Form tambah kategori kustom (moverlay) -->
+<div class="moverlay" id="customCatFormModal" style="z-index:1000;">
+  <div class="msheet" style="padding:20px 20px 28px;">
+    <div class="mhandle"></div>
+    <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;">Kategori Baru</div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">NAMA KATEGORI</div>
+    <input type="text" id="cc-name-input" maxlength="30" placeholder="mis. Pendidikan, Langganan, Kesehatan"
+      style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;color:var(--navy);outline:none;margin-bottom:18px;box-sizing:border-box;">
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">PILIH IKON</div>
+    <div id="cc-icon-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:18px;"></div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">PILIH WARNA</div>
+    <div id="cc-color-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:22px;"></div>
+
+    <button onclick="saveCustomCat()" style="width:100%;padding:14px;border-radius:12px;background:var(--navy);color:white;border:none;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Simpan</button>
+    <button onclick="closeCustomCatForm()" style="width:100%;padding:12px;border-radius:12px;background:var(--surface2);color:var(--navy);border:1.5px solid var(--border);font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;">Batal</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     UTANG & PIUTANG — overlay
+════════════════════════════════════════════════════════════ -->
+<div id="debts-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
+  <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">
+    <button onclick="closeDebtsOverlay()" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <div style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);flex:1;">Utang &amp; Piutang</div>
+  </div>
+  <!-- Ringkasan -->
+  <div style="display:flex;gap:10px;padding:14px 16px 0;flex-shrink:0;">
+    <div style="flex:1;background:#FEEBEB;border-radius:14px;padding:12px 14px;">
+      <div style="font-size:10px;font-weight:700;color:#B91C1C;letter-spacing:.5px;">TOTAL UTANG SAYA</div>
+      <div id="debt-total-utang" style="font-family:var(--f);font-size:16px;font-weight:800;color:#B91C1C;margin-top:4px;">Rp 0</div>
+    </div>
+    <div style="flex:1;background:#EBFEF3;border-radius:14px;padding:12px 14px;">
+      <div style="font-size:10px;font-weight:700;color:#065f46;letter-spacing:.5px;">TOTAL PIUTANG SAYA</div>
+      <div id="debt-total-piutang" style="font-family:var(--f);font-size:16px;font-weight:800;color:#065f46;margin-top:4px;">Rp 0</div>
+    </div>
+  </div>
+  <!-- Tab Utang | Piutang -->
+  <div style="margin:14px 16px;background:var(--surface2);border-radius:14px;padding:4px;display:flex;gap:0;flex-shrink:0;">
+    <button id="debt-tab-utang" onclick="switchDebtTab('utang')" style="flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--navy);box-shadow:var(--sh2);">Utang Saya</button>
+    <button id="debt-tab-piutang" onclick="switchDebtTab('piutang')" style="flex:1;padding:10px 6px;border-radius:10px;border:none;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);">Piutang Saya</button>
+  </div>
+  <div id="debt-list" style="flex:1;overflow-y:auto;padding:0 16px 90px;"></div>
+  <button onclick="openAddDebtForm()" style="position:fixed;bottom:calc(var(--safe-bot) + 20px);right:16px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;border:none;border-radius:50px;padding:14px 20px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(26,86,196,.4);z-index:50;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Tambah
+  </button>
+</div>
+
+<!-- Form tambah utang/piutang (moverlay) -->
+<div class="moverlay" id="debtFormModal" style="z-index:1000;">
+  <div class="msheet" style="padding:20px 20px 28px;">
+    <div class="mhandle"></div>
+    <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;" id="debt-form-title">Catat Utang/Piutang</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      <button id="debt-type-utang" onclick="selectDebtType('utang')" style="flex:1;padding:11px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);cursor:pointer;">🔴 Saya Berutang</button>
+      <button id="debt-type-piutang" onclick="selectDebtType('piutang')" style="flex:1;padding:11px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);cursor:pointer;">🟢 Saya Dipinjami</button>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">NAMA ORANG</div>
+    <input type="text" id="debt-nama-input" maxlength="60" placeholder="mis. Budi, Kak Sari"
+      style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;color:var(--navy);outline:none;margin-bottom:16px;box-sizing:border-box;">
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">JUMLAH</div>
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <span style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--blue2);">Rp</span>
+      <input type="text" id="debt-nominal-input" inputmode="numeric" placeholder="500.000"
+        style="flex:1;font-family:var(--f);font-size:18px;font-weight:800;color:var(--navy);border:none;outline:none;background:transparent;min-width:0;"
+        oninput="formatAnggaranInput(this)">
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">JATUH TEMPO (OPSIONAL)</div>
+    <input type="date" id="debt-tanggal-input"
+      style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;color:var(--navy);outline:none;margin-bottom:16px;box-sizing:border-box;">
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">CATATAN (OPSIONAL)</div>
+    <textarea id="debt-catatan-input" rows="2" maxlength="300" placeholder="Untuk apa, kesepakatan, dll."
+      style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:13px;color:var(--navy);outline:none;margin-bottom:22px;box-sizing:border-box;resize:none;"></textarea>
+
+    <input type="hidden" id="debt-edit-id" value="">
+    <button onclick="saveDebt()" style="width:100%;padding:14px;border-radius:12px;background:var(--navy);color:white;border:none;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Simpan</button>
+    <button onclick="closeDebtForm()" style="width:100%;padding:12px;border-radius:12px;background:var(--surface2);color:var(--navy);border:1.5px solid var(--border);font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;">Batal</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     KELOLA PERANGKAT — overlay
+════════════════════════════════════════════════════════════ -->
+<div id="devices-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
+  <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">
+    <button onclick="closeDevicesOverlay()" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <div style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);flex:1;">Kelola Perangkat</div>
+  </div>
+  <div style="padding:14px 16px 0;font-size:12px;color:var(--t3);line-height:1.5;">
+    Daftar perangkat yang pernah mengaktifkan <b>Masuk Cepat</b> untuk akun ini. Cabut akses perangkat yang tidak lagi Anda gunakan atau tidak Anda kenali.
+  </div>
+  <div id="devices-list" style="flex:1;overflow-y:auto;padding:14px 16px;"></div>
 </div>
 
 <!-- TAMBAH / EDIT ANGGARAN MODAL -->

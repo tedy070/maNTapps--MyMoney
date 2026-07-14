@@ -1430,7 +1430,22 @@ body{background:var(--bg);transition:background .35s;}
     <p class="sp-sub" id="s-sub">Master your finances with editorial-grade analytics and curated spending insights.</p>
     <button class="btn btn-p" onclick="goTo('register')" id="s-start">Get Started</button>
   </div>
-  <p class="sp-login"><span id="s-have">Already have an account?</span> <a onclick="goTo('login')" id="s-login">Log In</a></p>
+  <p class="sp-login"><span id="s-have">Already have an account?</span> <a onclick="goToLoginEntry()" id="s-login">Log In</a></p>
+</div>
+
+<!-- QUICK LOGIN (Masuk Cepat) -->
+<div class="scr auth-scr" id="quickLogin">
+  <div class="auth-card" style="text-align:center;">
+    <div class="auth-logo">maNTapps</div>
+    <h2 class="auth-title" id="ql-title">Selamat Datang Kembali</h2>
+    <p class="auth-sub" id="ql-sub">Ketuk foto profil untuk masuk cepat</p>
+    <div style="margin:28px 0;">
+      <div id="quickLoginAvatar" onclick="tapQuickLoginAvatar()" style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue2));margin:0 auto;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(26,86,196,.35);cursor:pointer;overflow:hidden;position:relative;font-size:34px;color:#fff;"></div>
+      <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);margin-top:14px;" id="quickLoginName"></div>
+      <div style="font-size:12px;color:var(--t3);margin-top:2px;" id="quickLoginEmail"></div>
+    </div>
+    <button class="btn btn-p" onclick="goToOtherAccount()" id="ql-other">Masuk dengan akun lain</button>
+  </div>
 </div>
 
 <!-- LOGIN -->
@@ -2309,6 +2324,7 @@ body{background:var(--bg);transition:background .35s;}
       <div class="sec-sec-ttl">AUTENTIKASI</div>
       <div class="sec-grp">
         <div class="sec-row" onclick="showPinChange()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Kunci PIN</div><div class="sec-row-sub" id="pinStatusLbl">Ketuk untuk atur PIN</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" stroke="#2A6FD6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Masuk Cepat</div><div class="sec-row-sub" id="quickLoginStatusLbl">Ketuk untuk aktifkan Masuk Cepat</div></div><button class="tog" id="quickLoginToggle" onclick="toggleQuickLogin()"></button></div>
         <div class="sec-row" onclick="showPasswordChange()"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Ganti Password</div><div class="sec-row-sub">Perbarui password login Anda</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Biometrik</div><div class="sec-row-sub">Face ID / Sidik Jari</div></div><button class="tog on" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'Biometrik diaktifkan':'Biometrik dinonaktifkan')"></button></div>
         <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Autentikasi Dua Langkah (2FA)</div><div class="sec-row-sub">SMS & Aplikasi Autentikator</div></div><button class="tog" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'2FA diaktifkan':'2FA dinonaktifkan')"></button></div>
@@ -2678,6 +2694,41 @@ let editingGoalId=null, editingWalletId=null, openMenuId=null;
 let savedPin='', lockPinBuf='', appHidden=false;
 const accounts = {};
 let user=null;
+
+// ============================================================
+// MASUK CEPAT (Quick Login) — device-local, TIDAK ke RTDB
+// ============================================================
+// Fitur opt-in dari Pengaturan → Keamanan → "Masuk Cepat". Kalau aktif,
+// profil ringkas (nama/email/avatar/foto + salinan PIN) di-cache di
+// localStorage device ini. Selama sesi Firebase Auth masih berlaku
+// (persistensi browser — user belum logout), tap foto di halaman
+// "Masuk Cepat" bisa langsung ke layar PIN tanpa perlu ketik ulang
+// email & password. Kalau user logout, cache ini otomatis dihapus
+// (lihat doLogout()) — jadi tidak bisa dipakai untuk bypass logout.
+const LS_QUICK_LOGIN_KEY = 'mm_quick_login';
+function saveQuickLoginProfile(){
+  if(!user || !user.uid) return;
+  try{
+    localStorage.setItem(LS_QUICK_LOGIN_KEY, JSON.stringify({
+      uid: user.uid, name: user.name, email: user.email,
+      avatar: user.avatar || 'default', photo: user.photo || null,
+      pin: savedPin || '' // salinan lokal PIN — dipakai untuk gate SEBELUM enterApp()
+    }));
+  } catch(e){}
+}
+function getQuickLoginProfile(){
+  try{
+    const raw = localStorage.getItem(LS_QUICK_LOGIN_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+function removeQuickLoginProfile(){
+  try{ localStorage.removeItem(LS_QUICK_LOGIN_KEY); } catch(e){}
+}
+function isQuickLoginEnabledForCurrentUser(){
+  const qlp = getQuickLoginProfile();
+  return !!(qlp && user && qlp.uid === user.uid);
+}
 
 // ============================================================
 // NOTIFICATIONS — localStorage per-UID, tidak ke RTDB
@@ -4754,7 +4805,7 @@ function updateAllAmounts(){
 // LANGUAGE
 // ============================================================
 const TR={
-  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
+  en:{'s-title':'Track Money <em>Like a Pro</em>','s-sub':'Master your finances with editorial-grade analytics and curated spending insights.','s-start':'Get Started','s-have':'Already have an account?','s-login':'Log In','s-badge':'● SYSTEM ONLINE','ql-title':'Welcome Back','ql-sub':'Tap your profile photo to sign in fast','ql-other':'Log in with another account','l-title':'Welcome Back','l-sub':'Access your curated financial dashboard','l-elbl':'EMAIL ADDRESS','l-plbl':'PASSWORD','l-forgot':'Forgot Password?','l-btn':'Login','l-or':'OR CONTINUE WITH','l-new':'New to the platform?','l-create':'Create Account','l-footer':'© 2024 MANTAPPS. SECURE. PRIVATE. ESSENTIAL.','loginEmailErr':'Invalid email format','loginPwErr':'Incorrect email or password','r-title':'Create Account','r-sub':'Join thousands managing money smarter','r-nlbl':'FULL NAME','r-elbl':'EMAIL ADDRESS','r-plbl':'PASSWORD','r-p2lbl':'CONFIRM PASSWORD','r-btn':'Create Account','r-have':'Already have an account?','r-login':'Log In','regNameErr':'Name is required','regEmailErr':'Invalid email format','regPwErr':'Password must be at least 6 characters','regPw2Err':'Passwords do not match','f-title':'Forgot Password?','f-sub':"Enter your email and we'll send a reset link",'f-elbl':'EMAIL ADDRESS','f-btn':'Send Reset Link','f-back':'Back to Login','f-back2':'← Back to Login','forgotEmailErr':'Invalid email format','h-ballbl':'TOTAL BALANCE','h-gain':'Monthly Gain','h-topup':'Top Up','h-spending':'Monthly Spending','h-view':'View Details','h-recent':'Recent Transactions','h-life':'LIFESTYLE','h-food':'FOOD','h-trans':'TRANSPORT','h-health':'CHARITY','h-shop':'SHOPPING','h-tech':'MARRIAGE','a-overview':'MONTHLY OVERVIEW','a-less':'12% less than last month','a-cat':'Spending by Category','a-goes':'Where your money goes','a-housing':'Housing','a-food':'Food & Dining','a-transport':'Transport','a-leisure':'Leisure','a-top':'Top Categories','a-re':'Top Category 1','a-gas':'Top Category 2','a-ls':'Top Category 3','a-weekly':'Weekly Breakdown','a-7days':'Last 7 days of activity','a-spend':'SPENDING','a-income':'INCOME','a-stip':'Smart Savings Tip','a-tiptext':'You spent 24% more on Dining Out this week. Switch to home cooking twice a week to reach your goal faster!','a-limit':'Set Spending Limit','sv-prog':'TOTAL PROGRESS','sv-from':'from last month','sv-new':'+ New Goal','sv-ins':'Insights','sv-emtip':'Saving for an emergency fund first provides ultimate peace of mind.','sv-learn':'Learn More','wlt-ttl':'My Wallets & Cards','wlt-sub':'Swipe to view · Tap ⋮ to manage','wlt-summary':'Total Across All Cards','st-acclbl':'ACCOUNT PREFERENCES','st-editp':'Edit Profile','st-editpsub':'Name, Avatar, Email','st-sec':'Security','st-notif':'Notifications','st-dark':'Dark Mode','st-darksub':'Adjust visual theme','st-lang':'Language','st-suplbl':'SUPPORT & EXIT','st-help':'Help Center','st-logout':'Log Out','st-logoutsub':'Securely sign out','st-hcft':'HANDCRAFTED FOR FINANCIAL WELLNESS','m-title':'Add Transaction','m-amt':'TRANSACTION AMOUNT','m-cat':'SELECT CATEGORY','m-note':'NOTE (OPTIONAL)','m-complete':'Complete Transaction','cp-sub':'Where did your money flow today?','cp-conf':'Confirm Selection →','n-home':'HOME','n-an':'ANALYTICS','n-sv':'SAVINGS','n-st':'SETTINGS','nc-title':'Notifications','nc-clear':'Mark all read','gm-title':'New Savings Goal','gm-namelbl':'GOAL NAME','gm-sublbl':'DESCRIPTION (OPTIONAL)','gm-targetlbl':'TARGET AMOUNT','gm-currlbl':'CURRENT SAVED','gm-save':'Create Goal','wm-title':'Add Wallet / Card','wm-banklbl':'BANK / WALLET NAME','wm-numlbl':'CARD NUMBER (LAST 4 DIGITS)','wm-ballbl':'CURRENT BALANCE','wm-typelbl':'TYPE','wm-save':'Add Card','svt-goals':'Goals & Bills','svt-wallets':'Wallets & Cards','svt-history':'History',
 'tg-tab-goals':'Goals','tg-tab-bills':'Bills',
 'tg-upcoming-total':'UPCOMING BILLS TOTAL','tg-need-attention':'bill(s) need attention','tg-pay-all':'Pay All',
 'tg-monthly-spending':'Monthly Spending','tg-of-budget':'% of budget','tg-due-soon':'Due Soon',
@@ -4799,7 +4850,7 @@ const TR={
     'pw-nomatch':'Passwords do not match',
     'pin-set':'PIN set!','pin-wrong':'Wrong PIN',
     'today':'Today','nav-income':'Income','nav-expense':'Expense','nav-transfer':'Transfer'},
-  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
+  id:{'s-title':'Kelola Uang <em>Seperti Pro</em>','s-sub':'Kuasai keuangan Anda dengan analitik berkelas dan wawasan pengeluaran akurat.','s-start':'Mulai Sekarang','s-have':'Sudah punya akun?','s-login':'Masuk','s-badge':'● SISTEM ONLINE','ql-title':'Selamat Datang Kembali','ql-sub':'Ketuk foto profil untuk masuk cepat','ql-other':'Masuk dengan akun lain','l-title':'Selamat Datang Kembali','l-sub':'Akses dashboard keuangan Anda','l-elbl':'ALAMAT EMAIL','l-plbl':'PASSWORD','l-forgot':'Lupa Password?','l-btn':'Masuk','l-or':'ATAU LANJUTKAN DENGAN','l-new':'Belum punya akun?','l-create':'Buat Akun','l-footer':'© 2024 MANTAPPS. AMAN. PRIVAT. PENTING.','loginEmailErr':'Format email tidak valid','loginPwErr':'Email atau password salah','r-title':'Buat Akun','r-sub':'Bergabung bersama ribuan pengguna','r-nlbl':'NAMA LENGKAP','r-elbl':'ALAMAT EMAIL','r-plbl':'PASSWORD','r-p2lbl':'KONFIRMASI PASSWORD','r-btn':'Buat Akun','r-have':'Sudah punya akun?','r-login':'Masuk','regNameErr':'Nama wajib diisi','regEmailErr':'Format email tidak valid','regPwErr':'Password minimal 6 karakter','regPw2Err':'Password tidak cocok','f-title':'Lupa Password?','f-sub':'Masukkan email untuk menerima link reset','f-elbl':'ALAMAT EMAIL','f-btn':'Kirim Link Reset','f-back':'Kembali ke Login','f-back2':'← Kembali ke Login','forgotEmailErr':'Format email tidak valid','h-ballbl':'TOTAL SALDO','h-gain':'Kenaikan Bulanan','h-topup':'Isi Saldo','h-spending':'Pengeluaran Bulanan','h-view':'Lihat Detail','h-recent':'Transaksi Terbaru','h-life':'GAYA HIDUP','h-food':'MAKANAN','h-trans':'TRANSPORTASI','h-health':'AMAL','h-shop':'BELANJA','h-tech':'PERNIKAHAN','a-overview':'RINGKASAN BULANAN','a-less':'12% lebih sedikit dari bulan lalu','a-cat':'Pengeluaran per Kategori','a-goes':'Ke mana uang Anda pergi','a-housing':'Perumahan','a-food':'Makanan & Minuman','a-transport':'Transportasi','a-leisure':'Hiburan','a-top':'Kategori Teratas','a-re':'Kategori 1','a-gas':'Kategori 2','a-ls':'Kategori 3','a-weekly':'Rincian Mingguan','a-7days':'7 hari aktivitas terakhir','a-spend':'PENGELUARAN','a-income':'PENDAPATAN','a-stip':'Tips Hemat Cerdas','a-tiptext':'Anda menghabiskan 24% lebih banyak untuk Makan di Luar minggu ini. Masak di rumah 2x seminggu untuk mencapai tujuan lebih cepat!','a-limit':'Atur Batas Pengeluaran','sv-prog':'TOTAL KEMAJUAN','sv-from':'dari bulan lalu','sv-new':'Tujuan Baru','sv-ins':'Wawasan','sv-emtip':'Menabung untuk dana darurat terlebih dahulu memberikan ketenangan pikiran.','sv-learn':'Pelajari Lebih Lanjut','wlt-ttl':'Dompet & Kartu Saya','wlt-sub':'Geser untuk lihat · Ketuk ⋮ untuk kelola','wlt-summary':'Total Semua Kartu','st-acclbl':'PREFERENSI AKUN','st-editp':'Edit Profil','st-editpsub':'Nama, Avatar, Email','st-sec':'Keamanan','st-notif':'Notifikasi','st-dark':'Mode Gelap','st-darksub':'Sesuaikan tampilan','st-lang':'Bahasa','st-suplbl':'DUKUNGAN & KELUAR','st-help':'Pusat Bantuan','st-logout':'Keluar','st-logoutsub':'Keluar dengan aman','st-hcft':'DIBUAT UNTUK KESEHATAN FINANSIAL','m-title':'Tambah Transaksi','m-amt':'JUMLAH TRANSAKSI','m-cat':'PILIH KATEGORI','m-note':'CATATAN (OPSIONAL)','m-complete':'Selesaikan Transaksi','cp-sub':'Ke mana uang Anda mengalir hari ini?','cp-conf':'Konfirmasi Pilihan →','n-home':'BERANDA','n-an':'ANALITIK','n-sv':'TABUNGAN','n-st':'PENGATURAN','nc-title':'Notifikasi','nc-clear':'Tandai semua dibaca','gm-title':'Tujuan Tabungan Baru','gm-namelbl':'NAMA TUJUAN','gm-sublbl':'DESKRIPSI (OPSIONAL)','gm-targetlbl':'TARGET JUMLAH','gm-currlbl':'SUDAH DITABUNG','gm-save':'Buat Tujuan','wm-title':'Tambah Dompet / Kartu','wm-banklbl':'NAMA BANK / DOMPET','wm-numlbl':'NOMOR KARTU (4 DIGIT TERAKHIR)','wm-ballbl':'SALDO SAAT INI','wm-typelbl':'JENIS','wm-save':'Tambah Kartu','svt-goals':'Tujuan & Tagihan','svt-wallets':'Dompet & Kartu','svt-history':'Riwayat',
 'tg-tab-goals':'Tujuan','tg-tab-bills':'Tagihan',
 'tg-upcoming-total':'TOTAL TAGIHAN MENDATANG','tg-need-attention':'tagihan perlu perhatian','tg-pay-all':'Bayar Semua',
 'tg-monthly-spending':'Pengeluaran Bulan Ini','tg-of-budget':'% dari anggaran','tg-due-soon':'Segera Jatuh Tempo',
@@ -5034,7 +5085,7 @@ function handlePhotoUpload(input){const f=input.files[0];if(!f)return;const r=ne
 function openEditProfile(){document.getElementById('editName').value=user?user.name:'Jordan Miller';document.getElementById('editEmail').value=user?user.email:'jordan.miller@curated.io';editAvData=curAv;editPhotoDataUrl=photoDataUrl;updateAvatar('editAvPreview',curAv,photoDataUrl);syncAvPicker();document.getElementById('editProfileOvr').classList.add('on');}
 function closeEditProfile(){document.getElementById('editProfileOvr').classList.remove('on');}
 async function saveProfile(){const name=document.getElementById('editName').value.trim();const em=document.getElementById('editEmail').value.trim();if(!name||!isEmail(em)){toast('⚠️ Please fill valid details');return;}curAv=editAvData;photoDataUrl=editPhotoDataUrl;cacheLastPhoto(photoDataUrl);if(user){user.name=name;user.email=em;user.avatar=curAv;user.photo=photoDataUrl;}document.getElementById('profileName').textContent=name;document.getElementById('profileEmail').textContent=em;updateAvatar('profileAv',curAv,photoDataUrl);updateAvatar('headerAv',curAv,photoDataUrl);updateSplashHero(photoDataUrl);updatePinLockIcon(photoDataUrl);closeEditProfile();addNotif('welcome','Profile Updated','Your profile has been saved successfully.');toast('✅ Profile saved!');// Simpan ke Firebase
-await fsSaveProfile(user); fbAutoSave();}
+await fsSaveProfile(user); fbAutoSave(); if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();}
 
 // ============================================================
 // SECURITY
@@ -6334,27 +6385,42 @@ function _fbErrMsg(code){
 // ============================================================
 // FIREBASE AUTH STATE OBSERVER — auto-login jika sesi aktif
 // ============================================================
+// Helper bersama: muat profil + state dari Firebase lalu masuk ke app.
+// Dipakai oleh: (a) auto-restore sesi di bawah, (b) doLogin() manual,
+// (c) alur "Masuk Cepat" setelah PIN benar (lihat _completeQuickLogin()).
+async function _loadProfileStateAndEnterApp(fu){
+  document.getElementById('fbLoadingOverlay').style.display='flex';
+  document.getElementById('fbLoadingText').textContent = lang==='id' ? 'Memuat data kamu...' : 'Loading your data...';
+  try {
+    const prof = await fsLoadProfile();
+    user = {
+      email:  fu.email,
+      name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
+      avatar: prof?.avatar || 'default',
+      photo:  prof?.photo  || null,
+      uid:    fu.uid
+    };
+    const state = await fbLoadState();
+    document.getElementById('fbLoadingOverlay').style.display='none';
+    await enterApp(state);
+  } catch(e){
+    document.getElementById('fbLoadingOverlay').style.display='none';
+    console.warn('Auto-login restore error:', e);
+  }
+}
 fbAuth.onAuthStateChanged(async (fu) => {
   if(fu && !document.getElementById('app').classList.contains('on')){
-    // Sesi aktif, restore langsung
-    document.getElementById('fbLoadingOverlay').style.display='flex';
-    document.getElementById('fbLoadingText').textContent = 'Memuat data kamu...';
-    try {
-      const prof = await fsLoadProfile();
-      user = {
-        email:  fu.email,
-        name:   prof?.name  || fu.displayName || fu.email.split('@')[0],
-        avatar: prof?.avatar || 'default',
-        photo:  prof?.photo  || null,
-        uid:    fu.uid
-      };
-      const state = await fbLoadState();
-      document.getElementById('fbLoadingOverlay').style.display='none';
-      await enterApp(state);
-    } catch(e){
-      document.getElementById('fbLoadingOverlay').style.display='none';
-      console.warn('Auto-login restore error:', e);
-    }
+    // Kalau "Masuk Cepat" sudah diaktifkan untuk akun ini, JANGAN auto-masuk
+    // langsung — biarkan splash tampil dulu supaya alur "Log In" → tap foto
+    // → PIN (lihat goToLoginEntry()/tapQuickLoginAvatar()) yang menentukan
+    // kapan app benar-benar dibuka. Sesi Firebase-nya tetap valid di
+    // background, cuma belum dipakai untuk masuk sampai user tap foto.
+    const qlp = getQuickLoginProfile();
+    if(qlp && qlp.uid === fu.uid) return;
+
+    // Sesi aktif & Masuk Cepat tidak dipakai user ini → restore langsung
+    // seperti sebelumnya (perilaku lama, tidak berubah).
+    await _loadProfileStateAndEnterApp(fu);
   }
 });
 
@@ -6764,6 +6830,17 @@ async function enterApp(initialState){
     updateSplashHero(photoDataUrl);
     updatePinLockIcon(photoDataUrl);
     syncAvPicker();
+
+    // Sinkronkan status toggle "Masuk Cepat" + segarkan cache-nya (foto/nama
+    // /PIN bisa saja sudah berubah sejak terakhir kali profil ini di-cache).
+    const qlTog = document.getElementById('quickLoginToggle');
+    const qlLbl = document.getElementById('quickLoginStatusLbl');
+    const qlIsOn = isQuickLoginEnabledForCurrentUser();
+    if(qlTog) qlTog.classList.toggle('on', qlIsOn);
+    if(qlLbl) qlLbl.textContent = qlIsOn
+      ? (lang==='id' ? 'Aktif · ketuk foto profil di halaman masuk untuk masuk cepat' : 'Active · tap your profile photo on the login page to sign in fast')
+      : (lang==='id' ? 'Ketuk untuk aktifkan Masuk Cepat' : 'Tap to enable Quick Login');
+    if(qlIsOn) saveQuickLoginProfile(); // refresh cache dengan data terbaru
   }
 
   // ③ Tampilkan layar app
@@ -6835,6 +6912,12 @@ async function doLogout(){
   // ② Sign out dari Firebase Auth
   try { await fbAuth.signOut(); } catch(e){}
 
+  // ②b Hapus cache "Masuk Cepat" — kalau tidak dihapus, tap foto di layar
+  //     Masuk Cepat bisa jadi jalan pintas untuk "masuk lagi" padahal user
+  //     baru saja SENGAJA logout. Fitur ini memang HANYA untuk kasus "app
+  //     ditinggal tanpa logout", bukan pengganti logout.
+  removeQuickLoginProfile();
+
   // ③ Reset seluruh state lokal
   user=null;
   _clearNotifLocal(); // hapus cache notifikasi kurs di localStorage (device-local, bukan data akun)
@@ -6857,6 +6940,8 @@ async function doLogout(){
   clearErrs(['loginEmailErr','loginPwErr']);
   updateAllAmounts(); // reset card total saldo & badge panah/persentase (home + welcome page)
   updateSplashHero(photoDataUrl); // welcome page ikut menampilkan foto profil user terakhir (jika ada)
+  const qlTog = document.getElementById('quickLoginToggle');
+  if(qlTog) qlTog.classList.remove('on');
   goTo('splash');
 }
 
@@ -6897,15 +6982,27 @@ async function socialLogin(){
 function updateLockPinDisplay(){
   for(let i=0;i<4;i++){ const d=document.getElementById('lp'+i); if(d) d.classList.toggle('fill', i<lockPinBuf.length); }
 }
+// ── Mode layar PIN lock ──
+// 'relock'     → app SUDAH terbuka, cuma di-relock (visibilitychange). Sukses → tutup overlay saja.
+// 'quicklogin' → app BELUM terbuka (alur "Masuk Cepat"). Sukses → lanjut muat profil+state & enterApp().
+let _pinLockMode = 'relock';
+let _pendingQuickLoginProfile = null;
+
 function lockPinKey(k){
   if(lockPinBuf.length>=4) return;
   lockPinBuf+=k; updateLockPinDisplay();
   if(lockPinBuf.length===4){
     setTimeout(()=>{
       if(lockPinBuf===savedPin){
-        hidePinLock();
         document.getElementById('pinLockError').textContent='';
         lockPinBuf='';
+        if(_pinLockMode==='quicklogin'){
+          const qlp = _pendingQuickLoginProfile;
+          hidePinLock();
+          _completeQuickLogin(qlp);
+        } else {
+          hidePinLock();
+        }
       } else {
         document.getElementById('pinLockError').textContent='❌ Incorrect PIN. Try again.';
         // Shake dots
@@ -6919,12 +7016,28 @@ function lockPinKey(k){
 function lockPinDel(){ if(lockPinBuf.length>0){ lockPinBuf=lockPinBuf.slice(0,-1); updateLockPinDisplay(); } }
 function showPinLock(){
   if(!savedPin||!user) return;
+  _pinLockMode = 'relock';
+  _pendingQuickLoginProfile = null;
   lockPinBuf='';
   const s=document.getElementById('pinLockScreen');
   s.style.display='flex';
   document.getElementById('pinLockError').textContent='';
   document.getElementById('pinLockUser').textContent=user?.email||'';
   updatePinLockIcon(photoDataUrl);
+  updateLockPinDisplay();
+}
+// Layar PIN untuk alur "Masuk Cepat" (SEBELUM app terbuka / SEBELUM `user` di-set).
+// qlp = profil dari getQuickLoginProfile() (berisi uid/nama/email/foto/pin cache-nya).
+function showPinLockForQuickLogin(qlp){
+  _pinLockMode = 'quicklogin';
+  _pendingQuickLoginProfile = qlp;
+  savedPin = qlp.pin || ''; // dipakai sbg pembanding di lockPinKey() di atas
+  lockPinBuf='';
+  const s=document.getElementById('pinLockScreen');
+  s.style.display='flex';
+  document.getElementById('pinLockError').textContent='';
+  document.getElementById('pinLockUser').textContent=qlp.email||'';
+  updatePinLockIcon(qlp.photo);
   updateLockPinDisplay();
 }
 function hidePinLock(){ const s=document.getElementById('pinLockScreen'); s.style.display='none'; lockPinBuf=''; }
@@ -6935,9 +7048,79 @@ async function showPinLockForgot(){
     const fu = fbAuth.currentUser;
     const credential = firebase.auth.EmailAuthProvider.credential(fu.email, pw);
     await fu.reauthenticateWithCredential(credential);
-    hidePinLock(); toast('✅ Unlocked!');
+    if(_pinLockMode==='quicklogin'){
+      const qlp = _pendingQuickLoginProfile;
+      hidePinLock();
+      toast('✅ Unlocked!');
+      _completeQuickLogin(qlp);
+    } else {
+      hidePinLock(); toast('✅ Unlocked!');
+    }
   } catch(e){ toast('❌ Incorrect password'); }
 }
+
+// ============================================================
+// MASUK CEPAT — layar & alur (welcome page → tap foto → PIN → app)
+// ============================================================
+// Dipanggil dari link "Log In" di welcome page. Kalau ada profil Masuk
+// Cepat tersimpan DAN sesi Firebase Auth-nya masih cocok/valid (user
+// belum logout), tampilkan halaman "Masuk Cepat". Kalau tidak, langsung
+// ke halaman login biasa (perilaku lama, tidak berubah).
+function goToLoginEntry(){
+  const qlp = getQuickLoginProfile();
+  if(qlp && fbAuth.currentUser && fbAuth.currentUser.uid === qlp.uid){
+    _renderQuickLoginScreen(qlp);
+    goTo('quickLogin');
+  } else {
+    goTo('login');
+  }
+}
+function _renderQuickLoginScreen(qlp){
+  const nameEl = document.getElementById('quickLoginName');
+  const emailEl = document.getElementById('quickLoginEmail');
+  if(nameEl) nameEl.textContent = qlp.name || '';
+  if(emailEl) emailEl.textContent = qlp.email || '';
+  const av = document.getElementById('quickLoginAvatar');
+  if(av){
+    av.innerHTML = qlp.photo
+      ? `<img src="${qlp.photo}" style="width:100%;height:100%;object-fit:cover;">`
+      : (avSVGs[qlp.avatar] || avSVGs.default);
+  }
+}
+// Tombol biru "Masuk dengan akun lain" — buka halaman login biasa
+// (email/password), TANPA menghapus cache Masuk Cepat (biar tetap
+// tersedia lain kali kalau user ingin pakai cara cepat lagi).
+function goToOtherAccount(){
+  goTo('login');
+}
+// Tap foto profil di halaman Masuk Cepat
+function tapQuickLoginAvatar(){
+  const qlp = getQuickLoginProfile();
+  if(!qlp){ goTo('login'); return; }
+  const fu = fbAuth.currentUser;
+  if(!fu || fu.uid !== qlp.uid){
+    // Sesi sudah tidak valid lagi (mis. token kadaluarsa/logout di device lain)
+    toast(lang==='id' ? '⚠️ Sesi berakhir, silakan masuk kembali' : '⚠️ Session expired, please log in again');
+    goTo('login');
+    return;
+  }
+  if(qlp.pin){
+    showPinLockForQuickLogin(qlp);
+  } else {
+    // Edge-case: Masuk Cepat aktif tanpa PIN ter-cache (seharusnya jarang
+    // terjadi karena toggleQuickLogin() mewajibkan PIN sudah diatur) —
+    // langsung saja masuk tanpa gerbang PIN.
+    _completeQuickLogin(qlp);
+  }
+}
+// Sesi Firebase sudah pasti valid di titik ini (sudah dicek sebelumnya) —
+// tinggal muat profil+state terbaru & masuk ke app, sama seperti login manual.
+function _completeQuickLogin(qlp){
+  const fu = fbAuth.currentUser;
+  if(!fu){ goTo('login'); return; }
+  _loadProfileStateAndEnterApp(fu);
+}
+
 
 // Visibility API for auto PIN lock
 document.addEventListener('visibilitychange',()=>{
@@ -6969,6 +7152,9 @@ function pinKey(k){
           const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
           addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
           toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
+          // Kalau Masuk Cepat aktif, salinan PIN lokalnya ikut diperbarui —
+          // supaya tidak jadi PIN basi/kadaluarsa di layar Masuk Cepat.
+          if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
           fbAutoSave();
         } else {
           pinBuf='';pinStp=0;newPinSaved='';
@@ -6978,6 +7164,35 @@ function pinKey(k){
         }
       }
     },200);
+  }
+}
+
+// ── Toggle "Masuk Cepat" di Pengaturan → Keamanan ──
+// Butuh PIN sudah diatur dulu, karena Masuk Cepat menggunakan PIN sebagai
+// gerbang keamanan sebelum benar-benar masuk ke app.
+function toggleQuickLogin(){
+  const tog = document.getElementById('quickLoginToggle');
+  const lbl = document.getElementById('quickLoginStatusLbl');
+  if(!tog) return;
+  const willEnable = !tog.classList.contains('on');
+  if(willEnable){
+    if(!savedPin){
+      toast(lang==='id'
+        ? '⚠️ Atur Kunci PIN terlebih dahulu sebelum mengaktifkan Masuk Cepat'
+        : '⚠️ Set a PIN Lock first before enabling Quick Login');
+      return;
+    }
+    saveQuickLoginProfile();
+    tog.classList.add('on');
+    if(lbl) lbl.textContent = lang==='id'
+      ? 'Aktif · ketuk foto profil di halaman masuk untuk masuk cepat'
+      : 'Active · tap your profile photo on the login page to sign in fast';
+    toast(lang==='id' ? '✅ Masuk Cepat diaktifkan' : '✅ Quick Login enabled');
+  } else {
+    removeQuickLoginProfile();
+    tog.classList.remove('on');
+    if(lbl) lbl.textContent = lang==='id' ? 'Ketuk untuk aktifkan Masuk Cepat' : 'Tap to enable Quick Login';
+    toast(lang==='id' ? '🚫 Masuk Cepat dinonaktifkan' : '🚫 Quick Login disabled');
   }
 }
 

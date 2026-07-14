@@ -2575,6 +2575,29 @@ const _RAW_VERSION = '__APP_VERSION__';
 const APP_VERSION = _RAW_VERSION.startsWith('__') ? 'V2.5.0-dev' : _RAW_VERSION;
 function showAppVersionToast(){ toast('maNTapps ' + APP_VERSION); }
 let lang='id', darkMode=false;
+
+// ── Kategori Kustom & Utang/Piutang ──
+// PENTING: deklarasi ini HARUS berada di sini (script block yang sama dengan
+// panggilan buildCatGrid()/applyLang() saat init halaman), BUKAN di dekat
+// deklarasi `budgets` di bagian bawah file. File ini punya beberapa tag
+// <script> terpisah; buildCatGrid() (lewat allPickableCats()) sudah dipanggil
+// SAAT HALAMAN PERTAMA KALI DIMUAT (sebelum login), jauh sebelum script block
+// yang berisi deklarasi `budgets` sempat berjalan. Kalau customCategories
+// dideklarasikan di script block yang lebih belakangan, allPickableCats()
+// akan lempar "ReferenceError: customCategories is not defined" saat
+// buildCatGrid() jalan di awal — dan karena error itu terjadi di kode
+// top-level (bukan di dalam try/catch), SISA script di block yang sama
+// (termasuk applyLang() yang seharusnya menerjemahkan halaman welcome ke
+// Bahasa Indonesia) IKUT BERHENTI dieksekusi. Itulah yang menyebabkan
+// halaman welcome tampil dalam teks Inggris mentah dari HTML — bukan
+// benar-benar "bug bahasa", tapi efek samping dari error ini menghentikan
+// applyLang() sebelum sempat jalan. `debts` dipindah ke sini juga sebagai
+// tindakan pencegahan, meski saat ini belum ada fungsi init yang
+// membutuhkannya lebih awal.
+let customCategories = [];
+let customCatIdCtr = 1;
+let debts = [];
+let debtIdCtr = 1;
 let liquidGlassEnabled=false, liquidGlassIntensity=55, liquidGlassCollapseOnScroll=true;
 
 // ============================================================
@@ -8520,17 +8543,6 @@ window.addNotif = function(type, title, msg){
 // budgets: array of { id, catId, nominal, periode (YYYY-MM), catatan }
 let budgets = [];
 let budgetIdCtr = 1;
-
-// ── Kategori Kustom ──
-// customCategories: array of { id, name, icon (1 karakter emoji), color (hex bg) }
-// Digabung dengan `cats` bawaan lewat allPickableCats() di manapun user memilih kategori.
-let customCategories = [];
-let customCatIdCtr = 1;
-
-// ── Utang & Piutang ──
-// debts: array of { id, type ('utang'|'piutang'), nama, nominal, tanggal (opsional), lunas, catatan }
-let debts = [];
-let debtIdCtr = 1;
 
 // Current month navigation for Anggaran
 let anggaranYear  = new Date().getFullYear();

@@ -6332,6 +6332,9 @@ function analyticsPrevMonth() {
   analyticsMonth--;
   if (analyticsMonth < 0) { analyticsMonth = 11; analyticsYear--; }
   updateAnalyticsBulanLabel();
+  buildHealthScore();
+  buildAutoInsights();
+  buildMonthComparison();
   buildDonut();
   buildIncomeExpenseDonut();
   buildTopCats();
@@ -6342,6 +6345,9 @@ function analyticsNextMonth() {
   analyticsMonth++;
   if (analyticsMonth > 11) { analyticsMonth = 0; analyticsYear++; }
   updateAnalyticsBulanLabel();
+  buildHealthScore();
+  buildAutoInsights();
+  buildMonthComparison();
   buildDonut();
   buildIncomeExpenseDonut();
   buildTopCats();
@@ -6388,6 +6394,9 @@ function selectAnalyticsBulan(y, m) {
   analyticsMonth = m;
   closeAnalyticsBulanPicker();
   updateAnalyticsBulanLabel();
+  buildHealthScore();
+  buildAutoInsights();
+  buildMonthComparison();
   buildDonut();
   buildIncomeExpenseDonut();
   buildTopCats();

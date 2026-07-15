@@ -136,6 +136,7 @@ async function fbSaveState(_retryCount){
     themeColor: (typeof currentThemeId !== 'undefined') ? currentThemeId : 'blue',
     liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity, collapseOnScroll: liquidGlassCollapseOnScroll },
     notifSound: { choice: notifSoundChoice },
+    appSettings,
     quickLoginEnabled,
     updatedAt: ts
   };
@@ -1401,6 +1402,9 @@ body{background:var(--bg);transition:background .35s;}
 #destGrid .src-chip.on{background:var(--teal2);color:#fff;border-color:var(--teal);}
 /* Highlight today bar */
 #barChart .br[style*="var(--blue2)"]{box-shadow:0 0 8px rgba(26,86,196,.35);}
+/* ── MODE PRIVASI: blur nominal saldo, tap untuk intip sebentar ── */
+.privacy-blur{filter:blur(8px);user-select:none;transition:filter .2s;cursor:pointer;}
+.privacy-blur.privacy-peek{filter:blur(0);}
 </style>
 </head>
 <body>
@@ -1591,8 +1595,8 @@ body{background:var(--bg);transition:background .35s;}
       <div class="bal-card">
         <div class="bal-sheen"></div>
         <div class="bal-lbl" id="h-ballbl">TOTAL BALANCE</div>
-        <div class="bal-amt" id="displayBalance">$12,450.80</div>
-        <div class="bal-usd" id="displayBalanceAlt"></div>
+        <div class="bal-amt" id="displayBalance" onclick="revealBalanceOnce(this)">$12,450.80</div>
+        <div class="bal-usd" id="displayBalanceAlt" onclick="revealBalanceOnce(this)"></div>
         <div class="bal-foot">
           <div style="display:flex;align-items:center;gap:7px;">
             <span class="gain-b" id="h-gain-badge">↗ +0%</span>
@@ -2386,15 +2390,15 @@ body{background:var(--bg);transition:background .35s;}
         <div class="sec-row" onclick="showPinChange()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Kunci PIN</div><div class="sec-row-sub" id="pinStatusLbl">Ketuk untuk atur PIN</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="sec-row"><div class="sec-row-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" stroke="#2A6FD6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Masuk Cepat</div><div class="sec-row-sub" id="quickLoginStatusLbl">Ketuk untuk aktifkan Masuk Cepat</div></div><button class="tog" id="quickLoginToggle" onclick="toggleQuickLogin()"></button></div>
         <div class="sec-row" onclick="showPasswordChange()"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Ganti Password</div><div class="sec-row-sub">Perbarui password login Anda</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
-        <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Biometrik</div><div class="sec-row-sub">Face ID / Sidik Jari</div></div><button class="tog on" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'Biometrik diaktifkan':'Biometrik dinonaktifkan')"></button></div>
-        <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Autentikasi Dua Langkah (2FA)</div><div class="sec-row-sub">SMS & Aplikasi Autentikator</div></div><button class="tog" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'2FA diaktifkan':'2FA dinonaktifkan')"></button></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Biometrik</div><div class="sec-row-sub">Face ID / Sidik Jari</div></div><button class="tog on" id="tog-biometric" onclick="toggleAppSetting('biometric','tog-biometric','Biometrik diaktifkan','Biometrik dinonaktifkan')"></button></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Autentikasi Dua Langkah (2FA)</div><div class="sec-row-sub">SMS & Aplikasi Autentikator</div></div><button class="tog" id="tog-2fa" onclick="toggleAppSetting('twoFA','tog-2fa','2FA diaktifkan','2FA dinonaktifkan')"></button></div>
       </div>
     </div>
     <div class="sec-section">
       <div class="sec-sec-ttl">SESI</div>
       <div class="sec-grp">
-        <div class="sec-row"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Mode Privasi</div><div class="sec-row-sub">Sembunyikan saldo saat screenshot</div></div><button class="tog" onclick="this.classList.toggle('on');toast('Mode Privasi diubah')"></button></div>
-        <div class="sec-row" onclick="toast('1 perangkat aktif: iPhone 14 Pro')"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Perangkat Aktif</div><div class="sec-row-sub">1 perangkat terhubung</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
+        <div class="sec-row"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Mode Privasi</div><div class="sec-row-sub">Sembunyikan saldo saat screenshot</div></div><button class="tog" id="tog-privacy" onclick="toggleAppSetting('privacyMode','tog-privacy','Mode Privasi aktif — ketuk saldo untuk intip sebentar','Mode Privasi nonaktif')"></button></div>
+        <div class="sec-row" onclick="closeSecOverlayThenOpenDevices()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Perangkat Aktif</div><div class="sec-row-sub">Lihat daftar perangkat (Kelola Perangkat)</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
       </div>
     </div>
   </div>
@@ -2435,18 +2439,18 @@ body{background:var(--bg);transition:background .35s;}
       <div><div style="font-size:13px;font-weight:600;color:var(--navy);">Notifikasi Aktif</div><div style="font-size:11px;color:var(--t3);">Push notification berfungsi di perangkat ini</div></div>
     </div>
     <div class="sec-section"><div class="sec-sec-ttl">PERINGATAN TRANSAKSI</div><div class="sec-grp">
-      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="notif-info"><div class="notif-nm">Peringatan Transaksi</div><div class="notif-sub">Setiap debit & kredit</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="notif-info"><div class="notif-nm">Peringatan Batas Pengeluaran</div><div class="notif-sub">Peringatan saat 80% anggaran terpakai</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm">Tujuan Tabungan</div><div class="notif-sub">Pencapaian & penyelesaian target</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="notif-info"><div class="notif-nm">Peringatan Transaksi</div><div class="notif-sub">Setiap debit & kredit</div></div><button class="tog on" id="tog-notif-tx" onclick="toggleAppSetting('notifTx','tog-notif-tx')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEEBEB;"><svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div class="notif-info"><div class="notif-nm">Peringatan Batas Pengeluaran</div><div class="notif-sub">Peringatan saat 80% anggaran terpakai</div></div><button class="tog on" id="tog-notif-budget" onclick="toggleAppSetting('notifBudget','tog-notif-budget')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#22C55E"><polyline points="20,6 9,17 4,12"/></svg></div><div class="notif-info"><div class="notif-nm">Tujuan Tabungan</div><div class="notif-sub">Pencapaian & penyelesaian target</div></div><button class="tog on" id="tog-notif-goal" onclick="toggleAppSetting('notifGoal','tog-notif-goal')"></button></div>
     </div></div>
     <div class="sec-section"><div class="sec-sec-ttl">SUARA NOTIFIKASI</div><div class="sec-grp">
       <div id="notifSoundChoices"></div>
     </div></div>
     <div class="sec-section"><div class="sec-sec-ttl">UMUM</div><div class="sec-grp">
-      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm">Notifikasi Harga Emas</div><div class="notif-sub">Update harga emas real-time (dalam aplikasi)</div></div><button class="tog on" id="goldNotifToggle" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm">Tips & Wawasan</div><div class="notif-sub">Saran keuangan mingguan</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/></svg></div><div class="notif-info"><div class="notif-nm">Promosi</div><div class="notif-sub">Penawaran eksklusif anggota</div></div><button class="tog" onclick="this.classList.toggle('on')"></button></div>
-      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="notif-info"><div class="notif-nm">Jam Tenang</div><div class="notif-sub">22:00 – 07:00</div></div><button class="tog on" onclick="this.classList.toggle('on')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;font-size:18px;display:flex;align-items:center;justify-content:center;">🥇</div><div class="notif-info"><div class="notif-nm">Notifikasi Harga Emas</div><div class="notif-sub">Update harga emas real-time (dalam aplikasi)</div></div><button class="tog on" id="tog-notif-gold" onclick="toggleAppSetting('notifGold','tog-notif-gold')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div><div class="notif-info"><div class="notif-nm">Tips & Wawasan</div><div class="notif-sub">Saran keuangan mingguan</div></div><button class="tog on" id="tog-notif-tips" onclick="toggleAppSetting('notifTips','tog-notif-tips')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M22 17H2a3 3 0 003-3V9a7 7 0 0114 0v5a3 3 0 003 3z"/></svg></div><div class="notif-info"><div class="notif-nm">Promosi</div><div class="notif-sub">Penawaran eksklusif anggota</div></div><button class="tog" id="tog-notif-promo" onclick="toggleAppSetting('notifPromo','tog-notif-promo')"></button></div>
+      <div class="notif-row"><div class="notif-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></div><div class="notif-info"><div class="notif-nm">Jam Tenang</div><div class="notif-sub">22:00 – 07:00 · notifikasi tetap tercatat, hanya suara dimatikan</div></div><button class="tog on" id="tog-quiet-hours" onclick="toggleAppSetting('quietHours','tog-quiet-hours')"></button></div>
     </div></div>
     <div style="height:20px;"></div>
   </div>
@@ -2915,6 +2919,87 @@ function _clearNotifLocal(){
 const _NOTIF_LOCAL_ONLY_TYPES = new Set(['rate']);
 
 // ============================================================
+// PENGATURAN TOGGLE (Keamanan & Notifikasi) — persisten via fbAutoSave()
+// ============================================================
+// Sebelumnya semua toggle di overlay Keamanan & Notifikasi cuma
+// onclick="this.classList.toggle('on')" — cuma ubah tampilan tombol,
+// TIDAK disimpan ke mana pun & TIDAK dibaca oleh logic manapun. Efeknya:
+// (1) status toggle hilang/reset tiap kali overlay ditutup-buka lagi atau
+// halaman di-reload, (2) mematikan toggle tidak benar-benar mematikan
+// apa pun. Objek `appSettings` ini jadi satu-satunya sumber kebenaran
+// untuk semua toggle tsb, disimpan ke Firebase (fbSaveState) & dipulihkan
+// saat login (enterApp), supaya konsisten di semua device.
+let appSettings = {
+  // Keamanan
+  biometric: true,
+  twoFA: false,
+  privacyMode: false,
+  // Notifikasi
+  notifTx: true,          // Peringatan Transaksi (debit & kredit)
+  notifBudget: true,       // Peringatan Batas Pengeluaran (80%/100% anggaran)
+  notifGoal: true,          // Tujuan Tabungan
+  notifGold: true,          // Notifikasi Harga Emas (& kurs)
+  notifTips: true,          // Tips & Wawasan
+  notifPromo: false,        // Promosi
+  quietHours: true          // Jam Tenang 22:00–07:00 (mute suara notif)
+};
+
+// Apakah sekarang sedang dalam jam tenang (22:00–07:00)?
+function isQuietHoursNow(){
+  const h = new Date().getHours();
+  return h >= 22 || h < 7;
+}
+
+// Sinkronkan tampilan tombol toggle (class 'on') dengan appSettings.
+// Dipanggil tiap kali overlay Keamanan/Notifikasi dibuka.
+function syncSettingsToggles(){
+  const map = {
+    'tog-biometric': appSettings.biometric,
+    'tog-2fa': appSettings.twoFA,
+    'tog-privacy': appSettings.privacyMode,
+    'tog-notif-tx': appSettings.notifTx,
+    'tog-notif-budget': appSettings.notifBudget,
+    'tog-notif-goal': appSettings.notifGoal,
+    'tog-notif-gold': appSettings.notifGold,
+    'tog-notif-tips': appSettings.notifTips,
+    'tog-notif-promo': appSettings.notifPromo,
+    'tog-quiet-hours': appSettings.quietHours
+  };
+  Object.keys(map).forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('on', !!map[id]);
+  });
+}
+
+// Toggle generik: balik nilai appSettings[key], sinkronkan tombolnya,
+// terapkan efek nyata (kalau ada), lalu simpan ke Firebase.
+function toggleAppSetting(key, btnId, labelOnMsg, labelOffMsg){
+  appSettings[key] = !appSettings[key];
+  const el = document.getElementById(btnId);
+  if(el) el.classList.toggle('on', appSettings[key]);
+  if(labelOnMsg || labelOffMsg) toast(appSettings[key] ? (labelOnMsg||'') : (labelOffMsg||''));
+  applyPrivacyMode(); // no-op kecuali key === 'privacyMode', aman dipanggil selalu
+  fbAutoSave();
+}
+
+// Mode Privasi — efek nyata: blur nominal saldo utama sampai disentuh/tap.
+function applyPrivacyMode(){
+  const ids = ['displayBalance','displayBalanceAlt'];
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.toggle('privacy-blur', !!appSettings.privacyMode);
+  });
+}
+// Tap saldo saat Mode Privasi aktif → buka blur sementara (3 detik)
+function revealBalanceOnce(el){
+  if(!appSettings.privacyMode || !el) return;
+  el.classList.add('privacy-peek');
+  clearTimeout(el._peekTimer);
+  el._peekTimer = setTimeout(()=>el.classList.remove('privacy-peek'), 3000);
+}
+
+// ============================================================
 // SUARA NOTIFIKASI — 1 opsi "Default" (suara bawaan device/browser, lewat
 // notifikasi native OS) + 5 suara custom yang disintesis via Web Audio API
 // (tidak pakai file audio eksternal sama sekali, jadi tidak ada
@@ -2922,6 +3007,7 @@ const _NOTIF_LOCAL_ONLY_TYPES = new Set(['rate']);
 // ============================================================
 let notifSoundChoice  = 'default'; // key dari NOTIF_SOUNDS di bawah
 let _notifAudioCtx = null;
+
 
 // Browser modern menahan AudioContext dalam status "suspended" sampai ada
 // interaksi user (klik/tap) — jadi kita buat & "unlock" sekali di interaksi
@@ -3211,7 +3297,10 @@ function addNotif(type,title,msg){
   notifications.unshift(item);
   updateNotifBadge();
   _saveNotifLocal();
-  playNotifSound();
+  // Jam Tenang (22:00–07:00): kalau toggle aktif & sekarang jam tenang,
+  // notifikasi tetap masuk & tercatat seperti biasa, tapi suaranya dibisukan.
+  const muted = appSettings.quietHours && isQuietHoursNow();
+  if(!muted) playNotifSound();
   // Simpan ke RTDB jika bukan tipe lokal-only (kurs/emas) — cuma kirim
   // notifikasi yang baru dibuat (partial patch), bukan seluruh array.
   if(!_NOTIF_LOCAL_ONLY_TYPES.has(type)){
@@ -3546,7 +3635,7 @@ function confirmQuickAdd(){
   const pct = Math.round((g.current / g.target) * 100);
   const notifTitle = lang==='id' ? 'Dana Ditambahkan' : 'Funds Added';
   const notifMsg   = `${fmt(rp)} → "${g.name}" · ${pct}%`;
-  addNotif('goal', notifTitle, notifMsg);
+  if(appSettings.notifGoal) addNotif('goal', notifTitle, notifMsg);
   // TIDAK memanggil addHistoryItem — penambahan dana tujuan bukan pengeluaran/pemasukan
   toast(`✅ ${fmt(rp)} → ${g.name}`);
   closeQuickAddModal();
@@ -3566,13 +3655,13 @@ function saveGoal(){
   const rpC=isModeRp()?cur:Math.round(cur*exRate);
   goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor});
   closeGoalModal();renderGoals();updateSavingsTotal();
-  addNotif('goal','New Goal Created!',`"${name}" has been added to your savings`);
+  if(appSettings.notifGoal) addNotif('goal','New Goal Created!',`"${name}" has been added to your savings`);
   toast(`🎯 Goal "${name}" created!`);
   fbAutoSave();
 }
 function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';document.getElementById('editGoalModal').classList.add('on');}
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
@@ -4904,10 +4993,13 @@ async function fetchRate(){
       const g = window._goldData;
       const goldMsg = g ? ` · Gold: $${g.priceUSD_per_oz.toFixed(0)}/oz (Rp ${Math.round(g.priceIDR_per_gram).toLocaleString('id-ID')}/g)` : '';
       // Tipe 'rate' = LOKAL ONLY, tidak disimpan ke RTDB (hanya info device saat ini)
-      addNotif('rate',
-        lang==='id'?'💹 Kurs & Emas Diperbarui':'💹 Rate & Gold Updated',
-        `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}${goldMsg}`
-      );
+      // Dikontrol toggle "Notifikasi Harga Emas" di Pengaturan → Notifikasi.
+      if(appSettings.notifGold){
+        addNotif('rate',
+          lang==='id'?'💹 Kurs & Emas Diperbarui':'💹 Rate & Gold Updated',
+          `1 USD = Rp ${Math.round(exRate).toLocaleString('id-ID')}${goldMsg}`
+        );
+      }
       // Gold notification: only in-app, no push notification
     }
   }catch(e){
@@ -5345,10 +5437,15 @@ async function saveProfile(){
 // ============================================================
 // SECURITY
 // ============================================================
-function openSecOverlay(){document.getElementById('secOvr').classList.add('on');}
+// Catatan: openSecOverlay() versi lengkap (yang juga mereset tampilan
+// secMain/pinChangeView) ada di bagian bawah file, dekat fungsi ganti
+// password. Definisi duplikat yang pernah ada di sini sudah dihapus
+// supaya tidak ada lagi 2 salinan fungsi yang sama yang bisa diam-diam
+// berbeda perilakunya.
 function openNotifSettingsOverlay(){
   document.getElementById('notifSettingsOvr').classList.add('on');
   renderNotifSoundChoices();
+  syncSettingsToggles();
   // Show/hide permission banner
   const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
   const banner = document.getElementById('pushPermBanner');
@@ -5377,7 +5474,9 @@ async function requestPushPermission(){
 function showPinChange(){document.getElementById('secMain').style.display='none';document.getElementById('pinChangeView').style.display='block';pinBuf='';pinStp=0;newPinSaved='';updatePinDisplay();document.getElementById('pin-instruction').textContent='Enter New PIN';}
 function hidePinChange(){document.getElementById('secMain').style.display='block';document.getElementById('pinChangeView').style.display='none';pinBuf='';pinStp=0;newPinSaved='';}
 function updatePinDisplay(){for(let i=0;i<4;i++)document.getElementById('pd'+i)?.classList.toggle('fill',i<pinBuf.length);}
-function pinKey(k){if(pinBuf.length>=4)return;pinBuf+=k;updatePinDisplay();if(pinBuf.length===4){setTimeout(()=>{if(pinStp===0){newPinSaved=pinBuf;pinBuf='';pinStp=1;document.getElementById('pin-instruction').textContent='Konfirmasi PIN Baru';updatePinDisplay();}else{if(pinBuf===newPinSaved){addNotif('security','PIN Diubah','PIN login Anda telah berhasil diperbarui.');toast('✅ PIN tersimpan!');hidePinChange();fbAutoSave();}else{pinBuf='';pinStp=0;newPinSaved='';document.getElementById('pin-instruction').textContent='PIN Tidak Cocok, Coba Lagi';updatePinDisplay();setTimeout(()=>{document.getElementById('pin-instruction').textContent='Masukkan PIN Baru';},1500);}}},200);}}
+// Catatan: pinKey() versi asli yang benar-benar dipakai (yang menyimpan
+// savedPin) ada di bagian "PIN SETUP" di bawah file. Definisi duplikat yang
+// pernah ada di sini (tidak pernah menyimpan PIN sama sekali) sudah dihapus.
 function pinDel(){if(pinBuf.length>0){pinBuf=pinBuf.slice(0,-1);updatePinDisplay();}}
 
 // ============================================================
@@ -5753,8 +5852,10 @@ function completeTx(){
     histFilterMonth = now.getMonth();
     renderHistory();
     renderRecentTxList();
-    addNotif('tx', '🏧 ' + (lang==='id'?'Tarik Tunai':'Cash Withdrawal'),
-      `${fmt(rp)} ${srcLabel} → ${cashWallet.bank} ••••${cashWallet.num}`);
+    if(appSettings.notifTx){
+      addNotif('tx', '🏧 ' + (lang==='id'?'Tarik Tunai':'Cash Withdrawal'),
+        `${fmt(rp)} ${srcLabel} → ${cashWallet.bank} ••••${cashWallet.num}`);
+    }
     refreshAnalytics();
     closeAddModal(); switchTab('home');
     toast(`✅ 🏧 ${fmt(rp)} → ${cashWallet.bank} ••••${cashWallet.num}`);
@@ -5822,7 +5923,9 @@ function completeTx(){
   renderHistory();
   renderRecentTxList();  // refresh home list
 
-  // ── Notification ────────────────────────────────────────
+  // ── Notification ──────────────────────────────────────── 
+  // Dikontrol toggle "Peringatan Transaksi" (Setiap debit & kredit) di
+  // Pengaturan → Notifikasi.
   const notifType  = isIncome ? 'tx' : 'neg';
   const notifTitle = isIncome?'💰 '+T('tx-income-done'):isTransfer?'🔄 '+T('tx-transfer-done'):'💳 '+T('tx-done');
   const notifMsg   = isIncome
@@ -5830,7 +5933,7 @@ function completeTx(){
     : isTransfer
     ? `${fmt(rp)} ${srcLabel} → ${destLabel}`
     : `-${fmt(rp)} ${lang==='id'?'dari':'from'} ${srcLabel}`;
-  addNotif(notifType, notifTitle, notifMsg);
+  if(appSettings.notifTx) addNotif(notifType, notifTitle, notifMsg);
 
   // ── Cek peringatan anggaran (hanya relevan untuk expense) ──
   if(isExpense){
@@ -6912,6 +7015,7 @@ self.addEventListener('notificationclick', e => { e.notification.close(); client
    sekaligus. Jadi: silent HANYA false (suara OS ikut bunyi) saat pilihan
    user adalah "default"; selain itu native notif di-silent-kan. ── */
 function _nativeNotifSilent(){
+  if(appSettings.quietHours && isQuietHoursNow()) return true;
   return notifSoundChoice !== 'default';
 }
 
@@ -7103,6 +7207,10 @@ async function enterApp(initialState){
     if(initialState.notifSound && initialState.notifSound.choice && NOTIF_SOUNDS[initialState.notifSound.choice]){
       notifSoundChoice = initialState.notifSound.choice;
     }
+    if(initialState.appSettings && typeof initialState.appSettings === 'object'){
+      appSettings = Object.assign({}, appSettings, initialState.appSettings);
+    }
+    applyPrivacyMode();
     if(initialState.quickLoginEnabled !== undefined){
       quickLoginEnabled = !!initialState.quickLoginEnabled;
     }
@@ -7114,6 +7222,8 @@ async function enterApp(initialState){
     // State baru (user baru) — semua sudah di-inisialisasi ke nilai default kosong
     historyItems=[]; goals=[]; wallets=[]; notifications=[]; balance=0;
     tagihan=[]; tagihanRiwayatBulanan=[]; budgets=[]; customCategories=[]; debts=[];
+    appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
+    applyPrivacyMode();
     applyThemeColor(currentThemeId, {save:false});
   }
 
@@ -7233,6 +7343,8 @@ async function doLogout(){
   // kembali termuat lewat _loadNotifFromRTDB(), tidak hilang lagi.
   notifications=[]; historyItems=[]; goals=[]; wallets=[];
   balance=0; savedPin=''; lockPinBuf=''; quickLoginEnabled=false;
+  appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
+  applyPrivacyMode();
 
   updateNotifBadge();
   hidePinLock();
@@ -7512,6 +7624,11 @@ function openSecOverlay(){
   document.getElementById('secOvr').classList.add('on');
   document.getElementById('secMain').style.display='block';
   document.getElementById('pinChangeView').style.display='none';
+  syncSettingsToggles();
+}
+function closeSecOverlayThenOpenDevices(){
+  document.getElementById('secOvr').classList.remove('on');
+  openDevicesOverlay();
 }
 function showPasswordChange(){
   document.getElementById('pwChangeOverlay').style.display='flex';
@@ -8643,16 +8760,20 @@ function checkBudgetAlerts(catId, periodeKey){
 
   if(pct >= 100 && !b.alerted100){
     b.alerted100 = true; b.alerted80 = true; // >100% otomatis melewati 80% juga
-    addNotif('tip', '🔴 ' + (lang==='id'?'Anggaran Terlampaui':'Budget Exceeded'),
-      lang==='id'
-        ? `Pengeluaran "${catName}" bulan ini ${fmt(spent)} — melebihi anggaran ${fmt(b.nominal)}.`
-        : `"${catName}" spending this month is ${fmt(spent)} — over your ${fmt(b.nominal)} budget.`);
+    if(appSettings.notifBudget){
+      addNotif('tip', '🔴 ' + (lang==='id'?'Anggaran Terlampaui':'Budget Exceeded'),
+        lang==='id'
+          ? `Pengeluaran "${catName}" bulan ini ${fmt(spent)} — melebihi anggaran ${fmt(b.nominal)}.`
+          : `"${catName}" spending this month is ${fmt(spent)} — over your ${fmt(b.nominal)} budget.`);
+    }
   } else if(pct >= 80 && !b.alerted80){
     b.alerted80 = true;
-    addNotif('tip', '⚠️ ' + (lang==='id'?'Anggaran Hampir Habis':'Budget Almost Reached'),
-      lang==='id'
-        ? `Pengeluaran "${catName}" sudah ${pct}% (${fmt(spent)}) dari anggaran ${fmt(b.nominal)} bulan ini.`
-        : `"${catName}" spending has reached ${pct}% (${fmt(spent)}) of this month's ${fmt(b.nominal)} budget.`);
+    if(appSettings.notifBudget){
+      addNotif('tip', '⚠️ ' + (lang==='id'?'Anggaran Hampir Habis':'Budget Almost Reached'),
+        lang==='id'
+          ? `Pengeluaran "${catName}" sudah ${pct}% (${fmt(spent)}) dari anggaran ${fmt(b.nominal)} bulan ini.`
+          : `"${catName}" spending has reached ${pct}% (${fmt(spent)}) of this month's ${fmt(b.nominal)} budget.`);
+    }
   }
 }
 

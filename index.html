@@ -91,6 +91,60 @@ function escapeHtml(str){
     .replace(/'/g, '&#39;');
 }
 
+// ═══════════════════════════════════════════════════════
+// EMPTY STATE ILUSTRATIF — dipakai di Goals, Wallets, dan Riwayat Transaksi.
+// Menampilkan ilustrasi SVG ringan (dibuat sendiri, bukan aset eksternal),
+// judul, subjudul, dan tombol CTA yang langsung membuka modal tambah data
+// yang relevan — supaya layar kosong tetap terasa ramah & mengarahkan aksi.
+// ═══════════════════════════════════════════════════════
+function emptyIllustrationHTML(type){
+  let svg, title, sub, ctaLbl, ctaFn;
+  if(type === 'goals'){
+    svg = `<svg width="88" height="88" viewBox="0 0 96 96" fill="none">
+      <circle cx="48" cy="52" r="30" stroke="var(--blue2)" stroke-width="2.5" opacity=".35"/>
+      <circle cx="48" cy="52" r="19" stroke="var(--blue2)" stroke-width="2.5" opacity=".55"/>
+      <circle cx="48" cy="52" r="8" fill="var(--blue2)" opacity=".85"/>
+      <path d="M48 8 L48 22" stroke="var(--navy)" stroke-width="2.5" stroke-linecap="round" opacity=".5"/>
+      <path d="M48 8 L66 16 L48 24 Z" fill="var(--orange)" opacity=".85"/>
+    </svg>`;
+    title = lang==='id' ? 'Belum Ada Tujuan Tabungan' : 'No Savings Goals Yet';
+    sub   = lang==='id' ? 'Tetapkan target dan pantau progresnya di sini — dana darurat, liburan, atau impian apa pun.'
+                        : 'Set a target and track your progress here — emergency fund, vacation, or any goal.';
+    ctaLbl = lang==='id' ? '+ Buat Tujuan' : '+ Create Goal';
+    ctaFn  = 'openNewGoalModal()';
+  } else if(type === 'wallets'){
+    svg = `<svg width="96" height="72" viewBox="0 0 96 72" fill="none">
+      <rect x="4" y="14" width="88" height="54" rx="10" stroke="var(--blue2)" stroke-width="2.5" opacity=".5"/>
+      <path d="M4 30 H92" stroke="var(--blue2)" stroke-width="2.5" opacity=".5"/>
+      <rect x="14" y="42" width="22" height="14" rx="3" fill="var(--blue2)" opacity=".3"/>
+      <circle cx="76" cy="49" r="9" fill="var(--orange)" opacity=".85"/>
+      <path d="M40 8 L52 8" stroke="var(--navy)" stroke-width="2.5" stroke-linecap="round" opacity=".4"/>
+      <path d="M46 2 L46 14" stroke="var(--navy)" stroke-width="2.5" stroke-linecap="round" opacity=".4"/>
+    </svg>`;
+    title = lang==='id' ? 'Belum Ada Dompet / Kartu' : 'No Wallets / Cards Yet';
+    sub   = lang==='id' ? 'Tambahkan dompet, rekening, atau kartu pertamamu untuk mulai melacak saldo secara real-time.'
+                        : 'Add your first wallet, account, or card to start tracking balance in real-time.';
+    ctaLbl = lang==='id' ? '+ Tambah Dompet' : '+ Add Wallet';
+    ctaFn  = 'openWalletModal()';
+  } else { // 'tx'
+    svg = `<svg width="72" height="88" viewBox="0 0 80 96" fill="none">
+      <path d="M14 6 H66 V90 L58 84 L50 90 L42 84 L34 90 L26 84 L18 90 L14 84 Z" stroke="var(--t3)" stroke-width="2.2" opacity=".45"/>
+      <path d="M24 26 H56 M24 38 H56 M24 50 H44" stroke="var(--t3)" stroke-width="2.2" opacity=".45" stroke-linecap="round"/>
+    </svg>`;
+    title = lang==='id' ? 'Belum Ada Transaksi' : 'No Transactions Yet';
+    sub   = lang==='id' ? 'Transaksi yang kamu catat akan otomatis muncul di sini.'
+                        : 'Transactions you record will automatically show up here.';
+    ctaLbl = lang==='id' ? '+ Tambah Transaksi' : '+ Add Transaction';
+    ctaFn  = 'openAddModal()';
+  }
+  return `<div class="empty-ill-wrap">
+    ${svg}
+    <div class="empty-ill-title">${title}</div>
+    <div class="empty-ill-sub">${sub}</div>
+    <button class="empty-ill-cta" onclick="${ctaFn}">${ctaLbl}</button>
+  </div>`;
+}
+
 // — Bersihkan objek dari `undefined` sebelum dikirim ke Realtime DB.
 // Firebase RTDB MENOLAK (throw) setiap value yang undefined di dalam object/array,
 // walau hanya 1 field. Ini adalah penyebab paling umum toast
@@ -1413,6 +1467,69 @@ body{background:var(--bg);transition:background .35s;}
 /* ── MODE PRIVASI: blur nominal saldo, tap untuk intip sebentar ── */
 .privacy-blur{filter:blur(8px);user-select:none;transition:filter .2s;cursor:pointer;}
 .privacy-blur.privacy-peek{filter:blur(0);}
+
+/* ══════════════════════════════════════════════════════════
+   SKOR KESEHATAN KEUANGAN (Financial Health Score)
+════════════════════════════════════════════════════════════ */
+.hs-card{background:var(--surface);border-radius:18px;padding:18px;margin:0 16px 13px;box-shadow:var(--sh2);}
+.hs-top{display:flex;align-items:center;gap:16px;}
+.hs-ring-wrap{position:relative;width:88px;height:88px;flex-shrink:0;}
+.hs-ring-wrap svg{width:88px;height:88px;transform:rotate(-90deg);}
+.hs-ring-bg{fill:none;stroke:var(--surface2);stroke-width:8;}
+.hs-ring-fg{fill:none;stroke:var(--blue2);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1),stroke .4s;}
+.hs-ring-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.hs-ring-score{font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);line-height:1;}
+.hs-ring-max{font-size:9px;color:var(--t3);font-weight:600;}
+.hs-info{flex:1;min-width:0;}
+.hs-label{font-family:var(--f);font-size:15px;font-weight:800;margin-bottom:3px;}
+.hs-sub{font-size:11.5px;color:var(--t3);line-height:1.4;}
+.hs-bars{display:flex;flex-direction:column;gap:8px;margin-top:16px;}
+.hs-bar-row{display:flex;align-items:center;gap:8px;}
+.hs-bar-lbl{font-size:11px;color:var(--t2);width:88px;flex-shrink:0;}
+.hs-bar-track{flex:1;height:6px;border-radius:4px;background:var(--surface2);overflow:hidden;}
+.hs-bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+.hs-bar-pct{font-size:11px;font-weight:700;color:var(--navy);width:34px;text-align:right;flex-shrink:0;}
+
+/* ══════════════════════════════════════════════════════════
+   INSIGHT OTOMATIS
+════════════════════════════════════════════════════════════ */
+.insight-card{background:var(--surface);border-radius:18px;padding:17px;margin:0 16px 13px;box-shadow:var(--sh2);}
+.insight-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--border);}
+.insight-row:first-of-type{border-top:none;padding-top:4px;}
+.insight-ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.insight-ico svg{width:16px;height:16px;}
+.insight-txt{font-size:12.5px;color:var(--t2);line-height:1.5;padding-top:5px;}
+.insight-txt b{color:var(--navy);font-weight:700;}
+
+/* ══════════════════════════════════════════════════════════
+   PERBANDINGAN BULAN-KE-BULAN
+════════════════════════════════════════════════════════════ */
+.mo-cmp-row{display:flex;align-items:center;gap:12px;margin-top:14px;}
+.mo-cmp-col{flex:1;text-align:center;}
+.mo-cmp-bars{display:flex;align-items:flex-end;justify-content:center;gap:10px;height:84px;margin-bottom:8px;}
+.mo-cmp-bar{width:30px;border-radius:6px 6px 2px 2px;transition:height .8s cubic-bezier(.4,0,.2,1);position:relative;}
+.mo-cmp-lbl{font-size:10px;color:var(--t3);font-weight:600;}
+.mo-cmp-amt{font-size:11px;color:var(--navy);font-weight:700;margin-top:2px;}
+.mo-cmp-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:10px;}
+
+/* ══════════════════════════════════════════════════════════
+   EMPTY STATE ILUSTRATIF
+════════════════════════════════════════════════════════════ */
+.empty-ill-wrap{text-align:center;padding:30px 20px;}
+.empty-ill-wrap svg{display:block;margin:0 auto 14px;opacity:.9;}
+.empty-ill-title{font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:5px;}
+.empty-ill-sub{font-size:12px;color:var(--t3);line-height:1.5;margin-bottom:16px;max-width:260px;margin-left:auto;margin-right:auto;}
+.empty-ill-cta{display:inline-flex;align-items:center;gap:6px;background:var(--blue2);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-family:var(--f);font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(42,111,214,.3);}
+.empty-ill-cta:active{transform:scale(.96);}
+
+/* ══════════════════════════════════════════════════════════
+   MICRO-ANIMATION SALDO
+════════════════════════════════════════════════════════════ */
+@keyframes balPulseUp{0%{color:var(--green);}100%{color:inherit;}}
+@keyframes balPulseDown{0%{color:var(--red);}100%{color:inherit;}}
+@keyframes balScaleBump{0%{transform:scale(1);}30%{transform:scale(1.045);}100%{transform:scale(1);}}
+.bal-amt.pulse-up{animation:balPulseUp 1.1s ease-out,balScaleBump .5s ease-out;}
+.bal-amt.pulse-down{animation:balPulseDown 1.1s ease-out,balScaleBump .5s ease-out;}
 </style>
 </head>
 <body>
@@ -1653,6 +1770,77 @@ body{background:var(--bg);transition:background .35s;}
         </div>
 
       </div><!-- /sticky hdr -->
+
+      <!-- SKOR KESEHATAN KEUANGAN -->
+      <div class="hs-card" id="healthScoreCard">
+        <div class="hs-top">
+          <div class="hs-ring-wrap">
+            <svg viewBox="0 0 88 88">
+              <circle class="hs-ring-bg" cx="44" cy="44" r="38"/>
+              <circle class="hs-ring-fg" id="hsRingFg" cx="44" cy="44" r="38" stroke-dasharray="238.76" stroke-dashoffset="238.76"/>
+            </svg>
+            <div class="hs-ring-num">
+              <div class="hs-ring-score" id="hsScoreNum">0</div>
+              <div class="hs-ring-max">/100</div>
+            </div>
+          </div>
+          <div class="hs-info">
+            <div class="hs-label" id="hsLabel" style="color:var(--blue2);">Menghitung…</div>
+            <div class="hs-sub" id="hsSub">Skor Kesehatan Keuangan — estimasi dari rasio tabungan, utang, dan disiplin anggaran bulan ini.</div>
+          </div>
+        </div>
+        <div class="hs-bars" id="hsBars">
+          <div class="hs-bar-row">
+            <div class="hs-bar-lbl">Rasio Tabungan</div>
+            <div class="hs-bar-track"><div class="hs-bar-fill" id="hsBarSave" style="width:0%;background:var(--green);"></div></div>
+            <div class="hs-bar-pct" id="hsPctSave">0%</div>
+          </div>
+          <div class="hs-bar-row">
+            <div class="hs-bar-lbl">Rasio Utang</div>
+            <div class="hs-bar-track"><div class="hs-bar-fill" id="hsBarDebt" style="width:0%;background:var(--orange);"></div></div>
+            <div class="hs-bar-pct" id="hsPctDebt">0%</div>
+          </div>
+          <div class="hs-bar-row">
+            <div class="hs-bar-lbl">Disiplin Anggaran</div>
+            <div class="hs-bar-track"><div class="hs-bar-fill" id="hsBarBudget" style="width:0%;background:var(--blue2);"></div></div>
+            <div class="hs-bar-pct" id="hsPctBudget">0%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INSIGHT OTOMATIS -->
+      <div class="insight-card" id="autoInsightsCard">
+        <div class="cc-ttl" style="margin-bottom:2px;">💡 Insight Otomatis</div>
+        <div class="cc-sub" style="margin-bottom:8px;">Pola pengeluaran bulan ini, dianalisis otomatis dari transaksimu</div>
+        <div id="autoInsightsList"></div>
+      </div>
+
+      <!-- PERBANDINGAN BULAN-KE-BULAN -->
+      <div class="cc" id="moCompareCard">
+        <div class="cc-ttl">📊 Perbandingan Bulan-ke-Bulan</div>
+        <div class="cc-sub" id="moCompareSub">Pengeluaran bulan ini vs bulan lalu</div>
+        <div class="mo-cmp-row">
+          <div class="mo-cmp-col">
+            <div class="mo-cmp-bars">
+              <div class="mo-cmp-bar" id="moBarPrevExp" style="height:2px;background:var(--t3);opacity:.45;"></div>
+              <div class="mo-cmp-bar" id="moBarCurExp" style="height:2px;background:var(--red);"></div>
+            </div>
+            <div class="mo-cmp-lbl">Pengeluaran</div>
+            <div class="mo-cmp-amt" id="moAmtExpPair">Rp0 → Rp0</div>
+          </div>
+          <div class="mo-cmp-col">
+            <div class="mo-cmp-bars">
+              <div class="mo-cmp-bar" id="moBarPrevInc" style="height:2px;background:var(--t3);opacity:.45;"></div>
+              <div class="mo-cmp-bar" id="moBarCurInc" style="height:2px;background:var(--teal);"></div>
+            </div>
+            <div class="mo-cmp-lbl">Pemasukan</div>
+            <div class="mo-cmp-amt" id="moAmtIncPair">Rp0 → Rp0</div>
+          </div>
+        </div>
+        <div style="text-align:center;">
+          <span class="mo-cmp-badge" id="moCompareBadge">— 0%</span>
+        </div>
+      </div>
 
       <!-- ── ANALYTICS MONTH PICKER (bottom sheet) ── -->
       <div id="analytics-bulan-picker" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.45);" onclick="closeAnalyticsBulanPicker()">
@@ -3528,10 +3716,7 @@ function renderGoals(){
   // Hapus semua card lama; pertahankan event listener delegation yang sudah terpasang
   c.innerHTML='';
   if(goals.length===0){
-    c.innerHTML=`<div style="text-align:center;padding:32px 16px;color:var(--t3);">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity:.3;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <div style="font-size:13px;">${lang==='id'?'Belum ada tujuan. Tambahkan tujuan pertama kamu!':'No goals yet. Add your first savings goal!'}</div>
-    </div>`;
+    c.innerHTML = emptyIllustrationHTML('goals');
     return;
   }
   goals.forEach(g=>{
@@ -4007,6 +4192,11 @@ function renderWallets(){
   _hideWalletCtx();
   if(!Array.isArray(wallets)) wallets=[];
   const c=document.getElementById('walletsContainer');if(!c)return;c.innerHTML='';
+  if(wallets.length===0){
+    c.innerHTML = emptyIllustrationHTML('wallets');
+    renderWalletSummary();
+    return;
+  }
   wallets.forEach(w=>{
     // ── Pengaman: field wallet yang tidak lengkap/rusak dulunya bisa
     //    bikin seluruh render gagal diam-diam (mis. w.color undefined
@@ -5109,6 +5299,50 @@ function computeGainBadgeState(balance, balAwalBulan, netBulanIni){
   }
   return { text: '— 0%', bg: 'rgba(107,114,128,.1)', color: 'var(--t3)' };
 }
+// ── Micro-animation saldo: hitung naik/turun + kedip warna sesaat ──
+// Dipakai tiap kali saldo total berubah, supaya perubahan terasa "hidup"
+// alih-alih angka yang tiba-tiba berganti. Load pertama kali (belum ada
+// nilai sebelumnya) langsung diset tanpa animasi, supaya tidak ada efek
+// aneh saat app baru dibuka.
+let _balAnimReq = null;
+let _lastBalanceShown = null;
+function animateBalanceDisplay(newVal){
+  const el = document.getElementById('displayBalance');
+  const elAlt = document.getElementById('displayBalanceAlt');
+  if(!el) return;
+  const from = (_lastBalanceShown===null) ? newVal : _lastBalanceShown;
+  const diff = newVal - from;
+  if(_lastBalanceShown===null || Math.abs(diff) < 1){
+    el.textContent = fmt(newVal);
+    if(elAlt) elAlt.textContent = fmtAlt(newVal);
+    _lastBalanceShown = newVal;
+    return;
+  }
+  if(_balAnimReq) cancelAnimationFrame(_balAnimReq);
+  const duration = 650;
+  const start = performance.now();
+  const dirClass = diff > 0 ? 'pulse-up' : 'pulse-down';
+  function step(now){
+    const t = Math.min(1, (now-start)/duration);
+    const eased = 1 - Math.pow(1-t, 3); // ease-out cubic
+    const val = from + diff*eased;
+    el.textContent = fmt(val);
+    if(elAlt) elAlt.textContent = fmtAlt(val);
+    if(t < 1){
+      _balAnimReq = requestAnimationFrame(step);
+    } else {
+      el.textContent = fmt(newVal);
+      if(elAlt) elAlt.textContent = fmtAlt(newVal);
+      _lastBalanceShown = newVal;
+      el.classList.remove('pulse-up','pulse-down');
+      void el.offsetWidth; // reflow supaya animasi CSS bisa retrigger
+      el.classList.add(dirClass);
+      setTimeout(()=>el.classList.remove(dirClass), 1200);
+    }
+  }
+  _balAnimReq = requestAnimationFrame(step);
+}
+
 function updateAllAmounts(){
   const rp=isModeRp();
   // Show rate banner always (now includes Gold/IDR and Gold/USD for both languages)
@@ -5123,8 +5357,7 @@ function updateAllAmounts(){
   // Total balance = sum semua wallet (realtime)
   const totalW = wallets.reduce((s,w)=>s+(w.balance||0),0);
   if(wallets.length>0) balance = totalW;
-  document.getElementById('displayBalance').textContent=fmt(balance);
-  document.getElementById('displayBalanceAlt').textContent=fmtAlt(balance);
+  animateBalanceDisplay(balance);
 
   // ── Kenaikan Bulanan (realtime) ──
   // Net bulan ini = pemasukan bulan ini - pengeluaran bulan ini (tarik tunai tidak dihitung)
@@ -6035,10 +6268,7 @@ function renderRecentTxList(){
   list.innerHTML = '';
   const recent = historyItems.slice(0,5);
   if(!recent.length){
-    list.innerHTML = `<div style="text-align:center;padding:28px 16px;color:var(--t3);font-size:13px;">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.2" style="margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;"><path d="M21 4H3M16 9H3M21 14H3M16 19H3"/></svg>
-      ${lang==='id'?'Belum ada transaksi. Tambah transaksi pertama!':'No transactions yet. Add your first one!'}
-    </div>`;
+    list.innerHTML = emptyIllustrationHTML('tx');
     return;
   }
   recent.forEach(h=>{
@@ -6067,10 +6297,7 @@ function renderRecentTxList(){
 function recalcTotalBalance() {
   // balance utama = total semua wallet
   balance = wallets.reduce((s, w) => s + (w.balance || 0), 0);
-  const el = document.getElementById('displayBalance');
-  if (el) el.textContent = fmt(balance);
-  const el2 = document.getElementById('displayBalanceAlt');
-  if (el2) el2.textContent = fmtAlt(balance);
+  animateBalanceDisplay(balance);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6787,9 +7014,263 @@ function buildTarikTunaiCard() {
   }
 }
 
+// ══════════════════════════════════════════════════════════
+// SKOR KESEHATAN KEUANGAN, INSIGHT OTOMATIS, PERBANDINGAN BULAN
+// ══════════════════════════════════════════════════════════
+
+// Ambil total pengeluaran/pemasukan & peta per-kategori untuk bulan tertentu
+// (parametrik, tidak tergantung bulan yang sedang dipilih di UI Analitik —
+// dipakai untuk mengambil data "bulan lalu" relatif terhadap bulan yang dilihat).
+function getMonthSummary(year, month){
+  const start = new Date(year, month, 1);
+  const end   = new Date(year, month + 1, 1);
+  const items = historyItems.filter(h => h.ts && new Date(h.ts) >= start && new Date(h.ts) < end);
+  const expense = items.filter(h=>!h.pos && !isTarikTx(h)).reduce((s,h)=>s+Math.abs(h.amt||0),0);
+  const income  = items.filter(h=>h.pos).reduce((s,h)=>s+Math.abs(h.amt||0),0);
+  const catMap = {};
+  items.filter(h=>!h.pos && !isTarikTx(h)).forEach(h=>{
+    const k = h.cat || 'lainnya';
+    catMap[k] = (catMap[k]||0) + Math.abs(h.amt||0);
+  });
+  return { expense, income, catMap, count: items.length };
+}
+
+// Bulan sebelumnya relatif terhadap bulan yang sedang dipilih di Analitik
+function _prevAnalyticsMonth(){
+  let py = analyticsYear, pm = analyticsMonth - 1;
+  if (pm < 0){ pm = 11; py -= 1; }
+  return { py, pm };
+}
+
+// ── Skor Kesehatan Keuangan (0-100) — ESTIMASI/INDIKATIF, bukan nasihat keuangan ──
+// 3 komponen: (1) Rasio Tabungan bulan ini [maks 40], (2) Rasio Utang belum lunas
+// terhadap saldo+pemasukan [maks 30], (3) Disiplin Anggaran bulan ini [maks 30].
+function computeHealthScore(){
+  const cur = getMonthSummary(analyticsYear, analyticsMonth);
+
+  // 1) Rasio tabungan
+  let saveRatio = 0, savePts;
+  if (cur.income > 0){
+    saveRatio = (cur.income - cur.expense) / cur.income; // bisa negatif
+    savePts = Math.max(0, Math.min(40, Math.round(((saveRatio + 0.2) / 1.2) * 40)));
+  } else if (cur.expense > 0){
+    savePts = 5;
+  } else {
+    savePts = 20; // belum ada transaksi bulan ini — netral
+  }
+
+  // 2) Rasio utang belum lunas
+  const unpaidDebt = (typeof debts !== 'undefined' ? debts : [])
+    .filter(d => d.type === 'utang' && !d.lunas)
+    .reduce((s,d) => s + (d.nominal||0), 0);
+  const denom = balance + cur.income;
+  let debtRatio = 0, debtPts;
+  if (unpaidDebt <= 0){
+    debtPts = 30;
+  } else if (denom <= 0){
+    debtPts = 0;
+  } else {
+    debtRatio = unpaidDebt / denom;
+    debtPts = Math.max(0, Math.min(30, Math.round((1 - Math.min(debtRatio,1)) * 30)));
+  }
+
+  // 3) Disiplin anggaran (bulan yang sedang dipilih di Analitik)
+  const periodeKey = `${analyticsYear}-${String(analyticsMonth+1).padStart(2,'0')}`;
+  const monthBudgets = (typeof budgets !== 'undefined' ? budgets : []).filter(b => b.periode === periodeKey);
+  let budgetPts, budgetDisciplinePct = null;
+  if (monthBudgets.length === 0){
+    budgetPts = 15; // belum pakai fitur anggaran — netral
+  } else {
+    const spent = (typeof calcSpentForPeriode === 'function') ? calcSpentForPeriode(periodeKey) : {};
+    const withinLimit = monthBudgets.filter(b => (spent[b.catId]||0) <= b.nominal).length;
+    budgetDisciplinePct = Math.round((withinLimit / monthBudgets.length) * 100);
+    budgetPts = Math.round((withinLimit / monthBudgets.length) * 30);
+  }
+
+  const total = Math.max(0, Math.min(100, savePts + debtPts + budgetPts));
+  return {
+    total,
+    saveRatioPct: Math.round(saveRatio * 100), savePts,
+    debtRatioPct: Math.round(debtRatio * 100), debtPts,
+    budgetDisciplinePct, budgetPts,
+    hasBudgets: monthBudgets.length > 0
+  };
+}
+
+function buildHealthScore(){
+  const r = computeHealthScore();
+  const CIRC = 238.76; // 2 * PI * r(38)
+  const offset = CIRC - (r.total/100) * CIRC;
+  const ring = document.getElementById('hsRingFg');
+  if (ring){
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = r.total>=70 ? 'var(--green)' : (r.total>=40 ? 'var(--blue2)' : 'var(--red)');
+  }
+  const numEl = document.getElementById('hsScoreNum');
+  if (numEl) numEl.textContent = r.total;
+
+  let label, color;
+  if (r.total>=80){ label = lang==='id'?'Sangat Sehat':'Very Healthy'; color='var(--green)'; }
+  else if (r.total>=60){ label = lang==='id'?'Sehat':'Healthy'; color='var(--blue2)'; }
+  else if (r.total>=40){ label = lang==='id'?'Cukup':'Fair'; color='var(--orange)'; }
+  else { label = lang==='id'?'Perlu Perhatian':'Needs Attention'; color='var(--red)'; }
+  const lblEl = document.getElementById('hsLabel');
+  if (lblEl){ lblEl.textContent = label; lblEl.style.color = color; }
+
+  const subEl = document.getElementById('hsSub');
+  if (subEl){
+    subEl.textContent = lang==='id'
+      ? `Estimasi dari rasio tabungan, utang, dan disiplin anggaran ${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear}. Bukan nasihat keuangan.`
+      : `Estimated from savings ratio, debt ratio, and budget discipline for ${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear}. Not financial advice.`;
+  }
+
+  const barSave = document.getElementById('hsBarSave'), pctSave = document.getElementById('hsPctSave');
+  if (barSave) barSave.style.width = Math.round((r.savePts/40)*100)+'%';
+  if (pctSave) pctSave.textContent = (r.saveRatioPct>=0?'+':'')+r.saveRatioPct+'%';
+
+  const barDebt = document.getElementById('hsBarDebt'), pctDebt = document.getElementById('hsPctDebt');
+  if (barDebt) barDebt.style.width = Math.round((r.debtPts/30)*100)+'%';
+  if (pctDebt) pctDebt.textContent = r.debtRatioPct+'%';
+
+  const barBudget = document.getElementById('hsBarBudget'), pctBudget = document.getElementById('hsPctBudget');
+  if (barBudget) barBudget.style.width = Math.round((r.budgetPts/30)*100)+'%';
+  if (pctBudget) pctBudget.textContent = r.hasBudgets ? (r.budgetDisciplinePct+'%') : '—';
+}
+
+// ── Insight Otomatis — dianalisis dari historyItems, budgets, dan debts ──
+function buildAutoInsights(){
+  const list = document.getElementById('autoInsightsList');
+  if (!list) return;
+  const cur = getMonthSummary(analyticsYear, analyticsMonth);
+  const { py, pm } = _prevAnalyticsMonth();
+  const prev = getMonthSummary(py, pm);
+  const insights = [];
+
+  // 1) Kategori dengan kenaikan terbesar (≥15%) dibanding bulan lalu
+  let biggestCat = null, biggestPct = 0;
+  Object.keys(cur.catMap).forEach(cat=>{
+    const prevV = prev.catMap[cat] || 0;
+    if (prevV > 0){
+      const pct = ((cur.catMap[cat] - prevV) / prevV) * 100;
+      if (pct > biggestPct && pct >= 15){ biggestPct = pct; biggestCat = cat; }
+    }
+  });
+  if (biggestCat){
+    const catName = T('cat-'+biggestCat) || biggestCat;
+    insights.push({ icon:'⚠️', bg:'#FFFBEB',
+      html: lang==='id'
+        ? `Pengeluaran <b>${escapeHtml(catName)}</b> naik <b>${Math.round(biggestPct)}%</b> dibanding bulan lalu.`
+        : `<b>${escapeHtml(catName)}</b> spending is up <b>${Math.round(biggestPct)}%</b> from last month.` });
+  }
+
+  // 2) Perubahan rasio tabungan dibanding bulan lalu
+  if (cur.income > 0 && prev.income > 0){
+    const curRatio  = (cur.income-cur.expense)/cur.income*100;
+    const prevRatio = (prev.income-prev.expense)/prev.income*100;
+    const diff = curRatio - prevRatio;
+    if (Math.abs(diff) >= 5){
+      insights.push({ icon: diff>0?'📈':'📉', bg: diff>0?'#EBFEF3':'#FEEBEB',
+        html: lang==='id'
+          ? (diff>0 ? `Rasio tabunganmu <b>membaik ${Math.round(diff)} poin</b> dibanding bulan lalu.`
+                    : `Rasio tabunganmu <b>turun ${Math.round(Math.abs(diff))} poin</b> dibanding bulan lalu.`)
+          : (diff>0 ? `Your savings ratio <b>improved by ${Math.round(diff)} points</b> vs last month.`
+                    : `Your savings ratio <b>dropped ${Math.round(Math.abs(diff))} points</b> vs last month.`) });
+    }
+  }
+
+  // 3) Peringatan anggaran mendekati/lewat batas (bulan yang sedang dipilih)
+  const periodeKey = `${analyticsYear}-${String(analyticsMonth+1).padStart(2,'0')}`;
+  const monthBudgets = (typeof budgets !== 'undefined' ? budgets : []).filter(b=>b.periode===periodeKey);
+  if (monthBudgets.length && typeof calcSpentForPeriode === 'function'){
+    const spent = calcSpentForPeriode(periodeKey);
+    let worst = null, worstPct = 0;
+    monthBudgets.forEach(b=>{
+      const s = spent[b.catId] || 0;
+      const pct = b.nominal>0 ? (s/b.nominal)*100 : 0;
+      if (pct > worstPct){ worstPct = pct; worst = b; }
+    });
+    if (worst && worstPct >= 80){
+      const catName = T('cat-'+worst.catId) || worst.catId;
+      insights.push({ icon:'🧾', bg: worstPct>=100?'#FEEBEB':'#FFFBEB',
+        html: lang==='id'
+          ? (worstPct>=100 ? `Anggaran <b>${escapeHtml(catName)}</b> sudah <b>melebihi batas</b> (${Math.round(worstPct)}%).`
+                           : `Anggaran <b>${escapeHtml(catName)}</b> sudah terpakai <b>${Math.round(worstPct)}%</b>.`)
+          : (worstPct>=100 ? `<b>${escapeHtml(catName)}</b> budget has <b>exceeded its limit</b> (${Math.round(worstPct)}%).`
+                           : `<b>${escapeHtml(catName)}</b> budget is already <b>${Math.round(worstPct)}%</b> used.`) });
+    }
+  }
+
+  // 4) Pengingat utang belum lunas
+  const unpaidDebts = (typeof debts!=='undefined'?debts:[]).filter(d=>d.type==='utang' && !d.lunas);
+  if (unpaidDebts.length){
+    const totalUnpaid = unpaidDebts.reduce((s,d)=>s+(d.nominal||0),0);
+    insights.push({ icon:'📌', bg:'#EBF3FE',
+      html: lang==='id'
+        ? `Ada <b>${unpaidDebts.length} utang</b> belum lunas senilai <b>${fmt(totalUnpaid)}</b>.`
+        : `You have <b>${unpaidDebts.length} unpaid debt${unpaidDebts.length>1?'s':''}</b> totaling <b>${fmt(totalUnpaid)}</b>.` });
+  }
+
+  if (!insights.length){
+    insights.push({ icon:'✅', bg:'#EBFEF3',
+      html: lang==='id' ? `Belum ada pola mencolok bulan ini — keuanganmu terlihat stabil.`
+                        : `No notable pattern this month — your finances look stable.` });
+  }
+
+  list.innerHTML = insights.slice(0,4).map(ins => `
+    <div class="insight-row">
+      <div class="insight-ico" style="background:${ins.bg};"><span style="font-size:14px;line-height:1;">${ins.icon}</span></div>
+      <div class="insight-txt">${ins.html}</div>
+    </div>`).join('');
+}
+
+// ── Perbandingan Bulan-ke-Bulan — pengeluaran & pemasukan, bulan ini vs bulan lalu ──
+function buildMonthComparison(){
+  const cur = getMonthSummary(analyticsYear, analyticsMonth);
+  const { py, pm } = _prevAnalyticsMonth();
+  const prev = getMonthSummary(py, pm);
+
+  const subEl = document.getElementById('moCompareSub');
+  if (subEl) subEl.textContent = `${MONTH_NAMES_FULL_ID[analyticsMonth]} ${analyticsYear} vs ${MONTH_NAMES_FULL_ID[pm]} ${py}`;
+
+  const maxExp = Math.max(cur.expense, prev.expense, 1);
+  const maxInc = Math.max(cur.income, prev.income, 1);
+  const bPrevExp = document.getElementById('moBarPrevExp'), bCurExp = document.getElementById('moBarCurExp');
+  const bPrevInc = document.getElementById('moBarPrevInc'), bCurInc = document.getElementById('moBarCurInc');
+  if (bPrevExp) bPrevExp.style.height = Math.max(2, Math.round((prev.expense/maxExp)*80))+'px';
+  if (bCurExp)  bCurExp.style.height  = Math.max(2, Math.round((cur.expense/maxExp)*80))+'px';
+  if (bPrevInc) bPrevInc.style.height = Math.max(2, Math.round((prev.income/maxInc)*80))+'px';
+  if (bCurInc)  bCurInc.style.height  = Math.max(2, Math.round((cur.income/maxInc)*80))+'px';
+
+  const expPairEl = document.getElementById('moAmtExpPair');
+  if (expPairEl) expPairEl.textContent = `${fmt(prev.expense)} → ${fmt(cur.expense)}`;
+  const incPairEl = document.getElementById('moAmtIncPair');
+  if (incPairEl) incPairEl.textContent = `${fmt(prev.income)} → ${fmt(cur.income)}`;
+
+  const badge = document.getElementById('moCompareBadge');
+  if (badge){
+    if (prev.expense > 0){
+      const pct = ((cur.expense - prev.expense)/prev.expense)*100;
+      const up = pct > 0.5, down = pct < -0.5;
+      const arrow = up ? '↑' : (down ? '↓' : '—');
+      const suffix = lang==='id' ? (up?'lebih besar dari bulan lalu':(down?'lebih kecil dari bulan lalu':'sama dengan bulan lalu'))
+                                  : (up?'higher than last month':(down?'lower than last month':'same as last month'));
+      badge.textContent = `${arrow} ${Math.abs(Math.round(pct))}% ${suffix}`;
+      badge.style.background = up ? 'rgba(239,68,68,.13)' : (down ? 'rgba(34,197,94,.15)' : 'rgba(107,114,128,.1)');
+      badge.style.color = up ? 'var(--red)' : (down ? 'var(--green)' : 'var(--t3)');
+    } else {
+      badge.textContent = lang==='id' ? '— Belum ada data bulan lalu' : '— No data for last month yet';
+      badge.style.background = 'rgba(107,114,128,.1)';
+      badge.style.color = 'var(--t3)';
+    }
+  }
+}
+
 // ── Master refresh — panggil setiap kali data berubah ──
 function refreshAnalytics() {
   updateAnalyticsBulanLabel();
+  buildHealthScore();
+  buildAutoInsights();
+  buildMonthComparison();
   buildDonut();
   buildIncomeExpenseDonut();
   buildTopCats();

@@ -61,6 +61,14 @@ const fsDB   = firebase.firestore();   // Firestore
 // Ambil UID user yang sedang login
 function fbUID(){ return fbAuth.currentUser?.uid || null; }
 
+// ── Live Chat / Admin Console — satu-satunya akun yang dianggap admin.
+// Email ini JUGA di-hardcode persis sama di database.rules.json — bukan
+// disimpan sebagai data yang bisa ditulis siapa pun, supaya tidak ada
+// celah user lain menaikkan diri jadi admin. Kalau mau ganti admin,
+// ubah di 2 tempat: sini & rules.
+const ADMIN_EMAIL = 'tedy@mail.com';
+function isAdminUser(){ return !!(user && user.email && user.email.toLowerCase() === ADMIN_EMAIL); }
+
 // ═══════════════════════════════════════════════════════
 // KEAMANAN — escapeHtml()
 // Banyak nilai yang diketik bebas oleh user (nama wallet/kartu, nama
@@ -2056,10 +2064,79 @@ body{background:var(--bg);transition:background .35s;}
       </div>
       <div class="st-lbl" id="st-suplbl">SUPPORT & EXIT</div>
       <div class="st-grp">
-        <div class="st-item" onclick="toast('Help Center coming soon!')"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="st-info"><div class="st-nm" id="st-help">Help Center</div><div class="st-sub">FAQs, Contact Support</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="st-item" onclick="openHelpCenterOverlay()"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="st-info"><div class="st-nm" id="st-help">Help Center</div><div class="st-sub">FAQ, Live Chat & Kontak Support</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+        <div class="st-item" id="st-admin-console-row" style="display:none;" onclick="openAdminConsoleOverlay()"><div class="st-ico" style="background:#0D2152;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/></svg></div><div class="st-info"><div class="st-nm">Admin Console</div><div class="st-sub">Balas Live Chat semua user</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item danger" onclick="doLogout()"><div class="st-ico"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="st-info"><div class="st-nm" id="st-logout">Log Out</div><div class="st-sub" id="st-logoutsub">Securely sign out</div></div></div>
       </div>
       <div class="st-foot"><div class="st-foot-t">MANTAPPS <span id="st-foot-version">V2.5.0</span></div><div class="st-foot-t" style="margin-top:3px;" id="st-hcft">HANDCRAFTED FOR FINANCIAL WELLNESS</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ HELP CENTER ═══════════ -->
+  <div class="ovr" id="helpCenterOvr">
+    <div class="ovr-hdr"><button class="ovr-back" onclick="closeHelpCenterOverlay()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Help Center</div></div>
+    <div style="padding:0 16px 24px;">
+      <div style="position:relative;margin:12px 0 18px;">
+        <input id="hcSearchInput" type="text" placeholder="Cari bantuan… (mis. PIN, transfer, budget)" oninput="renderFaqList()" style="width:100%;box-sizing:border-box;padding:12px 14px 12px 40px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--t1);font-size:14px;outline:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;">
+        <div onclick="openLiveChatOverlay()" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;">
+          <div style="font-size:20px;margin-bottom:6px;">💬</div>
+          <div style="font-size:11px;font-weight:600;color:var(--t1);">Live Chat</div>
+        </div>
+        <div onclick="contactSupportWA()" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;">
+          <div style="font-size:20px;margin-bottom:6px;">📱</div>
+          <div style="font-size:11px;font-weight:600;color:var(--t1);">WhatsApp</div>
+        </div>
+        <div onclick="contactSupportEmail()" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;">
+          <div style="font-size:20px;margin-bottom:6px;">📧</div>
+          <div style="font-size:11px;font-weight:600;color:var(--t1);">Email</div>
+        </div>
+      </div>
+
+      <div id="faqListContainer"></div>
+      <div id="faqEmptyState" style="display:none;text-align:center;padding:30px 10px;color:var(--t3);font-size:13px;">
+        Tidak ada FAQ yang cocok. Coba kata kunci lain, atau langsung <span style="color:var(--blue);font-weight:600;cursor:pointer;" onclick="openLiveChatOverlay()">chat dengan kami</span>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ LIVE CHAT ═══════════ -->
+  <div class="ovr" id="liveChatOvr">
+    <div class="ovr-hdr"><button class="ovr-back" onclick="closeLiveChatOverlay()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Live Chat Support</div></div>
+    <div id="chatMsgList" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;"></div>
+    <div style="display:flex;gap:8px;padding:10px 14px 18px;border-top:1px solid var(--border);background:var(--surface);">
+      <input id="chatInput" type="text" placeholder="Tulis pesan…" onkeydown="if(event.key==='Enter')sendChatMessage()" style="flex:1;padding:11px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--t1);font-size:14px;outline:none;">
+      <button onclick="sendChatMessage()" style="width:42px;height:42px;border-radius:50%;background:var(--blue);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════ ADMIN CONSOLE (khusus ADMIN_EMAIL) ═══════════ -->
+  <div class="ovr" id="adminConsoleOvr">
+    <div class="ovr-hdr"><button class="ovr-back" onclick="closeAdminConsoleOverlay()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Admin Console</div></div>
+    <div id="adminThreadListView" style="padding:8px 0 24px;">
+      <div id="adminThreadList"></div>
+      <div id="adminThreadEmpty" style="display:none;text-align:center;padding:40px 20px;color:var(--t3);font-size:13px;">Belum ada percakapan masuk.</div>
+    </div>
+    <div id="adminThreadDetailView" style="display:none;flex-direction:column;flex:1;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);">
+        <button onclick="adminBackToList()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--t2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg></button>
+        <div>
+          <div id="adminThreadName" style="font-weight:700;font-size:14px;color:var(--t1);"></div>
+          <div id="adminThreadEmail" style="font-size:11px;color:var(--t3);"></div>
+        </div>
+      </div>
+      <div id="adminChatMsgList" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;"></div>
+      <div style="display:flex;gap:8px;padding:10px 14px 18px;border-top:1px solid var(--border);background:var(--surface);">
+        <input id="adminChatInput" type="text" placeholder="Balas sebagai admin…" onkeydown="if(event.key==='Enter')sendAdminReply()" style="flex:1;padding:11px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--t1);font-size:14px;outline:none;">
+        <button onclick="sendAdminReply()" style="width:42px;height:42px;border-radius:50%;background:var(--blue);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -7234,6 +7311,8 @@ async function enterApp(initialState){
     cacheLastPhoto(photoDataUrl); // data asli dari server, timpa cache lokal
     document.getElementById('profileName').textContent  = user.name;
     document.getElementById('profileEmail').textContent = user.email;
+    const adminRow = document.getElementById('st-admin-console-row');
+    if(adminRow) adminRow.style.display = isAdminUser() ? 'flex' : 'none';
     document.getElementById('editName').value           = user.name;
     document.getElementById('editEmail').value          = user.email;
     updateAvatar('profileAv',     curAv, photoDataUrl);
@@ -7345,6 +7424,10 @@ async function doLogout(){
   balance=0; savedPin=''; lockPinBuf=''; quickLoginEnabled=false;
   appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
   applyPrivacyMode();
+  const adminRow = document.getElementById('st-admin-console-row');
+  if(adminRow) adminRow.style.display = 'none';
+  if(_chatListenerRef){ _chatListenerRef.off(); _chatListenerRef = null; }
+  if(_adminThreadListenerRef){ _adminThreadListenerRef.off(); _adminThreadListenerRef = null; }
 
   updateNotifBadge();
   hidePinLock();
@@ -9137,6 +9220,282 @@ async function revokeDevice(devId){
     renderDevicesList();
   }catch(e){
     toast('⚠️ Gagal mencabut akses, coba lagi');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// HELP CENTER — FAQ (accordion + search) & tombol kontak
+// ════════════════════════════════════════════════════════════
+// Isi FAQ sengaja mengikuti fitur yang BENAR-BENAR ada di app (bukan
+// FAQ generik), supaya jawabannya akurat. Kalau ada fitur baru
+// ditambahkan ke app, tambahkan juga entri terkait di sini.
+const FAQ_DATA = [
+  { cat:'Transaksi', items:[
+    {q:'Bagaimana cara tarik tunai?', a:'Buka menu tambah transaksi, pilih "Tarik Tunai", tentukan sumber dana & jumlahnya. Riwayatnya otomatis tercatat.'},
+    {q:'Kenapa transaksi saya tidak muncul di riwayat bulan ini?', a:'Riwayat difilter per bulan. Cek apakah filter bulan/tahun di halaman Riwayat sedang menunjuk ke bulan transaksi tsb dibuat.'}
+  ]},
+  { cat:'Dompet & Kartu', items:[
+    {q:'Bagaimana cara top up dompet?', a:'Buka detail dompet, pilih "Top Up", masukkan nominal. Saldo & riwayat akan diperbarui otomatis.'},
+    {q:'Bisa hapus kartu yang salah input?', a:'Bisa, buka detail kartu tsb lalu pilih hapus. Transaksi yang sudah tercatat dari kartu itu tidak ikut terhapus.'}
+  ]},
+  { cat:'Tujuan Tabungan', items:[
+    {q:'Bagaimana cara menambah dana ke goal?', a:'Buka goal yang dituju, pilih "Tambah Dana", masukkan nominal. Persentase goal ikut ter-update otomatis.'}
+  ]},
+  { cat:'Anggaran (Budget)', items:[
+    {q:'Kenapa saya dapat notifikasi anggaran hampir habis?', a:'Notifikasi ini muncul otomatis saat pengeluaran kategori tsb mencapai 80% (peringatan) atau 100% (terlampaui) dari anggaran bulanan yang kamu atur di menu Anggaran.'},
+    {q:'Bagaimana cara mematikan notifikasi ini?', a:'Buka Pengaturan → Notifikasi → matikan toggle "Peringatan Batas Pengeluaran".'}
+  ]},
+  { cat:'Kategori Kustom', items:[
+    {q:'Bagaimana cara buat kategori transaksi sendiri?', a:'Buka Pengaturan → Kategori Kustom → tombol tambah, pilih ikon & warna, lalu simpan. Kategori ini akan muncul di pilihan kategori saat menambah transaksi.'}
+  ]},
+  { cat:'Utang & Piutang', items:[
+    {q:'Apa bedanya Utang dan Piutang di sini?', a:'"Utang" = kamu yang berutang ke orang lain. "Piutang" = orang lain berutang ke kamu. Keduanya dicatat terpisah di Pengaturan → Utang & Piutang.'}
+  ]},
+  { cat:'Keamanan & Masuk Cepat', items:[
+    {q:'Bagaimana cara ganti PIN?', a:'Buka Pengaturan → Keamanan → Ganti PIN, ikuti langkahnya (masukkan PIN baru 2x untuk konfirmasi).'},
+    {q:'Kenapa Masuk Cepat tidak muncul di device baru?', a:'Masuk Cepat bersifat per-device — kamu perlu login penuh dulu di device tsb lalu aktifkan Masuk Cepat di Pengaturan → Keamanan.'}
+  ]},
+  { cat:'Notifikasi', items:[
+    {q:'Bagaimana cara matikan suara notifikasi malam hari?', a:'Aktifkan toggle "Jam Tenang" di Pengaturan → Notifikasi. Notifikasi tetap tercatat di Notification Center, tapi suaranya otomatis dibisukan jam 22:00–07:00.'},
+    {q:'Bagaimana cara ganti suara notifikasi?', a:'Buka Pengaturan → Notifikasi → bagian "Suara Notifikasi", pilih salah satu nada yang tersedia.'}
+  ]},
+  { cat:'Kurs & Harga Emas', items:[
+    {q:'Kursnya update berapa lama sekali?', a:'Kurs USD/IDR dan harga emas diperbarui otomatis secara berkala selama app terbuka.'}
+  ]},
+  { cat:'Akun & Profil', items:[
+    {q:'Bagaimana cara ganti foto profil?', a:'Buka Pengaturan → Edit Profile, tap foto untuk mengganti dari galeri.'},
+    {q:'Bagaimana cara cabut akses login dari device lain?', a:'Buka Pengaturan → Kelola Perangkat, pilih device yang mau dicabut, tap "Cabut".'}
+  ]}
+];
+
+function renderFaqList(){
+  const q = (document.getElementById('hcSearchInput')?.value || '').toLowerCase().trim();
+  const container = document.getElementById('faqListContainer');
+  const emptyState = document.getElementById('faqEmptyState');
+  if(!container) return;
+
+  let html = '';
+  let totalShown = 0;
+  FAQ_DATA.forEach((group, gi) => {
+    const filtered = q
+      ? group.items.filter(it => it.q.toLowerCase().includes(q) || it.a.toLowerCase().includes(q))
+      : group.items;
+    if(!filtered.length) return;
+    totalShown += filtered.length;
+    html += `<div class="sec-section" style="margin:0 0 16px;">
+      <div class="sec-sec-ttl">${escapeHtml(group.cat.toUpperCase())}</div>
+      <div class="sec-grp">
+        ${filtered.map((it,ii) => {
+          const id = `faq-${gi}-${ii}`;
+          return `<div style="border-bottom:1px solid var(--border);">
+            <div onclick="toggleFaqItem('${id}')" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;cursor:pointer;">
+              <span style="font-size:13.5px;font-weight:600;color:var(--t1);">${escapeHtml(it.q)}</span>
+              <svg id="${id}-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2" style="flex-shrink:0;transition:transform .2s;"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div id="${id}-a" style="display:none;padding:0 16px 14px;font-size:12.5px;line-height:1.6;color:var(--t2);">${escapeHtml(it.a)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+  container.style.display = totalShown ? 'block' : 'none';
+  if(emptyState) emptyState.style.display = totalShown ? 'none' : 'block';
+}
+function toggleFaqItem(id){
+  const ans = document.getElementById(id+'-a');
+  const ic  = document.getElementById(id+'-ic');
+  if(!ans) return;
+  const open = ans.style.display === 'block';
+  ans.style.display = open ? 'none' : 'block';
+  if(ic) ic.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function openHelpCenterOverlay(){
+  document.getElementById('helpCenterOvr').classList.add('on');
+  const inp = document.getElementById('hcSearchInput');
+  if(inp) inp.value = '';
+  renderFaqList();
+}
+function closeHelpCenterOverlay(){
+  document.getElementById('helpCenterOvr').classList.remove('on');
+}
+
+// ── Kontak Support (data DEMO — ganti ke nomor/email asli sebelum rilis) ──
+const SUPPORT_WA_NUMBER = '628123456789';       // demo
+const SUPPORT_EMAIL     = 'support@mantapps-demo.com'; // demo
+function contactSupportWA(){
+  const msg = encodeURIComponent('Halo maNTapps Support, saya butuh bantuan.');
+  window.open(`https://wa.me/${SUPPORT_WA_NUMBER}?text=${msg}`, '_blank');
+}
+function contactSupportEmail(){
+  const subject = encodeURIComponent('Bantuan maNTapps');
+  const body    = encodeURIComponent('Halo maNTapps Support,\n\nSaya butuh bantuan terkait: ');
+  window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+}
+
+// ════════════════════════════════════════════════════════════
+// LIVE CHAT — chat dalam-app dengan admin, tersimpan realtime di
+// /supportChat/{uid}/messages (lihat database.rules.json v15)
+// ════════════════════════════════════════════════════════════
+let _chatListenerRef = null;
+
+function openLiveChatOverlay(){
+  const uid = fbUID();
+  if(!uid){ toast('⚠️ Silakan login terlebih dahulu'); return; }
+  document.getElementById('liveChatOvr').classList.add('on');
+  _attachChatListener(uid, 'chatMsgList', false);
+  // Tandai sudah dibaca oleh user
+  fbDB.ref(`supportChat/${uid}/meta/unreadForUser`).set(false).catch(()=>{});
+}
+function closeLiveChatOverlay(){
+  document.getElementById('liveChatOvr').classList.remove('on');
+  if(_chatListenerRef){ _chatListenerRef.off(); _chatListenerRef = null; }
+}
+
+function _renderChatBubbles(containerId, messages){
+  const list = document.getElementById(containerId);
+  if(!list) return;
+  if(!messages.length){
+    list.innerHTML = `<div style="text-align:center;padding:30px 16px;color:var(--t3);font-size:12.5px;">Belum ada pesan. Tulis pertanyaanmu di bawah 👇</div>`;
+    return;
+  }
+  list.innerHTML = messages.map(m => {
+    const isUser = m.sender === 'user';
+    const timeStr = m.time ? new Date(m.time).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div style="align-self:${isUser?'flex-end':'flex-start'};max-width:78%;">
+      <div style="background:${isUser?'var(--blue)':'var(--surface2)'};color:${isUser?'#fff':'var(--t1)'};padding:10px 14px;border-radius:${isUser?'16px 16px 4px 16px':'16px 16px 16px 4px'};font-size:13.5px;line-height:1.5;word-break:break-word;">${escapeHtml(m.text)}</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:3px;text-align:${isUser?'right':'left'};">${timeStr}</div>
+    </div>`;
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+function _attachChatListener(uid, containerId, isAdmin){
+  if(_chatListenerRef) { _chatListenerRef.off(); }
+  const ref = fbDB.ref(`supportChat/${uid}/messages`).orderByChild('time');
+  _chatListenerRef = ref;
+  ref.on('value', snap => {
+    const val = snap.val() || {};
+    const messages = Object.values(val).sort((a,b)=>(a.time||0)-(b.time||0));
+    _renderChatBubbles(containerId, messages);
+  });
+}
+
+async function sendChatMessage(){
+  const uid = fbUID(); if(!uid) return;
+  const input = document.getElementById('chatInput');
+  const text = (input.value || '').trim();
+  if(!text) return;
+  input.value = '';
+  const now = Date.now();
+  try{
+    await fbDB.ref(`supportChat/${uid}/messages`).push({ sender:'user', text, time: now });
+    await fbDB.ref(`supportChat/${uid}/meta`).update({
+      name: (user && user.name) || 'User',
+      email: (user && user.email) || '',
+      lastMsg: text,
+      lastTime: now,
+      unreadForAdmin: true
+    });
+  }catch(e){
+    toast('⚠️ Gagal mengirim pesan, coba lagi');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// ADMIN CONSOLE — khusus akun ADMIN_EMAIL, balas Live Chat semua user
+// ════════════════════════════════════════════════════════════
+let _adminThreadListenerRef = null;
+let _adminActiveUid = null;
+
+function openAdminConsoleOverlay(){
+  if(!isAdminUser()){ toast('⚠️ Akses ditolak'); return; }
+  document.getElementById('adminConsoleOvr').classList.add('on');
+  adminBackToList();
+  _attachAdminThreadListListener();
+}
+function closeAdminConsoleOverlay(){
+  document.getElementById('adminConsoleOvr').classList.remove('on');
+  if(_adminThreadListenerRef){ _adminThreadListenerRef.off(); _adminThreadListenerRef = null; }
+  if(_chatListenerRef){ _chatListenerRef.off(); _chatListenerRef = null; }
+}
+
+function _attachAdminThreadListListener(){
+  if(_adminThreadListenerRef) _adminThreadListenerRef.off();
+  const ref = fbDB.ref('supportChat');
+  _adminThreadListenerRef = ref;
+  ref.on('value', snap => {
+    const val = snap.val() || {};
+    const threads = Object.keys(val)
+      .filter(uid => val[uid] && val[uid].meta)
+      .map(uid => ({ uid, ...val[uid].meta }))
+      .sort((a,b) => (b.lastTime||0) - (a.lastTime||0));
+    _renderAdminThreadList(threads);
+  });
+}
+
+function _renderAdminThreadList(threads){
+  const list = document.getElementById('adminThreadList');
+  const empty = document.getElementById('adminThreadEmpty');
+  if(!list) return;
+  if(!threads.length){
+    list.innerHTML = '';
+    if(empty) empty.style.display = 'block';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  list.innerHTML = threads.map(t => {
+    const timeStr = t.lastTime ? new Date(t.lastTime).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div onclick="adminOpenThread('${t.uid}')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;">
+      <div style="width:40px;height:40px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;color:var(--t2);">${escapeHtml((t.name||'?').charAt(0).toUpperCase())}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13.5px;font-weight:700;color:var(--t1);">${escapeHtml(t.name||'User')}</span>
+          ${t.unreadForAdmin ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;"></span>' : ''}
+        </div>
+        <div style="font-size:12px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.lastMsg||'')}</div>
+      </div>
+      <div style="font-size:10px;color:var(--t3);flex-shrink:0;">${timeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+function adminOpenThread(uid){
+  _adminActiveUid = uid;
+  document.getElementById('adminThreadListView').style.display = 'none';
+  document.getElementById('adminThreadDetailView').style.display = 'flex';
+  fbDB.ref(`supportChat/${uid}/meta`).once('value').then(snap => {
+    const meta = snap.val() || {};
+    document.getElementById('adminThreadName').textContent = meta.name || 'User';
+    document.getElementById('adminThreadEmail').textContent = meta.email || '';
+  });
+  _attachChatListener(uid, 'adminChatMsgList', true);
+  fbDB.ref(`supportChat/${uid}/meta/unreadForAdmin`).set(false).catch(()=>{});
+}
+function adminBackToList(){
+  _adminActiveUid = null;
+  document.getElementById('adminThreadListView').style.display = 'block';
+  document.getElementById('adminThreadDetailView').style.display = 'none';
+  if(_chatListenerRef){ _chatListenerRef.off(); _chatListenerRef = null; }
+}
+
+async function sendAdminReply(){
+  if(!_adminActiveUid) return;
+  const input = document.getElementById('adminChatInput');
+  const text = (input.value || '').trim();
+  if(!text) return;
+  input.value = '';
+  const now = Date.now();
+  try{
+    await fbDB.ref(`supportChat/${_adminActiveUid}/messages`).push({ sender:'admin', text, time: now });
+    await fbDB.ref(`supportChat/${_adminActiveUid}/meta`).update({
+      lastMsg: text,
+      lastTime: now,
+      unreadForUser: true
+    });
+  }catch(e){
+    toast('⚠️ Gagal mengirim balasan, coba lagi');
   }
 }
 

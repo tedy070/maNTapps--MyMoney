@@ -5823,6 +5823,14 @@ function catIconInnerHtml(c, size){
 function catLabel(c){
   return T('cat-'+c.id) || c.name || c.id;
 }
+// Nama bawah (subjudul) kategori — kategori bawaan pakai key terjemahan 'cat-{id}-sub',
+// kategori kustom pakai `c.sub` yang diisi user sendiri di form. Kalau kosong,
+// jatuhkan ke teks generik "Kategori Kustom" / "Custom Category" supaya tetap ada isinya.
+function catSub(c){
+  if(c.svg) return T('cat-'+c.id+'-sub');
+  if(c.sub && c.sub.trim()) return c.sub;
+  return lang==='id' ? 'Kategori Kustom' : 'Custom Category';
+}
 function catDisplayName(catId){
   if(!catId) return '';
   const c = allPickableCats().find(x => x.id === catId);
@@ -6039,7 +6047,7 @@ function updateTxSummary() {
   preview.style.display = 'block';
 }
 
-function buildCatGrid(){const g=document.getElementById('catGrid');if(!g)return;g.innerHTML='';allPickableCats().forEach(c=>{const d=document.createElement('div');d.className='cat-c'+(selCat===c.id?' sel':'');d.onclick=()=>selectCat(d,c);d.innerHTML=`<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(c.svg?T('cat-'+c.id+'-sub'):(lang==='id'?'Kategori Kustom':'Custom Category'))}</div>`;g.appendChild(d);});}
+function buildCatGrid(){const g=document.getElementById('catGrid');if(!g)return;g.innerHTML='';allPickableCats().forEach(c=>{const d=document.createElement('div');d.className='cat-c'+(selCat===c.id?' sel':'');d.onclick=()=>selectCat(d,c);d.innerHTML=`<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(catSub(c))}</div>`;g.appendChild(d);});}
 
 function openAddModal(){
   document.getElementById('addModal').classList.add('on');
@@ -9383,9 +9391,12 @@ function renderCustomCatList(){
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
-        <div style="font-size:11px;color:var(--t3);">Kategori Kustom</div>
+        <div style="font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(catSub(c))}</div>
       </div>
-      <button onclick="deleteCustomCat(${c.id})" style="background:#FEEBEB;border:none;border-radius:10px;padding:8px;cursor:pointer;flex-shrink:0;">
+      <button onclick="editCustomCat('${c.id}')" style="background:#EBF3FE;border:none;border-radius:10px;padding:8px;cursor:pointer;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A56C4" stroke-width="2"><path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+      </button>
+      <button onclick="deleteCustomCat('${c.id}')" style="background:#FEEBEB;border:none;border-radius:10px;padding:8px;cursor:pointer;flex-shrink:0;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
       </button>
     </div>`).join('');
@@ -9396,6 +9407,26 @@ function openAddCustomCatForm(){
   ccSelIcon = CC_ICONS[0];
   ccSelColor = CC_COLORS[0];
   document.getElementById('cc-name-input').value = '';
+  document.getElementById('cc-sub-input').value = '';
+  document.getElementById('cc-form-title').textContent = lang==='id' ? 'Kategori Baru' : 'New Category';
+  document.getElementById('cc-save-btn').textContent = lang==='id' ? 'Simpan' : 'Save';
+  buildCcIconGrid();
+  buildCcColorGrid();
+  document.getElementById('customCatFormModal').classList.add('on');
+}
+// Buka form yang SAMA dengan openAddCustomCatForm, tapi field-nya diisi
+// (di-prefill) sesuai data kategori kustom yang sudah ada sebelumnya —
+// supaya user tinggal mengubah bagian yang perlu, bukan mengetik ulang semua.
+function editCustomCat(id){
+  const c = customCategories.find(x => x.id === id);
+  if(!c) return;
+  ccEditId = c.id;
+  ccSelIcon = c.icon;
+  ccSelColor = c.color;
+  document.getElementById('cc-name-input').value = c.name;
+  document.getElementById('cc-sub-input').value = c.sub || '';
+  document.getElementById('cc-form-title').textContent = lang==='id' ? 'Edit Kategori' : 'Edit Category';
+  document.getElementById('cc-save-btn').textContent = lang==='id' ? 'Simpan Perubahan' : 'Save Changes';
   buildCcIconGrid();
   buildCcColorGrid();
   document.getElementById('customCatFormModal').classList.add('on');
@@ -9423,12 +9454,23 @@ function selectCcColor(col){ ccSelColor = col; buildCcColorGrid(); }
 
 function saveCustomCat(){
   const name = document.getElementById('cc-name-input').value.trim();
+  const sub = document.getElementById('cc-sub-input').value.trim();
   if(!name){ toast('⚠️ Masukkan nama kategori dahulu'); return; }
   if(name.length > 30){ toast('⚠️ Nama kategori maks 30 karakter'); return; }
-  // customId diberi prefix supaya TIDAK PERNAH bentrok dengan id kategori bawaan (mis. 'food','tarik', dst)
-  const newId = 'custom_' + (customCatIdCtr++);
-  customCategories.push({ id:newId, name, icon:ccSelIcon, color:ccSelColor });
-  toast('✅ Kategori "'+name+'" ditambahkan');
+  if(sub.length > 30){ toast('⚠️ Subjudul maks 30 karakter'); return; }
+  if(ccEditId){
+    // Mode edit: perbarui kategori yang sudah ada di tempat (in-place),
+    // supaya id-nya tetap sama dan transaksi lama yang memakainya tidak terputus.
+    const c = customCategories.find(x => x.id === ccEditId);
+    if(!c){ toast('⚠️ Kategori tidak ditemukan'); closeCustomCatForm(); return; }
+    c.name = name; c.sub = sub; c.icon = ccSelIcon; c.color = ccSelColor;
+    toast('✅ Kategori "'+name+'" diperbarui');
+  } else {
+    // customId diberi prefix supaya TIDAK PERNAH bentrok dengan id kategori bawaan (mis. 'food','tarik', dst)
+    const newId = 'custom_' + (customCatIdCtr++);
+    customCategories.push({ id:newId, name, sub, icon:ccSelIcon, color:ccSelColor });
+    toast('✅ Kategori "'+name+'" ditambahkan');
+  }
   closeCustomCatForm();
   renderCustomCatList();
   fbAutoSave();
@@ -10159,7 +10201,7 @@ function buildAnggaranCatGrid(){
     const d = document.createElement('div');
     d.className = 'cat-c' + (selAnggaranCat === c.id ? ' sel' : '');
     d.onclick = () => selectAnggaranCat(d, c);
-    d.innerHTML = `<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(c.svg?T('cat-'+c.id+'-sub'):(lang==='id'?'Kategori Kustom':'Custom Category'))}</div>`;
+    d.innerHTML = `<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(catSub(c))}</div>`;
     g.appendChild(d);
   });
 }
@@ -10491,10 +10533,14 @@ function closeAnggaranRiwayat(){
 <div class="moverlay" id="customCatFormModal" style="z-index:1000;">
   <div class="msheet" style="padding:20px 20px 28px;">
     <div class="mhandle"></div>
-    <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;">Kategori Baru</div>
+    <div id="cc-form-title" style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;">Kategori Baru</div>
 
-    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">NAMA KATEGORI</div>
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">NAMA KATEGORI (NAMA ATAS)</div>
     <input type="text" id="cc-name-input" maxlength="30" placeholder="mis. Pendidikan, Langganan, Kesehatan"
+      style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;color:var(--navy);outline:none;margin-bottom:18px;box-sizing:border-box;">
+
+    <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">SUBJUDUL (NAMA BAWAH) — OPSIONAL</div>
+    <input type="text" id="cc-sub-input" maxlength="30" placeholder="mis. CICILAN & UANG SEKOLAH"
       style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;color:var(--navy);outline:none;margin-bottom:18px;box-sizing:border-box;">
 
     <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">PILIH IKON</div>
@@ -10503,7 +10549,7 @@ function closeAnggaranRiwayat(){
     <div style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;">PILIH WARNA</div>
     <div id="cc-color-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:22px;"></div>
 
-    <button onclick="saveCustomCat()" style="width:100%;padding:14px;border-radius:12px;background:var(--navy);color:white;border:none;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Simpan</button>
+    <button id="cc-save-btn" onclick="saveCustomCat()" style="width:100%;padding:14px;border-radius:12px;background:var(--navy);color:white;border:none;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Simpan</button>
     <button onclick="closeCustomCatForm()" style="width:100%;padding:12px;border-radius:12px;background:var(--surface2);color:var(--navy);border:1.5px solid var(--border);font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;">Batal</button>
   </div>
 </div>

@@ -4555,7 +4555,7 @@ function populateHistSearchCatOptions(){
   const curVal = sel.value;
   const allCats = cats.concat(customCategories || []);
   sel.innerHTML = '<option value="">Semua Kategori</option>' +
-    allCats.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(T('cat-'+c.id) || c.name || c.id)}</option>`).join('');
+    allCats.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(catLabel(c))}</option>`).join('');
   sel.value = curVal;
 }
 
@@ -5821,7 +5821,13 @@ function catIconInnerHtml(c, size){
   return `<span style="font-size:${size}px;line-height:1;">${escapeHtml(c.icon||'🏷️')}</span>`;
 }
 function catLabel(c){
-  return T('cat-'+c.id) || c.name || c.id;
+  // Kategori bawaan (punya c.svg) pakai key terjemahan 'cat-{id}'.
+  // Kategori kustom TIDAK boleh lewat T(), karena T() akan mengembalikan
+  // key itu sendiri (mis. "cat-custom_1") sebagai fallback terakhir kalau
+  // key tidak ditemukan — bukan `undefined`/falsy — sehingga c.name tidak
+  // pernah kepakai. Makanya untuk kustom langsung pakai c.name.
+  if(c.svg) return T('cat-'+c.id) || c.name || c.id;
+  return c.name || c.id;
 }
 // Nama bawah (subjudul) kategori — kategori bawaan pakai key terjemahan 'cat-{id}-sub',
 // kategori kustom pakai `c.sub` yang diisi user sendiri di form. Kalau kosong,
@@ -6084,7 +6090,7 @@ function closeAddModal(){
 
 function openCatPicker(){document.getElementById('catPicker').classList.add('on');}
 function selectCat(el,c){document.querySelectorAll('.cat-c').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');selCat=c.id;selCatIco=catIconInnerHtml(c);selCatColor=c.bg||c.color;document.getElementById('catConfSub').textContent='SELECTED: 1 CATEGORY';}
-function confirmCat(){if(!selCat)return;const t=document.getElementById('catSelTxt');const cObj=allPickableCats().find(x=>x.id===selCat);t.textContent=cObj?catLabel(cObj):T('cat-'+selCat);t.classList.add('sel');document.getElementById('catPicker').classList.remove('on');}
+function confirmCat(){if(!selCat)return;const t=document.getElementById('catSelTxt');const cObj=allPickableCats().find(x=>x.id===selCat);t.textContent=cObj?catLabel(cObj):catDisplayName(selCat);t.classList.add('sel');document.getElementById('catPicker').classList.remove('on');}
 
 function completeTx(){
   if(!rawAmountNum || rawAmountNum <= 0){
@@ -6097,7 +6103,7 @@ function completeTx(){
     toast('⚠️ '+(lang==='id'?'Pilih kartu terlebih dahulu!':'Please select a card first!')); return;
   }
 
-  const note       = document.getElementById('noteInput').value || T('cat-'+selCat);
+  const note       = document.getElementById('noteInput').value || catDisplayName(selCat);
   // SISTEM BARU: rawAmountNum sudah dalam RUPIAH
   // Jika mode USD, user ketik dalam USD → konversi ke Rupiah dulu
   const rp         = isModeRp() ? rawAmountNum : Math.round(rawAmountNum * exRate);
@@ -6698,7 +6704,7 @@ function buildTopCats() {
   sorted.forEach(([cat,amt],i)=>{
     const col = colorPalette[i % colorPalette.length];
     const pct = Math.round((amt/totalAll)*100);
-    const catName = T('cat-'+cat) || (cat.charAt(0).toUpperCase()+cat.slice(1));
+    const catName = catDisplayName(cat);
     const item = document.createElement('div');
     item.className = 'tc-item';
     item.innerHTML = `
@@ -6819,7 +6825,7 @@ function _renderDailyItems() {
   sorted.forEach(([cat, amt], i) => {
     const col     = colorPalette[i % colorPalette.length];
     const pct     = amt > 0 ? Math.round((amt / maxAmt) * 100) : 0;
-    const catName = T('cat-' + cat) || (cat.charAt(0).toUpperCase() + cat.slice(1));
+    const catName = catDisplayName(cat);
     const svg     = catSvgs[cat] || catSvgs.tarik;
     const item = document.createElement('div');
     item.className = 'tc-item';
@@ -6955,7 +6961,7 @@ function buildSmartTip() {
   const total=mn.reduce((s,h)=>s+Math.abs(h.amt||0),0);
   const pct=Math.round((top[1]/total)*100);
   const el=document.getElementById('a-tiptext');
-  if(el)el.textContent=`${pct}% pengeluaran di ${bulanLbl} ada di kategori "${T('cat-'+top[0])||top[0]}". Total: ${fmt(top[1])}.`;
+  if(el)el.textContent=`${pct}% pengeluaran di ${bulanLbl} ada di kategori "${catDisplayName(top[0])}". Total: ${fmt(top[1])}.`;
 }
 
 // ── Tarik Tunai per bulan card ──
@@ -7173,7 +7179,7 @@ function buildAutoInsights(){
     }
   });
   if (biggestCat){
-    const catName = T('cat-'+biggestCat) || biggestCat;
+    const catName = catDisplayName(biggestCat);
     insights.push({ icon:'⚠️', bg:'#FFFBEB',
       html: lang==='id'
         ? `Pengeluaran <b>${escapeHtml(catName)}</b> naik <b>${Math.round(biggestPct)}%</b> dibanding bulan lalu.`
@@ -7207,7 +7213,7 @@ function buildAutoInsights(){
       if (pct > worstPct){ worstPct = pct; worst = b; }
     });
     if (worst && worstPct >= 80){
-      const catName = T('cat-'+worst.catId) || worst.catId;
+      const catName = catDisplayName(worst.catId);
       insights.push({ icon:'🧾', bg: worstPct>=100?'#FEEBEB':'#FFFBEB',
         html: lang==='id'
           ? (worstPct>=100 ? `Anggaran <b>${escapeHtml(catName)}</b> sudah <b>melebihi batas</b> (${Math.round(worstPct)}%).`
@@ -8401,9 +8407,9 @@ function openEditTagihan(id) {
   selTagihanCat = t.cat || '';
   selTagihanCatColor = t.catColor || '';
   selTagihanCatIco   = t.catIco   || '';
-  const catObj = cats.find(c => c.id === selTagihanCat);
-  const catLabel = catObj ? (T('cat-'+catObj.id) || catObj.id) : (selTagihanCat || (lang==='id' ? 'Pilih kategori...' : 'Select category...'));
-  document.getElementById('tg-cat-txt').textContent = catLabel;
+  const catObj = allPickableCats().find(c => c.id === selTagihanCat);
+  const tgCatTxt = catObj ? catLabel(catObj) : (selTagihanCat || (lang==='id' ? 'Pilih kategori...' : 'Select category...'));
+  document.getElementById('tg-cat-txt').textContent = tgCatTxt;
   // Set frekuensi
   setTagihanFreq(t.frekuensi || 'sekali', null);
   // Set reminder
@@ -8585,7 +8591,7 @@ function _buildTagihanCatGrid() {
 function confirmTagihanCat() {
   if (!selTagihanCat) { toast('⚠️ ' + (lang==='id' ? 'Pilih kategori dulu' : 'Choose a category')); return; }
   const catObj = cats.find(c => c.id === selTagihanCat);
-  document.getElementById('tg-cat-txt').textContent = T('cat-'+selTagihanCat) || selTagihanCat;
+  document.getElementById('tg-cat-txt').textContent = catDisplayName(selTagihanCat);
   document.getElementById('tagihanCatPicker').classList.remove('on');
 }
 

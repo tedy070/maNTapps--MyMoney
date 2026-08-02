@@ -226,6 +226,10 @@ async function fbSaveState(_retryCount){
   try {
     await fbDB.ref(`users/${uid}/state`).set(state);
     _pendingSaveOnReconnect = false;
+    // Backup otomatis harian — jalan di "belakang layar", TIDAK di-await
+    // dan dibungkus try/catch sendiri supaya gagal-nya backup TIDAK PERNAH
+    // membuat save utama di atas ini ikut dianggap gagal.
+    backupStateIfNeeded(state, uid).catch(err => console.warn('Auto-backup gagal (non-fatal):', err));
   } catch(e){
     console.warn('RTDB save error:', e);
     const attempt = _retryCount || 0;
@@ -246,8 +250,157 @@ async function fbSaveState(_retryCount){
   }
 }
 
-// Saat koneksi kembali online, simpan ulang perubahan yang tertunda.
-let _pendingSaveOnReconnect = false;
+// ── Backup otomatis dalam-app (gratis, tidak butuh plan Blaze) ──
+// Key backup = tanggal WIB "YYYY-MM-DD", jadi maksimal 1 backup per hari
+// (bukan tiap kali save — supaya hemat write & storage). Kalau backup
+// utk HARI INI sudah ada, tidak menulis apa-apa (idempotent, aman
+// dipanggil berkali-kali sehari tanpa boros).
+function _backupDateKeyWIB(d){
+  d = d || new Date();
+  // WIB = UTC+7, tidak ada DST → offset tetap
+  const wib = new Date(d.getTime() + 7*60*60*1000);
+  return wib.toISOString().slice(0,10); // YYYY-MM-DD
+}
+async function backupStateIfNeeded(state, uid){
+  uid = uid || fbUID(); if(!uid) return;
+  const key = _backupDateKeyWIB();
+  const ref = fbDB.ref(`users/${uid}/backups/${key}`);
+  const snap = await ref.once('value');
+  if (snap.exists()) return; // sudah ada backup hari ini, tidak perlu tulis ulang
+  await ref.set(state);
+  await _pruneOldBackups(uid);
+}
+// Hapus backup yang lebih tua dari 7 hari (dihitung dari tanggal WIB).
+async function _pruneOldBackups(uid){
+  uid = uid || fbUID(); if(!uid) return;
+  const snap = await fbDB.ref(`users/${uid}/backups`).once('value');
+  const all = snap.val(); if(!all) return;
+  const keys = Object.keys(all).sort(); // "YYYY-MM-DD" urut leksikografis = urut kronologis
+  const cutoffKey = _backupDateKeyWIB(new Date(Date.now() - 7*24*60*60*1000));
+  const toDelete = keys.filter(k => k < cutoffKey);
+  for (const k of toDelete){
+    await fbDB.ref(`users/${uid}/backups/${k}`).remove();
+  }
+}
+// Dipanggil dari tombol "Backup Sekarang" di Pengaturan — paksa buat backup
+// SAAT INI juga, terlepas dari apakah backup hari ini sudah ada (overwrite).
+async function manualBackupNow(){
+  const uid = fbUID();
+  if(!uid || !navigator.onLine){
+    toast('⚠️ '+(lang==='id'?'Tidak bisa backup — cek koneksi internet.':'Cannot back up — check your internet connection.'));
+    return;
+  }
+  const btn = document.getElementById('manualBackupBtn');
+  if(btn){ btn.disabled = true; btn.textContent = lang==='id' ? 'Menyimpan...' : 'Saving...'; }
+  try{
+    // Pastikan snapshot yang dibackup itu SELALU yang PALING BARU & lengkap —
+    // bukan _lastSnapJson lama — jadi bangun ulang state persis seperti di
+    // fbSaveState(), lalu tulis ke key hari ini (overwrite kalau sudah ada).
+    const ts = Date.now();
+    const historySlim = (historyItems||[]).map(h=>{const s=Object.assign({},h);delete s.catIco;return s;});
+    const rawState = {
+      balance, wallets, goals, historyItems: historySlim,
+      tagihan: (typeof tagihan!=='undefined')?tagihan.map(t=>{const s=Object.assign({},t);delete s.catIco;return s;}):[],
+      tagihanBudget: (typeof tagihanBudget!=='undefined')?tagihanBudget:8000000,
+      tagihanRiwayatBulanan: tagihanRiwayatBulanan.map(r=>{const s=Object.assign({},r);delete s.catIco;return s;}),
+      budgets: (typeof budgets!=='undefined')?budgets:[],
+      customCategories: (typeof customCategories!=='undefined')?customCategories:[],
+      debts: (typeof debts!=='undefined')?debts:[],
+      savedPin, lang, darkMode: document.body.classList.contains('dk'),
+      themeColor: (typeof currentThemeId!=='undefined')?currentThemeId:'blue',
+      liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity, collapseOnScroll: liquidGlassCollapseOnScroll },
+      notifSound: { choice: notifSoundChoice }, appSettings, quickLoginEnabled, updatedAt: ts
+    };
+    const state = _fbSanitize(rawState);
+    const key = _backupDateKeyWIB();
+    await fbDB.ref(`users/${uid}/backups/${key}`).set(state);
+    await _pruneOldBackups(uid);
+    toast('✅ '+(lang==='id'?'Backup berhasil disimpan.':'Backup saved successfully.'));
+    renderBackupList();
+  }catch(e){
+    console.warn('Manual backup error:', e);
+    toast('⚠️ '+(lang==='id'?'Gagal membuat backup.':'Failed to create backup.'));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = lang==='id' ? '📦 Backup Sekarang' : '📦 Back Up Now'; }
+  }
+}
+// Ambil & tampilkan daftar backup yang tersedia di panel Pengaturan.
+async function renderBackupList(){
+  const box = document.getElementById('backupListBox');
+  if(!box) return;
+  const uid = fbUID();
+  if(!uid){ box.innerHTML=''; return; }
+  box.innerHTML = `<div style="text-align:center;padding:16px;color:var(--t3);font-size:13px;">${lang==='id'?'Memuat...':'Loading...'}</div>`;
+  try{
+    const snap = await fbDB.ref(`users/${uid}/backups`).once('value');
+    const all = snap.val() || {};
+    // Cuma tampilkan backup harian biasa (bukan snapshot -preRestore-),
+    // urut dari yang PALING BARU. Snapshot -preRestore- tetap tersimpan
+    // di DB sbg jaring pengaman, cuma disembunyikan dari daftar utama
+    // supaya tidak membingungkan.
+    const keys = Object.keys(all).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
+    if(keys.length===0){
+      box.innerHTML = `<div style="text-align:center;padding:16px;color:var(--t3);font-size:13px;">${lang==='id'?'Belum ada backup. Backup otomatis dibuat 1x/hari saat app dipakai.':'No backups yet. An automatic backup is made once a day while using the app.'}</div>`;
+      return;
+    }
+    box.innerHTML = keys.map(k => {
+      const b = all[k];
+      const walletCount = b.wallets ? Object.keys(b.wallets).length : 0;
+      const txCount = b.historyItems ? Object.keys(b.historyItems).length : 0;
+      const bal = typeof b.balance === 'number' ? fmt(b.balance) : '-';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface2);border-radius:12px;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:13px;color:var(--navy);">${escapeHtml(k)}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px;">${escapeHtml(bal)} · ${walletCount} ${lang==='id'?'kartu':'cards'} · ${txCount} ${lang==='id'?'transaksi':'transactions'}</div>
+        </div>
+        <button onclick="confirmRestoreFromBackup('${escapeHtml(k)}')" style="background:var(--accent,#1A56C4);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;">${lang==='id'?'Pulihkan':'Restore'}</button>
+      </div>`;
+    }).join('');
+  }catch(e){
+    console.warn('Gagal memuat daftar backup:', e);
+    box.innerHTML = `<div style="text-align:center;padding:16px;color:#EF4444;font-size:13px;">${lang==='id'?'Gagal memuat daftar backup.':'Failed to load backup list.'}</div>`;
+  }
+}
+// Konfirmasi dulu sebelum restore — ini operasi MENIMPA data yang sedang
+// aktif, jadi harus jelas & tidak bisa ke-trigger tidak sengaja.
+function confirmRestoreFromBackup(dateKey){
+  const msg = lang==='id'
+    ? `Pulihkan data ke kondisi tanggal ${dateKey}?\n\nData yang AKTIF SEKARANG akan otomatis dibackup dulu sebagai jaring pengaman sebelum ditimpa. Lanjutkan?`
+    : `Restore data to the state from ${dateKey}?\n\nYour CURRENT data will be safety-backed-up first before being overwritten. Continue?`;
+  if(confirm(msg)) restoreFromBackup(dateKey);
+}
+async function restoreFromBackup(dateKey){
+  const uid = fbUID();
+  if(!uid || !navigator.onLine){
+    toast('⚠️ '+(lang==='id'?'Tidak bisa memulihkan — cek koneksi internet.':'Cannot restore — check your internet connection.'));
+    return;
+  }
+  try{
+    toast('⏳ '+(lang==='id'?'Memulihkan data...':'Restoring data...'));
+    // 1) Jaring pengaman: backup dulu kondisi SEKARANG (sebelum ditimpa),
+    //    dengan key khusus supaya tidak bentrok dengan backup harian biasa.
+    const safetyKey = `${_backupDateKeyWIB()}-preRestore-${Date.now()}`;
+    const curSnap = await fbDB.ref(`users/${uid}/state`).once('value');
+    const curState = curSnap.val();
+    if(curState) await fbDB.ref(`users/${uid}/backups/${safetyKey}`).set(curState);
+
+    // 2) Ambil isi backup yang mau dipulihkan, tulis ke /state.
+    const bkSnap = await fbDB.ref(`users/${uid}/backups/${dateKey}`).once('value');
+    const bkState = bkSnap.val();
+    if(!bkState){ toast('⚠️ '+(lang==='id'?'Backup tidak ditemukan.':'Backup not found.')); return; }
+    await fbDB.ref(`users/${uid}/state`).set(bkState);
+
+    // 3) Terapkan ke UI yang sedang berjalan supaya user langsung lihat hasilnya
+    //    tanpa perlu reload manual.
+    _applyStateFromDB(bkState);
+    refreshAllUI();
+    toast('✅ '+(lang==='id'?'Data berhasil dipulihkan.':'Data restored successfully.'));
+    renderBackupList();
+  }catch(e){
+    console.warn('Restore error:', e);
+    toast('⚠️ '+(lang==='id'?'Gagal memulihkan data.':'Failed to restore data.'));
+  }
+}
 window.addEventListener('online', ()=>{
   if (_pendingSaveOnReconnect) fbSaveState();
 });
@@ -2665,9 +2818,25 @@ body{background:var(--bg);transition:background .35s;}
         <div class="sec-row" onclick="closeSecOverlayThenOpenDevices()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Perangkat Aktif</div><div class="sec-row-sub">Lihat daftar perangkat (Kelola Perangkat)</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg></div>
       </div>
     </div>
+    <div class="sec-section">
+      <div class="sec-sec-ttl">DATA & BACKUP</div>
+      <div class="sec-grp">
+        <div class="sec-row" onclick="showBackupView()"><div class="sec-row-ico" style="background:#EBF9F1;"><svg viewBox="0 0 24 24" stroke="#0B9B5C"><path d="M21 8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Backup & Pulihkan Data</div><div class="sec-row-sub">Backup otomatis harian · gratis, tidak perlu upgrade plan</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+      </div>
+    </div>
   </div>
 
-  <!-- PIN SETUP VIEW -->
+  <!-- BACKUP & RESTORE VIEW -->
+  <div id="backupView" style="display:none;padding:0 20px 20px;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;">Backup & Pulihkan Data</div>
+      <div style="font-size:12px;color:var(--t3);line-height:1.5;">Backup otomatis dibuat 1x/hari saat app dipakai (disimpan 7 hari terakhir). Backup sebelum melakukan hal berisiko (mis. update app) supaya lebih aman.</div>
+    </div>
+    <button id="manualBackupBtn" onclick="manualBackupNow()" style="width:100%;background:var(--accent,#1A56C4);color:#fff;border:none;border-radius:14px;padding:14px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:18px;">📦 Backup Sekarang</button>
+    <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.6px;margin-bottom:10px;">BACKUP TERSEDIA</div>
+    <div id="backupListBox"></div>
+    <button class="btn btn-s" onclick="hideBackupView()" style="width:100%;margin-top:18px;">Kembali</button>
+  </div>
   <div id="pinChangeView" style="display:none;padding:0 20px 20px;">
     <div style="text-align:center;margin-bottom:22px;"><div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;" id="pin-instruction">Masukkan PIN Baru</div><div style="font-size:12px;color:var(--t3);">Masukkan PIN 4 digit</div></div>
     <div class="pin-display" id="pinDisplay"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
@@ -3087,9 +3256,20 @@ let savedPin='', lockPinBuf='', appHidden=false;
 // langsung tahu PIN aslinya. `savedPin` mulai versi ini menyimpan HASH-nya,
 // bukan PIN mentah. uid dipakai sebagai salt supaya hash tiap akun berbeda
 // walau kebetulan PIN-nya sama.
-async function hashPin(pin){
+//
+// BUG FIX: sebelumnya fungsi ini SELALU membaca `user.uid` dari variabel
+// global. Itu benar untuk mode 'relock' (app sudah terbuka penuh, `user`
+// sudah terisi) — TAPI SALAH untuk verifikasi PIN di alur Masuk Cepat,
+// karena pada titik itu `user` MASIH `null` (baru terisi SETELAH PIN
+// cocok, lihat showPinLockForQuickLogin()). Akibatnya salt yang dipakai
+// saat PIN dibuat (uid asli) beda dengan salt saat diverifikasi ulang
+// lewat Masuk Cepat (fallback statis) → hash TIDAK PERNAH cocok, PIN
+// selalu ditolak walau benar. Makanya sekarang uid WAJIB dioper eksplisit
+// oleh pemanggil (lihat lockPinKey() & pinKey()) — bukan diam-diam dibaca
+// dari `user` global yang belum tentu sudah terisi.
+async function hashPin(pin, uid){
   try{
-    const salt = (user && user.uid) ? user.uid : 'mm_static_salt_v1';
+    const salt = uid || 'mm_static_salt_v1';
     const enc  = new TextEncoder().encode(salt + ':' + pin);
     const buf  = await crypto.subtle.digest('SHA-256', enc);
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -5806,6 +5986,8 @@ async function requestPushPermission(){
 }
 function showPinChange(){document.getElementById('secMain').style.display='none';document.getElementById('pinChangeView').style.display='block';pinBuf='';pinStp=0;newPinSaved='';updatePinDisplay();document.getElementById('pin-instruction').textContent='Enter New PIN';}
 function hidePinChange(){document.getElementById('secMain').style.display='block';document.getElementById('pinChangeView').style.display='none';pinBuf='';pinStp=0;newPinSaved='';}
+function showBackupView(){document.getElementById('secMain').style.display='none';document.getElementById('backupView').style.display='block';renderBackupList();}
+function hideBackupView(){document.getElementById('secMain').style.display='block';document.getElementById('backupView').style.display='none';}
 function updatePinDisplay(){for(let i=0;i<4;i++)document.getElementById('pd'+i)?.classList.toggle('fill',i<pinBuf.length);}
 // Catatan: pinKey() versi asli yang benar-benar dipakai (yang menyimpan
 // savedPin) ada di bagian "PIN SETUP" di bawah file. Definisi duplikat yang
@@ -8082,6 +8264,15 @@ function lockPinKey(k){
   if(lockPinBuf.length===4){
     setTimeout(async ()=>{
       const inputBuf = lockPinBuf; // simpan dulu sebelum di-reset di bawah
+      // uid akun yang BENAR untuk salt — JANGAN pernah baca `user.uid`
+      // langsung di sini, karena saat mode 'quicklogin' `user` MASIH
+      // `null` (baru terisi setelah PIN cocok). Pakai uid dari profil
+      // Masuk Cepat (`_pendingQuickLoginProfile`) untuk mode itu — uid-nya
+      // sama persis dengan uid asli akun, cuma sumbernya beda karena
+      // dibaca dari cache localStorage, bukan dari sesi Auth yang aktif.
+      const uidForHash = (_pinLockMode === 'quicklogin' && _pendingQuickLoginProfile)
+        ? _pendingQuickLoginProfile.uid
+        : (user && user.uid);
       let ok;
       if(_isLegacyPlainPin(savedPin)){
         // Akun lama: savedPin masih PIN polos. Cocokkan apa adanya dulu,
@@ -8089,7 +8280,7 @@ function lockPinKey(k){
         // tahu atau melakukan apa pun.
         ok = (inputBuf === savedPin);
         if(ok){
-          const newHash = await hashPin(inputBuf);
+          const newHash = await hashPin(inputBuf, uidForHash);
           if(_pinLockMode === 'quicklogin'){
             // Data asli belum ter-load — JANGAN autosave sekarang (lihat
             // catatan di deklarasi _pendingPinMigrationHash di atas).
@@ -8106,7 +8297,7 @@ function lockPinKey(k){
           }
         }
       } else {
-        ok = (await hashPin(inputBuf)) === savedPin;
+        ok = (await hashPin(inputBuf, uidForHash)) === savedPin;
       }
       if(ok){
         document.getElementById('pinLockError').textContent='';
@@ -8264,7 +8455,7 @@ function pinKey(k){
       else{
         if(pinBuf===newPinSaved){
           (async ()=>{
-            savedPin = await hashPin(newPinSaved); // simpan HASH, bukan PIN mentah
+            savedPin = await hashPin(newPinSaved, user && user.uid); // simpan HASH, bukan PIN mentah
             const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
             addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
             toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
@@ -8327,6 +8518,7 @@ function openSecOverlay(){
   document.getElementById('secOvr').classList.add('on');
   document.getElementById('secMain').style.display='block';
   document.getElementById('pinChangeView').style.display='none';
+  document.getElementById('backupView').style.display='none';
   syncSettingsToggles();
 }
 function closeSecOverlayThenOpenDevices(){

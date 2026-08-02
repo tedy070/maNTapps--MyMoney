@@ -3080,6 +3080,30 @@ let pinBuf='',pinStp=0,newPinSaved='';
 let goalColor='#1A56C4', walletColorSel='#1A56C4,#2A6FD6', walletTypeSel='Debit', editWalletColorSel='#1A56C4,#2A6FD6';
 let editingGoalId=null, editingWalletId=null, openMenuId=null;
 let savedPin='', lockPinBuf='', appHidden=false;
+// ── Hashing PIN (SHA-256 + salt = uid user) ──
+// PIN app-lock (4 digit) TIDAK BOLEH disimpan sebagai teks polos — baik di
+// RTDB maupun di cache localStorage Masuk Cepat — karena siapa pun yang bisa
+// membaca datanya (mis. lewat akses device atau kesalahan Security Rules)
+// langsung tahu PIN aslinya. `savedPin` mulai versi ini menyimpan HASH-nya,
+// bukan PIN mentah. uid dipakai sebagai salt supaya hash tiap akun berbeda
+// walau kebetulan PIN-nya sama.
+async function hashPin(pin){
+  try{
+    const salt = (user && user.uid) ? user.uid : 'mm_static_salt_v1';
+    const enc  = new TextEncoder().encode(salt + ':' + pin);
+    const buf  = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    // Web Crypto tidak tersedia (mis. context tidak aman/HTTP) — jangan
+    // sampai user terkunci total dari app-nya sendiri karena ini.
+    return pin;
+  }
+}
+// PIN yang dibuat SEBELUM update ini tersimpan sebagai 4 digit polos di RTDB.
+// Fungsi ini mendeteksi format lama itu supaya user lama tidak perlu reset
+// PIN manual — begitu mereka berhasil unlock sekali, PIN-nya otomatis
+// dimigrasikan ke hash (lihat lockPinKey()).
+function _isLegacyPlainPin(v){ return /^\d{4}$/.test(v || ''); }
 // Flag akun (disinkronkan ke RTDB) yang menandai user PERNAH mengaktifkan
 // Masuk Cepat di SALAH SATU device-nya. Ini TERPISAH dari cache
 // localStorage per-device (LS_QUICK_LOGIN_KEY) — flag ini cuma dipakai
@@ -3107,7 +3131,7 @@ function saveQuickLoginProfile(){
     localStorage.setItem(LS_QUICK_LOGIN_KEY, JSON.stringify({
       uid: user.uid, name: user.name, email: user.email,
       avatar: user.avatar || 'default', photo: user.photo || null,
-      pin: savedPin || '' // salinan lokal PIN — dipakai untuk gate SEBELUM enterApp()
+      pin: savedPin || '' // salinan lokal HASH PIN (bukan PIN mentah) — dipakai utk gate SEBELUM enterApp()
     }));
   } catch(e){}
 }
@@ -5431,7 +5455,7 @@ const TR={
 'tg-err-name':'Bill name is required','tg-err-date':'Due date is required',
 'tg-remind-custom':'Remind how many days before? (e.g. 7)',
 'tg-remind-days-label':'days','tg-added-notif':'Bill Added',
-'cat-rent-sub':'BILLS & HOUSING','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE','cat-saving':'Saving','cat-saving-sub':'SAVE & GROW','cat-emergency':'Emergency Fund','cat-emergency-sub':'DANA DARURAT',
+'cat-food':'Food','cat-rent-sub':'BILLS & HOUSING','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE','cat-saving':'Saving','cat-saving-sub':'SAVE & GROW','cat-emergency':'Emergency Fund','cat-emergency-sub':'SAFETY NET','cat-pindah_bank':'Bank Transfer','cat-pindah_bank-sub':'TEMPORARY LOAN',
     'tx-income':'Income','tx-expense':'Expense','tx-transfer':'Transfer',
     'tx-topup':'Top Up','tx-recorded':'recorded','tx-from':'from','tx-to':'to',
     'tx-insufficient':'Insufficient balance! Available',
@@ -5476,7 +5500,7 @@ const TR={
 'tg-err-name':'Nama tagihan wajib diisi','tg-err-date':'Tanggal jatuh tempo wajib diisi',
 'tg-remind-custom':'Ingatkan berapa hari sebelumnya? (contoh: 7)',
 'tg-remind-days-label':'hari','tg-added-notif':'Tagihan Ditambahkan',
-'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS','cat-saving':'Saving','cat-saving-sub':'TABUNG & TUMBUH','cat-emergency':'Dana Darurat','cat-emergency-sub':'DANA DARURAT',
+'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS','cat-saving':'Saving','cat-saving-sub':'TABUNG & TUMBUH','cat-emergency':'Dana Darurat','cat-emergency-sub':'DANA DARURAT','cat-pindah_bank':'Pindah Bank','cat-pindah_bank-sub':'PINJAMAN TEMPORARY',
     'tx-income':'Pemasukan','tx-expense':'Pengeluaran','tx-transfer':'Transfer',
     'tx-topup':'Isi Saldo','tx-recorded':'tercatat','tx-from':'dari','tx-to':'ke',
     'tx-insufficient':'Saldo tidak cukup! Tersedia',
@@ -5804,6 +5828,12 @@ const cats=[
   {id:'gaji',stroke:'#0B7A63',bg:'#EBFEF3',svg:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>'},
   {id:'saving',stroke:'#0FA884',bg:'#E8FBF5',svg:'<path d="M19 5H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2z"/><path d="M16 14a2 2 0 100-4 2 2 0 000 4z"/><path d="M6 10h4"/><path d="M6 13h2"/>'},
   {id:'emergency',stroke:'#EF4444',bg:'#FEF2F2',svg:'<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'},
+  // Kategori khusus: cuma boleh dipakai saat tab transaksi = TRANSFER (lihat
+  // pickableCatsForTxType()). Formatnya senada dengan 'tarik' (Tarik Tunai):
+  // dikecualikan dari perhitungan expense & income di seluruh analitik
+  // (lihat isTarikTx()), karena ini cuma perpindahan uang antar akun sendiri,
+  // bukan pengeluaran/pemasukan riil.
+  {id:'pindah_bank',stroke:'#7C3AED',bg:'#F3E8FF',txTypes:['transfer'],svg:'<path d="M7 7h12M15 3l4 4-4 4"/><path d="M17 17H5m4 4l-4-4 4-4"/>'},
 ];
 
 // ── Kategori Kustom: helper gabungan ──
@@ -5812,6 +5842,13 @@ const cats=[
 // user ikut muncul di mana pun tanpa harus menduplikasi logika 3x.
 function allPickableCats(){
   return cats.concat(customCategories || []);
+}
+// Sebagian besar kategori bebas dipakai di Expense/Income/Transfer manapun
+// (tidak ada `txTypes` = tidak dibatasi, perilaku lama tidak berubah).
+// Kategori yang punya `txTypes` (mis. 'pindah_bank': ['transfer']) HANYA
+// muncul di grid saat tab transaksi aktif ada di daftar itu.
+function pickableCatsForTxType(type){
+  return allPickableCats().filter(c => !c.txTypes || c.txTypes.includes(type));
 }
 // Kategori bawaan pakai SVG (c.svg ada); kategori kustom pakai emoji (c.icon).
 // Fungsi ini merender ikon yang sesuai untuk keduanya di dalam wadah bulat yang sama.
@@ -5881,6 +5918,18 @@ function setTxType(type) {
     if (type === 'income') btn.classList.add('income-type');
     if (type === 'transfer') btn.classList.add('transfer-type');
   }
+  // Kalau kategori yang sedang terpilih ternyata tidak valid untuk tipe baru
+  // ini (mis. 'Pindah Bank' hanya valid utk Transfer), reset pilihannya
+  // supaya user tidak kebawa kategori yang sudah tidak semestinya tampil.
+  if (selCat) {
+    const stillValid = pickableCatsForTxType(txType).some(c => c.id === selCat);
+    if (!stillValid) {
+      selCat=''; selCatIco=''; selCatColor='';
+      const t=document.getElementById('catSelTxt');
+      if(t){ t.textContent = lang==='id'?'Pilih kategori':'Choose a category'; t.classList.remove('sel'); }
+    }
+  }
+  buildCatGrid();
   buildSourceGrid();
   updateTxSummary();
 }
@@ -6053,7 +6102,7 @@ function updateTxSummary() {
   preview.style.display = 'block';
 }
 
-function buildCatGrid(){const g=document.getElementById('catGrid');if(!g)return;g.innerHTML='';allPickableCats().forEach(c=>{const d=document.createElement('div');d.className='cat-c'+(selCat===c.id?' sel':'');d.onclick=()=>selectCat(d,c);d.innerHTML=`<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(catSub(c))}</div>`;g.appendChild(d);});}
+function buildCatGrid(){const g=document.getElementById('catGrid');if(!g)return;g.innerHTML='';pickableCatsForTxType(txType).forEach(c=>{const d=document.createElement('div');d.className='cat-c'+(selCat===c.id?' sel':'');d.onclick=()=>selectCat(d,c);d.innerHTML=`<div class="cico-w"><div class="cico" style="background:${c.bg||c.color};">${catIconInnerHtml(c)}</div><div class="cchk"><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg></div></div><div class="cnm">${escapeHtml(catLabel(c))}</div><div class="csub">${escapeHtml(catSub(c))}</div>`;g.appendChild(d);});}
 
 function openAddModal(){
   document.getElementById('addModal').classList.add('on');
@@ -6078,6 +6127,7 @@ function openAddModal(){
     const dd = String(now.getDate()).padStart(2,'0');
     todayInput.value = `${yyyy}-${mm}-${dd}`;
   }
+  buildCatGrid();
   buildSourceGrid();
   setTimeout(()=>document.getElementById('amountRaw').focus(), 200);
 }
@@ -6418,10 +6468,14 @@ function selectAnalyticsBulan(y, m) {
   buildSmartTip();
 }
 
-// ── Helper: cek apakah transaksi adalah Tarik Tunai (type ATAU cat) ──
-// Menangkap data lama (cat:'tarik' tanpa type) dan data baru (type:'tarik')
+// ── Helper: cek apakah transaksi TIDAK BOLEH dihitung sbg expense/income ──
+// (Tarik Tunai & Pindah Bank sama-sama cuma perpindahan uang antar akun milik
+// sendiri, bukan pengeluaran/pemasukan riil.) Nama fungsi dipertahankan
+// 'isTarikTx' karena dipakai di banyak tempat, tapi cakupannya sekarang juga
+// termasuk kategori 'pindah_bank'. Menangkap data lama (cat:'tarik' tanpa
+// type) dan data baru (type:'tarik').
 function isTarikTx(h) {
-  return h.type === 'tarik' || h.cat === 'tarik';
+  return h.type === 'tarik' || h.cat === 'tarik' || h.cat === 'pindah_bank';
 }
 
 // ── Kumpulkan data per-periode ──
@@ -7768,7 +7822,18 @@ async function enterApp(initialState){
     // ── Kategori Kustom ──
     if(Array.isArray(initialState.customCategories)){
       customCategories = initialState.customCategories;
-      if(customCategories.length > 0) customCatIdCtr = Math.max(...customCategories.map(c=>c.id||0)) + 1;
+      // BUG FIX: id kategori kustom berformat string "custom_N" (bukan angka murni
+      // seperti wallet/goal/tagihan/budget/debt), jadi Math.max(...c.id) akan NaN
+      // kalau id-nya dipakai apa adanya (Math.max hanya bekerja pada angka).
+      // Ambil dulu angka N di belakang "custom_" sebelum di-Math.max, supaya
+      // ID kategori baru berikutnya tidak jadi "custom_NaN" (yang membuat SEMUA
+      // kategori baru setelah reload berbagi id sama persis → tabrakan data).
+      if(customCategories.length > 0){
+        customCatIdCtr = Math.max(...customCategories.map(c => {
+          const n = parseInt(String(c.id).replace('custom_',''), 10);
+          return isNaN(n) ? 0 : n;
+        })) + 1;
+      }
     }
 
     // ── Utang & Piutang ──
@@ -7992,8 +8057,23 @@ function lockPinKey(k){
   if(lockPinBuf.length>=4) return;
   lockPinBuf+=k; updateLockPinDisplay();
   if(lockPinBuf.length===4){
-    setTimeout(()=>{
-      if(lockPinBuf===savedPin){
+    setTimeout(async ()=>{
+      const inputBuf = lockPinBuf; // simpan dulu sebelum di-reset di bawah
+      let ok;
+      if(_isLegacyPlainPin(savedPin)){
+        // Akun lama: savedPin masih PIN polos. Cocokkan apa adanya dulu,
+        // lalu migrasikan diam-diam ke hash begitu cocok — user tidak perlu
+        // tahu atau melakukan apa pun.
+        ok = (inputBuf === savedPin);
+        if(ok){
+          savedPin = await hashPin(inputBuf);
+          if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
+          fbAutoSave();
+        }
+      } else {
+        ok = (await hashPin(inputBuf)) === savedPin;
+      }
+      if(ok){
         document.getElementById('pinLockError').textContent='';
         lockPinBuf='';
         if(_pinLockMode==='quicklogin'){
@@ -8148,14 +8228,16 @@ function pinKey(k){
       if(pinStp===0){ newPinSaved=pinBuf;pinBuf='';pinStp=1; document.getElementById('pin-instruction').textContent='Confirm New PIN'; updatePinDisplay(); }
       else{
         if(pinBuf===newPinSaved){
-          savedPin=newPinSaved;
-          const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
-          addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
-          toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
-          // Kalau Masuk Cepat aktif, salinan PIN lokalnya ikut diperbarui —
-          // supaya tidak jadi PIN basi/kadaluarsa di layar Masuk Cepat.
-          if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
-          fbAutoSave();
+          (async ()=>{
+            savedPin = await hashPin(newPinSaved); // simpan HASH, bukan PIN mentah
+            const lbl=document.getElementById('pinStatusLbl'); if(lbl) lbl.textContent='PIN enabled · tap to change';
+            addNotif('security','PIN Lock Enabled','App will lock when you leave and come back.');
+            toast('✅ PIN enabled! App will lock when you leave.'); hidePinChange();
+            // Kalau Masuk Cepat aktif, salinan PIN lokalnya ikut diperbarui —
+            // supaya tidak jadi PIN basi/kadaluarsa di layar Masuk Cepat.
+            if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
+            fbAutoSave();
+          })();
         } else {
           pinBuf='';pinStp=0;newPinSaved='';
           document.getElementById('pin-instruction').textContent='PIN Mismatch — Try Again';
@@ -8569,7 +8651,7 @@ function openTagihanCatPicker() {
 function _buildTagihanCatGrid() {
   const grid = document.getElementById('tagihanCatGrid'); if (!grid) return;
   grid.innerHTML = '';
-  allPickableCats().forEach(c => {
+  pickableCatsForTxType('expense').forEach(c => {
     const d = document.createElement('div');
     d.className = 'cat-c';
     if (c.id === selTagihanCat) d.classList.add('on');
@@ -10203,7 +10285,7 @@ function buildAnggaranCatGrid(){
   const g = document.getElementById('anggaran-cat-grid');
   if(!g) return;
   g.innerHTML = '';
-  allPickableCats().forEach(c => {
+  pickableCatsForTxType('expense').forEach(c => {
     const d = document.createElement('div');
     d.className = 'cat-c' + (selAnggaranCat === c.id ? ' sel' : '');
     d.onclick = () => selectAnggaranCat(d, c);

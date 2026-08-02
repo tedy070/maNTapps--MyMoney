@@ -7872,6 +7872,18 @@ async function enterApp(initialState){
     applyThemeColor(currentThemeId, {save:false});
   }
 
+  // BUG FIX: terapkan migrasi hash PIN yang DITUNDA dari alur Masuk Cepat
+  // (lihat _pendingPinMigrationHash di bagian PIN LOCK). Titik ini aman
+  // karena SEMUA state asli (wallets/goals/historyItems/budgets/dst) sudah
+  // pasti terisi di atas — baik dari cloud maupun default user baru — jadi
+  // fbAutoSave() di sini tidak akan pernah menimpa data dengan nilai kosong.
+  if(_pendingPinMigrationHash){
+    savedPin = _pendingPinMigrationHash;
+    _pendingPinMigrationHash = null;
+    if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
+    fbAutoSave();
+  }
+
   // ② Update UI profil
   if(user){
     curAv        = user.avatar || 'default';
@@ -8052,6 +8064,17 @@ function updateLockPinDisplay(){
 // 'quicklogin' → app BELUM terbuka (alur "Masuk Cepat"). Sukses → lanjut muat profil+state & enterApp().
 let _pinLockMode = 'relock';
 let _pendingQuickLoginProfile = null;
+// BUG FIX KRITIS: pada alur Masuk Cepat, saat migrasi PIN lama→hash berhasil,
+// state asli user (wallets/goals/historyItems/dst) BELUM ter-load dari cloud
+// (baru dimuat SETELAH ini, lewat _completeQuickLogin()). Kalau fbAutoSave()
+// dipanggil LANGSUNG di titik ini, timer debounce-nya (1.2 detik) bisa
+// keburu jalan SEBELUM data asli selesai dimuat — akibatnya .set() menulis
+// state KOSONG/default ke Firebase, MENGHAPUS PERMANEN data asli user.
+// Solusinya: JANGAN autosave di sini untuk mode quicklogin — cuma simpan
+// hash-nya di flag ini, lalu terapkan + autosave SETELAH enterApp() selesai
+// memuat & mengisi semua variabel state asli (lihat pengecekan flag ini
+// di akhir fungsi enterApp()).
+let _pendingPinMigrationHash = null;
 
 function lockPinKey(k){
   if(lockPinBuf.length>=4) return;
@@ -8066,9 +8089,21 @@ function lockPinKey(k){
         // tahu atau melakukan apa pun.
         ok = (inputBuf === savedPin);
         if(ok){
-          savedPin = await hashPin(inputBuf);
-          if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
-          fbAutoSave();
+          const newHash = await hashPin(inputBuf);
+          if(_pinLockMode === 'quicklogin'){
+            // Data asli belum ter-load — JANGAN autosave sekarang (lihat
+            // catatan di deklarasi _pendingPinMigrationHash di atas).
+            // Biarkan `savedPin` tetap versi lama untuk sementara (akan
+            // ditimpa lagi oleh nilai dari cloud saat enterApp() jalan,
+            // lalu diganti hash yang benar tepat setelahnya).
+            _pendingPinMigrationHash = newHash;
+          } else {
+            // Mode 'relock' → app SUDAH terbuka & state SUDAH lengkap di
+            // memori, aman untuk langsung disimpan.
+            savedPin = newHash;
+            if(isQuickLoginEnabledForCurrentUser()) saveQuickLoginProfile();
+            fbAutoSave();
+          }
         }
       } else {
         ok = (await hashPin(inputBuf)) === savedPin;

@@ -284,6 +284,86 @@ async function _pruneOldBackups(uid){
 }
 // Dipanggil dari tombol "Backup Sekarang" di Pengaturan — paksa buat backup
 // SAAT INI juga, terlepas dari apakah backup hari ini sudah ada (overwrite).
+// Bangun snapshot state TERBARU langsung dari variabel di memori — dipakai
+// bersama oleh manualBackupNow() (simpan ke RTDB), downloadBackupFile(), dan
+// shareBackupToWhatsApp() (unduh/bagikan file). SATU sumber logika supaya
+// ketiganya selalu konsisten & selalu mencerminkan kondisi TERKINI (bukan
+// snapshot lama yang di-cache) — dibangun ulang dari nol setiap dipanggil.
+function _buildFreshStatePayload(){
+  const historySlim = (historyItems||[]).map(h=>{const s=Object.assign({},h);delete s.catIco;return s;});
+  const rawState = {
+    balance, wallets, goals, historyItems: historySlim,
+    tagihan: (typeof tagihan!=='undefined')?tagihan.map(t=>{const s=Object.assign({},t);delete s.catIco;return s;}):[],
+    tagihanBudget: (typeof tagihanBudget!=='undefined')?tagihanBudget:8000000,
+    tagihanRiwayatBulanan: tagihanRiwayatBulanan.map(r=>{const s=Object.assign({},r);delete s.catIco;return s;}),
+    budgets: (typeof budgets!=='undefined')?budgets:[],
+    customCategories: (typeof customCategories!=='undefined')?customCategories:[],
+    debts: (typeof debts!=='undefined')?debts:[],
+    savedPin, lang, darkMode: document.body.classList.contains('dk'),
+    themeColor: (typeof currentThemeId!=='undefined')?currentThemeId:'blue',
+    liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity, collapseOnScroll: liquidGlassCollapseOnScroll },
+    notifSound: { choice: notifSoundChoice }, appSettings, quickLoginEnabled, updatedAt: Date.now()
+  };
+  return _fbSanitize(rawState);
+}
+// Nama file konsisten dipakai baik utk download maupun share.
+function _backupFileName(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `backup-keuangan-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+}
+// Tombol "Download Backup" — generate file JSON dadakan dari kondisi
+// TERKINI di memori (bukan file lama yang di-reuse), lalu trigger unduhan
+// browser. Blob & Object URL dibuat baru setiap panggilan supaya tidak
+// pernah ke-cache jadi versi basi.
+function downloadBackupFile(){
+  try{
+    const payload = _buildFreshStatePayload();
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], {type:'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = _backupFileName();
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 2000); // bebaskan memori setelah unduhan dimulai
+    toast('✅ '+(lang==='id'?'File backup diunduh.':'Backup file downloaded.'));
+  }catch(e){
+    console.warn('Download backup error:', e);
+    toast('⚠️ '+(lang==='id'?'Gagal membuat file backup.':'Failed to create backup file.'));
+  }
+}
+// Tombol "Bagikan ke WhatsApp" (manual) — pakai Web Share API bawaan
+// browser/OS (BUKAN integrasi WhatsApp resmi/API pihak ketiga — jadi tidak
+// perlu server, token, atau akun apa pun). Kalau device/browser mendukung
+// share file (umumnya Android/iOS), muncul share-sheet asli OS tempat user
+// PILIH SENDIRI WhatsApp & kontak tujuannya. Kalau tidak didukung (banyak
+// terjadi di desktop), otomatis fallback ke download biasa supaya user
+// tetap dapat filenya dan bisa lampirkan manual sendiri.
+async function shareBackupToWhatsApp(){
+  try{
+    const payload = _buildFreshStatePayload();
+    const json = JSON.stringify(payload, null, 2);
+    const file = new File([json], _backupFileName(), {type:'application/json'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({
+        files: [file],
+        title: lang==='id' ? 'Backup Data Keuangan' : 'Financial Data Backup',
+        text:  lang==='id' ? `Backup tanggal ${_backupDateKeyWIB()}` : `Backup dated ${_backupDateKeyWIB()}`
+      });
+      // Tidak ada toast "berhasil" di sini dengan sengaja — Web Share API
+      // tidak memberi tahu app KEMANA/APAKAH benar-benar terkirim (itu
+      // sepenuhnya di tangan user di share-sheet OS), jadi klaim "terkirim"
+      // di sini akan menyesatkan.
+    } else {
+      toast('ℹ️ '+(lang==='id'?'Perangkat ini tidak mendukung share file langsung — file diunduh, silakan lampirkan manual di WhatsApp.':'This device doesn\'t support direct file sharing — file downloaded, please attach it manually in WhatsApp.'));
+      downloadBackupFile();
+    }
+  }catch(e){
+    if(e && e.name === 'AbortError') return; // user membatalkan share-sheet, bukan error
+    console.warn('Share backup error:', e);
+    toast('⚠️ '+(lang==='id'?'Gagal membagikan file — coba unduh manual.':'Failed to share file — try downloading manually.'));
+  }
+}
 async function manualBackupNow(){
   const uid = fbUID();
   if(!uid || !navigator.onLine){
@@ -293,25 +373,7 @@ async function manualBackupNow(){
   const btn = document.getElementById('manualBackupBtn');
   if(btn){ btn.disabled = true; btn.textContent = lang==='id' ? 'Menyimpan...' : 'Saving...'; }
   try{
-    // Pastikan snapshot yang dibackup itu SELALU yang PALING BARU & lengkap —
-    // bukan _lastSnapJson lama — jadi bangun ulang state persis seperti di
-    // fbSaveState(), lalu tulis ke key hari ini (overwrite kalau sudah ada).
-    const ts = Date.now();
-    const historySlim = (historyItems||[]).map(h=>{const s=Object.assign({},h);delete s.catIco;return s;});
-    const rawState = {
-      balance, wallets, goals, historyItems: historySlim,
-      tagihan: (typeof tagihan!=='undefined')?tagihan.map(t=>{const s=Object.assign({},t);delete s.catIco;return s;}):[],
-      tagihanBudget: (typeof tagihanBudget!=='undefined')?tagihanBudget:8000000,
-      tagihanRiwayatBulanan: tagihanRiwayatBulanan.map(r=>{const s=Object.assign({},r);delete s.catIco;return s;}),
-      budgets: (typeof budgets!=='undefined')?budgets:[],
-      customCategories: (typeof customCategories!=='undefined')?customCategories:[],
-      debts: (typeof debts!=='undefined')?debts:[],
-      savedPin, lang, darkMode: document.body.classList.contains('dk'),
-      themeColor: (typeof currentThemeId!=='undefined')?currentThemeId:'blue',
-      liquidGlass: { enabled: liquidGlassEnabled, intensity: liquidGlassIntensity, collapseOnScroll: liquidGlassCollapseOnScroll },
-      notifSound: { choice: notifSoundChoice }, appSettings, quickLoginEnabled, updatedAt: ts
-    };
-    const state = _fbSanitize(rawState);
+    const state = _buildFreshStatePayload();
     const key = _backupDateKeyWIB();
     await fbDB.ref(`users/${uid}/backups/${key}`).set(state);
     await _pruneOldBackups(uid);
@@ -2832,7 +2894,12 @@ body{background:var(--bg);transition:background .35s;}
       <div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;">Backup & Pulihkan Data</div>
       <div style="font-size:12px;color:var(--t3);line-height:1.5;">Backup otomatis dibuat 1x/hari saat app dipakai (disimpan 7 hari terakhir). Backup sebelum melakukan hal berisiko (mis. update app) supaya lebih aman.</div>
     </div>
-    <button id="manualBackupBtn" onclick="manualBackupNow()" style="width:100%;background:var(--accent,#1A56C4);color:#fff;border:none;border-radius:14px;padding:14px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:18px;">📦 Backup Sekarang</button>
+    <button id="manualBackupBtn" onclick="manualBackupNow()" style="width:100%;background:var(--accent,#1A56C4);color:#fff;border:none;border-radius:14px;padding:14px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;">📦 Backup Sekarang</button>
+    <div style="display:flex;gap:10px;margin-bottom:18px;">
+      <button onclick="downloadBackupFile()" style="flex:1;background:var(--surface2);color:var(--navy);border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">⬇️ Download File</button>
+      <button onclick="shareBackupToWhatsApp()" style="flex:1;background:#25D366;color:#fff;border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">📤 Bagikan ke WA</button>
+    </div>
+    <div style="font-size:11px;color:var(--t3);line-height:1.5;margin:-10px 0 18px;">Download/Bagikan mengambil kondisi data TERKINI langsung dari app (bukan file lama) — bukan integrasi resmi WhatsApp, cuma memakai menu share bawaan HP kamu. Di sebagian browser desktop, tombol Bagikan otomatis jadi download biasa.</div>
     <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.6px;margin-bottom:10px;">BACKUP TERSEDIA</div>
     <div id="backupListBox"></div>
     <button class="btn btn-s" onclick="hideBackupView()" style="width:100%;margin-top:18px;">Kembali</button>

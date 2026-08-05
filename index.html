@@ -306,27 +306,80 @@ function _buildFreshStatePayload(){
   };
   return _fbSanitize(rawState);
 }
+// ── Enkripsi file backup (opsional) ──
+// Pakai Web Crypto bawaan browser (AES-256-GCM + kunci diturunkan dari kata
+// sandi lewat PBKDF2) — TIDAK ada library luar, TIDAK ada data yang keluar
+// dari device. Kata sandi TIDAK PERNAH disimpan di mana pun (device atau
+// cloud) — cuma dipakai sesaat untuk menurunkan kunci enkripsi, lalu
+// dibuang dari memori. Kalau kata sandi lupa, file TIDAK BISA dipulihkan
+// lagi — makanya ini opsional, bukan default.
+const _ENC_MARKER = '__mm_encrypted_backup_v1__';
+async function _deriveAesKey(passphrase, saltBytes){
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:saltBytes, iterations:150000, hash:'SHA-256' },
+    baseKey, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+function _b64(bytes){ return btoa(String.fromCharCode(...new Uint8Array(bytes))); }
+function _unb64(str){ return Uint8Array.from(atob(str), c => c.charCodeAt(0)); }
+async function _encryptJsonWithPassphrase(jsonString, passphrase){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await _deriveAesKey(passphrase, salt);
+  const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(jsonString));
+  return JSON.stringify({
+    marker: _ENC_MARKER, alg:'AES-GCM', kdf:'PBKDF2-SHA256', iterations:150000,
+    salt: _b64(salt), iv: _b64(iv), ciphertext: _b64(ciphertext)
+  }, null, 2);
+}
+// Return: string JSON asli (plaintext) hasil dekripsi, atau throw kalau
+// kata sandi salah / file rusak (AES-GCM otomatis mendeteksi keduanya
+// lewat authentication tag bawaannya — tidak perlu pengecekan manual).
+async function _decryptJsonWithPassphrase(envelopeObj, passphrase){
+  const salt = _unb64(envelopeObj.salt);
+  const iv   = _unb64(envelopeObj.iv);
+  const ciphertext = _unb64(envelopeObj.ciphertext);
+  const key  = await _deriveAesKey(passphrase, salt);
+  const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ciphertext);
+  return new TextDecoder().decode(plainBuf);
+}
+// Tanya user mau pakai kata sandi atau tidak (kosongkan = lewati, tidak
+// dienkripsi). Pakai prompt() bawaan browser — konsisten dengan pola yang
+// sudah dipakai app ini di alur "Lupa PIN".
+function _askBackupPassphrase(){
+  const pw = prompt(lang==='id'
+    ? 'Lindungi file dengan kata sandi? (opsional)\n\nKosongkan & tekan OK untuk lewati.\n⚠️ Kalau lupa kata sandinya, file TIDAK BISA dipulihkan lagi.'
+    : 'Protect this file with a passphrase? (optional)\n\nLeave empty & press OK to skip.\n⚠️ If you forget the passphrase, the file CANNOT be recovered.', '');
+  return pw; // null kalau user tekan Cancel, '' kalau dikosongkan lalu OK
+}
+
 // Nama file konsisten dipakai baik utk download maupun share.
-function _backupFileName(){
+function _backupFileName(encrypted){
   const d = new Date();
   const pad = n => String(n).padStart(2,'0');
-  return `backup-keuangan-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+  return `backup-keuangan-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${encrypted?'-terenkripsi':''}.json`;
 }
 // Tombol "Download Backup" — generate file JSON dadakan dari kondisi
 // TERKINI di memori (bukan file lama yang di-reuse), lalu trigger unduhan
 // browser. Blob & Object URL dibuat baru setiap panggilan supaya tidak
 // pernah ke-cache jadi versi basi.
-function downloadBackupFile(){
+async function downloadBackupFile(){
   try{
+    const pw = _askBackupPassphrase();
+    if(pw === null) return; // user membatalkan
     const payload = _buildFreshStatePayload();
-    const json = JSON.stringify(payload, null, 2);
+    let json = JSON.stringify(payload, null, 2);
+    const encrypted = !!pw;
+    if(encrypted) json = await _encryptJsonWithPassphrase(json, pw);
     const blob = new Blob([json], {type:'application/json'});
     const url  = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = _backupFileName();
+    a.href = url; a.download = _backupFileName(encrypted);
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 2000); // bebaskan memori setelah unduhan dimulai
-    toast('✅ '+(lang==='id'?'File backup diunduh.':'Backup file downloaded.'));
+    toast('✅ '+(lang==='id'?(encrypted?'File backup terenkripsi diunduh.':'File backup diunduh.'):(encrypted?'Encrypted backup file downloaded.':'Backup file downloaded.')));
   }catch(e){
     console.warn('Download backup error:', e);
     toast('⚠️ '+(lang==='id'?'Gagal membuat file backup.':'Failed to create backup file.'));
@@ -341,14 +394,18 @@ function downloadBackupFile(){
 // tetap dapat filenya dan bisa lampirkan manual sendiri.
 async function shareBackupToWhatsApp(){
   try{
+    const pw = _askBackupPassphrase();
+    if(pw === null) return; // user membatalkan
     const payload = _buildFreshStatePayload();
-    const json = JSON.stringify(payload, null, 2);
-    const file = new File([json], _backupFileName(), {type:'application/json'});
+    let json = JSON.stringify(payload, null, 2);
+    const encrypted = !!pw;
+    if(encrypted) json = await _encryptJsonWithPassphrase(json, pw);
+    const file = new File([json], _backupFileName(encrypted), {type:'application/json'});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({
         files: [file],
         title: lang==='id' ? 'Backup Data Keuangan' : 'Financial Data Backup',
-        text:  lang==='id' ? `Backup tanggal ${_backupDateKeyWIB()}` : `Backup dated ${_backupDateKeyWIB()}`
+        text:  lang==='id' ? `Backup tanggal ${_backupDateKeyWIB()}${encrypted?' (terenkripsi)':''}` : `Backup dated ${_backupDateKeyWIB()}${encrypted?' (encrypted)':''}`
       });
       // Tidak ada toast "berhasil" di sini dengan sengaja — Web Share API
       // tidak memberi tahu app KEMANA/APAKAH benar-benar terkirim (itu
@@ -356,7 +413,12 @@ async function shareBackupToWhatsApp(){
       // di sini akan menyesatkan.
     } else {
       toast('ℹ️ '+(lang==='id'?'Perangkat ini tidak mendukung share file langsung — file diunduh, silakan lampirkan manual di WhatsApp.':'This device doesn\'t support direct file sharing — file downloaded, please attach it manually in WhatsApp.'));
-      downloadBackupFile();
+      const blob = new Blob([json], {type:'application/json'});
+      const url  = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = _backupFileName(encrypted);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 2000);
     }
   }catch(e){
     if(e && e.name === 'AbortError') return; // user membatalkan share-sheet, bukan error
@@ -461,6 +523,74 @@ async function restoreFromBackup(dateKey){
   }catch(e){
     console.warn('Restore error:', e);
     toast('⚠️ '+(lang==='id'?'Gagal memulihkan data.':'Failed to restore data.'));
+  }
+}
+// Trigger klik pada <input type="file"> tersembunyi (dipanggil dari tombol "Pulihkan dari File").
+function triggerRestoreFromFilePicker(){
+  const inp = document.getElementById('restoreFileInput');
+  if(inp){ inp.value=''; inp.click(); }
+}
+// Handler saat user pilih file JSON (biasa atau terenkripsi) utk dipulihkan.
+async function restoreFromUploadedFile(evt){
+  const file = evt?.target?.files?.[0];
+  if(!file) return;
+  const uid = fbUID();
+  if(!uid || !navigator.onLine){
+    toast('⚠️ '+(lang==='id'?'Tidak bisa memulihkan — cek koneksi internet.':'Cannot restore — check your internet connection.'));
+    return;
+  }
+  try{
+    const rawText = await file.text();
+    let parsed;
+    try{ parsed = JSON.parse(rawText); }
+    catch(e){ toast('⚠️ '+(lang==='id'?'File bukan JSON yang valid.':'File is not valid JSON.')); return; }
+
+    let stateObj;
+    if(parsed && parsed.marker === _ENC_MARKER){
+      // File terenkripsi — minta kata sandi, boleh dicoba berkali-kali
+      // (max 5x dalam 1 sesi restore ini, biar tidak infinite loop kalau
+      // memang salah/lupa).
+      let plainJson = null;
+      for(let i=0;i<5 && !plainJson;i++){
+        const pw = prompt(lang==='id' ? 'File ini terenkripsi. Masukkan kata sandinya:' : 'This file is encrypted. Enter the passphrase:', '');
+        if(pw === null) return; // batal
+        try{ plainJson = await _decryptJsonWithPassphrase(parsed, pw); }
+        catch(e){ toast('❌ '+(lang==='id'?'Kata sandi salah atau file rusak.':'Wrong passphrase or corrupted file.')); }
+      }
+      if(!plainJson) return;
+      stateObj = JSON.parse(plainJson);
+    } else {
+      stateObj = parsed;
+    }
+
+    // Pemeriksaan waras minimal — pastikan ini memang bentuk state app ini,
+    // bukan JSON sembarangan yang kebetulan valid.
+    if(typeof stateObj !== 'object' || stateObj === null || typeof stateObj.balance === 'undefined'){
+      toast('⚠️ '+(lang==='id'?'Isi file tidak dikenali sebagai backup aplikasi ini.':'File content is not recognized as a backup from this app.'));
+      return;
+    }
+
+    const msg = lang==='id'
+      ? `Pulihkan data dari file "${file.name}"?\n\nData yang AKTIF SEKARANG akan otomatis dibackup dulu sebagai jaring pengaman sebelum ditimpa. Lanjutkan?`
+      : `Restore data from file "${file.name}"?\n\nYour CURRENT data will be safety-backed-up first before being overwritten. Continue?`;
+    if(!confirm(msg)) return;
+
+    toast('⏳ '+(lang==='id'?'Memulihkan data...':'Restoring data...'));
+    // Jaring pengaman: backup dulu kondisi SEKARANG sebelum ditimpa.
+    const safetyKey = `${_backupDateKeyWIB()}-preRestore-${Date.now()}`;
+    const curSnap = await fbDB.ref(`users/${uid}/state`).once('value');
+    const curState = curSnap.val();
+    if(curState) await fbDB.ref(`users/${uid}/backups/${safetyKey}`).set(curState);
+
+    const sanitized = _fbSanitize(stateObj);
+    await fbDB.ref(`users/${uid}/state`).set(sanitized);
+    _applyStateFromDB(sanitized);
+    refreshAllUI();
+    toast('✅ '+(lang==='id'?'Data berhasil dipulihkan dari file.':'Data restored from file successfully.'));
+    renderBackupList();
+  }catch(e){
+    console.warn('Restore from file error:', e);
+    toast('⚠️ '+(lang==='id'?'Gagal memulihkan dari file.':'Failed to restore from file.'));
   }
 }
 window.addEventListener('online', ()=>{
@@ -2881,11 +3011,27 @@ body{background:var(--bg);transition:background .35s;}
       </div>
     </div>
     <div class="sec-section">
+      <div class="sec-sec-ttl">AKTIVITAS</div>
+      <div class="sec-grp">
+        <div class="sec-row" onclick="showLoginActivityView()"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Aktivitas Login</div><div class="sec-row-sub">Riwayat kapan & lewat mana akun ini diakses</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+      </div>
+    </div>
+    <div class="sec-section">
       <div class="sec-sec-ttl">DATA & BACKUP</div>
       <div class="sec-grp">
         <div class="sec-row" onclick="showBackupView()"><div class="sec-row-ico" style="background:#EBF9F1;"><svg viewBox="0 0 24 24" stroke="#0B9B5C"><path d="M21 8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Backup & Pulihkan Data</div><div class="sec-row-sub">Backup otomatis harian · gratis, tidak perlu upgrade plan</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
       </div>
     </div>
+  </div>
+
+  <!-- AKTIVITAS LOGIN VIEW -->
+  <div id="loginActivityView" style="display:none;padding:0 20px 20px;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;">Aktivitas Login</div>
+      <div style="font-size:12px;color:var(--t3);line-height:1.5;">30 aktivitas login terakhir. Kalau ada perangkat/waktu yang tidak Anda kenali (ditandai ⚠️), segera ganti password & cabut akses perangkat di menu "Perangkat Aktif".</div>
+    </div>
+    <div id="loginActivityBox"></div>
+    <button class="btn btn-s" onclick="hideLoginActivityView()" style="width:100%;margin-top:18px;">Kembali</button>
   </div>
 
   <!-- BACKUP & RESTORE VIEW -->
@@ -2899,7 +3045,9 @@ body{background:var(--bg);transition:background .35s;}
       <button onclick="downloadBackupFile()" style="flex:1;background:var(--surface2);color:var(--navy);border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">⬇️ Download File</button>
       <button onclick="shareBackupToWhatsApp()" style="flex:1;background:#25D366;color:#fff;border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">📤 Bagikan ke WA</button>
     </div>
-    <div style="font-size:11px;color:var(--t3);line-height:1.5;margin:-10px 0 18px;">Download/Bagikan mengambil kondisi data TERKINI langsung dari app (bukan file lama) — bukan integrasi resmi WhatsApp, cuma memakai menu share bawaan HP kamu. Di sebagian browser desktop, tombol Bagikan otomatis jadi download biasa.</div>
+    <div style="font-size:11px;color:var(--t3);line-height:1.5;margin:-10px 0 14px;">Download/Bagikan mengambil kondisi data TERKINI langsung dari app (bukan file lama) — bukan integrasi resmi WhatsApp, cuma memakai menu share bawaan HP kamu. Di sebagian browser desktop, tombol Bagikan otomatis jadi download biasa. Setiap kali diminta, kamu bisa pilih lindungi file dengan kata sandi (opsional) — kosongkan saja kalau tidak perlu.</div>
+    <input type="file" id="restoreFileInput" accept="application/json,.json" style="display:none;" onchange="restoreFromUploadedFile(event)">
+    <button onclick="triggerRestoreFromFilePicker()" style="width:100%;background:var(--surface2);color:var(--navy);border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:18px;">📂 Pulihkan dari File (biasa/terenkripsi)</button>
     <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.6px;margin-bottom:10px;">BACKUP TERSEDIA</div>
     <div id="backupListBox"></div>
     <button class="btn btn-s" onclick="hideBackupView()" style="width:100%;margin-top:18px;">Kembali</button>
@@ -7975,6 +8123,7 @@ async function doLogin(){
     const state = await fbLoadState();
     setBtn(T('l-btn'), false);
     document.getElementById('fbLoadingOverlay').style.display='none';
+    logLoginActivity('password');
     await enterApp(state);
   } catch(e){
     document.getElementById('fbLoadingOverlay').style.display='none';
@@ -8325,7 +8474,65 @@ let _pendingQuickLoginProfile = null;
 // di akhir fungsi enterApp()).
 let _pendingPinMigrationHash = null;
 
+// ── Anti brute-force PIN ──
+// Disimpan di localStorage (BUKAN memori JS) supaya TIDAK bisa dilewati
+// cuma dengan refresh halaman — itu justru poin utamanya. Per-device
+// (bukan per-akun) karena ancamannya adalah orang lain yang pegang fisik
+// device ini mencoba nebak PIN berkali-kali.
+// Eskalasi: 3 percobaan pertama bebas (jaga-jaga salah ketik biasa),
+// baru mulai dikunci sementara mulai percobaan ke-4, makin lama tiap
+// gagal berikutnya (30d → 60d → 120d → maks 5 menit).
+const PIN_BRUTEFORCE_KEY = 'mm_pin_bruteforce_v1';
+const PIN_LOCKOUT_SCHEDULE_SEC = [30, 60, 120, 300]; // dipakai mulai percobaan gagal ke-4 dst (indeks di-clamp di angka terakhir)
+function _getPinAttemptState(){
+  try{ const raw = localStorage.getItem(PIN_BRUTEFORCE_KEY); return raw ? JSON.parse(raw) : {count:0, lockUntil:0}; }
+  catch(e){ return {count:0, lockUntil:0}; }
+}
+function _savePinAttemptState(s){ try{ localStorage.setItem(PIN_BRUTEFORCE_KEY, JSON.stringify(s)); }catch(e){} }
+function _pinLockoutRemainingMs(){ return Math.max(0, _getPinAttemptState().lockUntil - Date.now()); }
+function _resetPinAttempts(){ _savePinAttemptState({count:0, lockUntil:0}); }
+// Return: detik lockout yang baru berlaku (0 kalau belum masuk fase lockout).
+function _recordFailedPinAttempt(){
+  const s = _getPinAttemptState();
+  s.count = (s.count||0) + 1;
+  let lockSec = 0;
+  if(s.count >= 4){
+    lockSec = PIN_LOCKOUT_SCHEDULE_SEC[Math.min(s.count - 4, PIN_LOCKOUT_SCHEDULE_SEC.length - 1)];
+    s.lockUntil = Date.now() + lockSec*1000;
+  }
+  _savePinAttemptState(s);
+  return lockSec;
+}
+
+// Tampilkan (& perbarui tiap detik) status lockout begitu layar PIN
+// dibuka — supaya user langsung tahu masih dikunci tanpa perlu coba
+// ketik dulu. Dipanggil dari showPinLock() & showPinLockForQuickLogin().
+let _pinLockoutTimer = null;
+function _updatePinLockoutDisplay(){
+  clearInterval(_pinLockoutTimer);
+  const tick = () => {
+    const remainMs = _pinLockoutRemainingMs();
+    const errEl = document.getElementById('pinLockError');
+    if(remainMs <= 0){ clearInterval(_pinLockoutTimer); if(errEl) errEl.textContent=''; return; }
+    const sec = Math.ceil(remainMs/1000);
+    if(errEl) errEl.textContent = lang==='id'
+      ? `🔒 Terlalu banyak percobaan salah. Coba lagi dalam ${sec} detik.`
+      : `🔒 Too many failed attempts. Try again in ${sec}s.`;
+  };
+  tick();
+  _pinLockoutTimer = setInterval(tick, 1000);
+}
 function lockPinKey(k){
+  // Cek lockout DULU, sebelum terima input digit apa pun — kalau lagi
+  // dikunci, tombol angka tidak boleh berfungsi sama sekali.
+  const remainMs = _pinLockoutRemainingMs();
+  if(remainMs > 0){
+    const sec = Math.ceil(remainMs/1000);
+    document.getElementById('pinLockError').textContent = lang==='id'
+      ? `🔒 Terlalu banyak percobaan salah. Coba lagi dalam ${sec} detik.`
+      : `🔒 Too many failed attempts. Try again in ${sec}s.`;
+    return;
+  }
   if(lockPinBuf.length>=4) return;
   lockPinBuf+=k; updateLockPinDisplay();
   if(lockPinBuf.length===4){
@@ -8369,15 +8576,20 @@ function lockPinKey(k){
       if(ok){
         document.getElementById('pinLockError').textContent='';
         lockPinBuf='';
+        _resetPinAttempts();
         if(_pinLockMode==='quicklogin'){
           const qlp = _pendingQuickLoginProfile;
           hidePinLock();
+          logLoginActivity('quicklogin-pin');
           _completeQuickLogin(qlp);
         } else {
           hidePinLock();
         }
       } else {
-        document.getElementById('pinLockError').textContent='❌ Incorrect PIN. Try again.';
+        const lockSec = _recordFailedPinAttempt();
+        document.getElementById('pinLockError').textContent = lockSec > 0
+          ? (lang==='id' ? `🔒 Terlalu banyak percobaan salah. Coba lagi dalam ${lockSec} detik.` : `🔒 Too many failed attempts. Try again in ${lockSec}s.`)
+          : '❌ Incorrect PIN. Try again.';
         // Shake dots
         const dotsEl = document.getElementById('pinLockDots');
         if(dotsEl){ dotsEl.style.animation='pinShake .4s ease'; setTimeout(()=>dotsEl.style.animation='',500); }
@@ -8398,6 +8610,7 @@ function showPinLock(){
   document.getElementById('pinLockUser').textContent=user?.email||'';
   updatePinLockIcon(photoDataUrl);
   updateLockPinDisplay();
+  _updatePinLockoutDisplay();
 }
 // Layar PIN untuk alur "Masuk Cepat" (SEBELUM app terbuka / SEBELUM `user` di-set).
 // qlp = profil dari getQuickLoginProfile() (berisi uid/nama/email/foto/pin cache-nya).
@@ -8412,8 +8625,9 @@ function showPinLockForQuickLogin(qlp){
   document.getElementById('pinLockUser').textContent=qlp.email||'';
   updatePinLockIcon(qlp.photo);
   updateLockPinDisplay();
+  _updatePinLockoutDisplay();
 }
-function hidePinLock(){ const s=document.getElementById('pinLockScreen'); s.style.display='none'; lockPinBuf=''; }
+function hidePinLock(){ const s=document.getElementById('pinLockScreen'); s.style.display='none'; lockPinBuf=''; clearInterval(_pinLockoutTimer); }
 async function showPinLockForgot(){
   const pw=prompt('Enter your password to unlock:','');
   if(!pw) return;
@@ -8421,6 +8635,7 @@ async function showPinLockForgot(){
     const fu = fbAuth.currentUser;
     const credential = firebase.auth.EmailAuthProvider.credential(fu.email, pw);
     await fu.reauthenticateWithCredential(credential);
+    logLoginActivity('forgot-pin-password');
     if(_pinLockMode==='quicklogin'){
       const qlp = _pendingQuickLoginProfile;
       hidePinLock();
@@ -8586,6 +8801,7 @@ function openSecOverlay(){
   document.getElementById('secMain').style.display='block';
   document.getElementById('pinChangeView').style.display='none';
   document.getElementById('backupView').style.display='none';
+  document.getElementById('loginActivityView').style.display='none';
   syncSettingsToggles();
 }
 function closeSecOverlayThenOpenDevices(){
@@ -10047,6 +10263,71 @@ function _deviceLabel(){
   else if(/linux/i.test(ua)) name = 'Linux';
   return name + ' · ' + (lang==='id'?'Browser':'Browser');
 }
+
+// ── Aktivitas Login ── dicatat tiap kali user BENAR-BENAR masuk akun
+// (bukan tiap relock/unlock biasa). method: 'password' | 'quicklogin-pin'
+// | 'forgot-pin-password'. Dibungkus try/catch & TIDAK di-await oleh
+// pemanggil (fire-and-forget) — gagal mencatat log TIDAK BOLEH pernah
+// menghalangi/gagalkan proses login itu sendiri.
+function logLoginActivity(method){
+  const uid = fbUID(); if(!uid) return;
+  fbDB.ref(`users/${uid}/loginActivity`).push({
+    time: Date.now(), method, device: _deviceLabel()
+  }).then(()=>_pruneLoginActivity(uid)).catch(err=>console.warn('Gagal mencatat aktivitas login (non-fatal):', err));
+}
+// Simpan cuma 30 entri terakhir supaya node ini tidak membengkak selamanya.
+async function _pruneLoginActivity(uid){
+  try{
+    const snap = await fbDB.ref(`users/${uid}/loginActivity`).orderByChild('time').once('value');
+    const all = snap.val(); if(!all) return;
+    const keys = Object.keys(all).sort((a,b)=>all[a].time-all[b].time); // lama → baru
+    const excess = keys.length - 30;
+    if(excess <= 0) return;
+    const toDelete = keys.slice(0, excess);
+    const updates = {};
+    toDelete.forEach(k => updates[k] = null);
+    await fbDB.ref(`users/${uid}/loginActivity`).update(updates);
+  }catch(e){ console.warn('Gagal membersihkan aktivitas login lama:', e); }
+}
+// Render daftar di panel "Aktivitas Login" (Pengaturan → Keamanan).
+async function renderLoginActivityList(){
+  const box = document.getElementById('loginActivityBox');
+  if(!box) return;
+  const uid = fbUID();
+  if(!uid){ box.innerHTML=''; return; }
+  box.innerHTML = `<div style="text-align:center;padding:16px;color:var(--t3);font-size:13px;">${lang==='id'?'Memuat...':'Loading...'}</div>`;
+  try{
+    const snap = await fbDB.ref(`users/${uid}/loginActivity`).orderByChild('time').once('value');
+    const all = snap.val() || {};
+    const rows = Object.values(all).sort((a,b)=>b.time-a.time); // baru → lama
+    if(rows.length===0){
+      box.innerHTML = `<div style="text-align:center;padding:16px;color:var(--t3);font-size:13px;">${lang==='id'?'Belum ada aktivitas tercatat.':'No activity recorded yet.'}</div>`;
+      return;
+    }
+    const thisDevice = _deviceLabel();
+    const methodLabel = { 'password': lang==='id'?'Email & Password':'Email & Password',
+      'quicklogin-pin': lang==='id'?'Masuk Cepat (PIN)':'Quick Login (PIN)',
+      'forgot-pin-password': lang==='id'?'Verifikasi Password (Lupa PIN)':'Password Verify (Forgot PIN)' };
+    box.innerHTML = rows.map(r => {
+      const d = new Date(r.time);
+      const tgl = d.toLocaleString(lang==='id'?'id-ID':'en-US', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const isOtherDevice = r.device !== thisDevice;
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border-radius:12px;margin-bottom:8px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:${isOtherDevice?'#FEF3EB':'#EBF9F1'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">${isOtherDevice?'⚠️':'✅'}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:var(--navy);">${escapeHtml(r.device||'?')}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px;">${escapeHtml(methodLabel[r.method]||r.method)} · ${escapeHtml(tgl)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    console.warn('Gagal memuat aktivitas login:', e);
+    box.innerHTML = `<div style="text-align:center;padding:16px;color:#EF4444;font-size:13px;">${lang==='id'?'Gagal memuat aktivitas login.':'Failed to load login activity.'}</div>`;
+  }
+}
+function showLoginActivityView(){document.getElementById('secMain').style.display='none';document.getElementById('loginActivityView').style.display='block';renderLoginActivityList();}
+function hideLoginActivityView(){document.getElementById('secMain').style.display='block';document.getElementById('loginActivityView').style.display='none';}
+
 
 // Dipanggil saat user MENGAKTIFKAN Masuk Cepat di device ini (hook dari
 // fungsi toggle yang sudah ada — lihat pemanggilan di dekat quickLoginEnabled).

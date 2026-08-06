@@ -1498,6 +1498,23 @@ body{background:var(--bg);transition:background .35s;}
 .wallet-card::before{content:'';position:absolute;top:-25px;right:-25px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none;}
 .wallet-card::after{content:'';position:absolute;bottom:-35px;left:10px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none;}
 
+/* ── Mode Atur Urutan Kartu (long-press lalu geser) ──
+   Semua kartu bergetar halus sbg indikasi visual "siap digeser" (mirip
+   atur ulang ikon di homescreen HP). Kartu yang sedang aktif di-drag
+   berhenti bergetar & tampil terangkat (scale + shadow lebih tebal). */
+@keyframes walletWiggle{
+  0%{transform:rotate(-1deg);}
+  50%{transform:rotate(1deg);}
+  100%{transform:rotate(-1deg);}
+}
+.wallet-scroll.reorder-mode{scroll-snap-type:none;}
+.wallet-scroll.reorder-mode .wallet-card{animation:walletWiggle .22s ease-in-out infinite;touch-action:none;}
+.wallet-scroll.reorder-mode .wallet-card.wallet-dragging{
+  animation:none;opacity:.92;z-index:50;
+  box-shadow:0 18px 36px rgba(13,33,82,.4);
+  transition:none;
+}
+
 /* ── Liquid Glass: wallet-card jadi gelembung/gel kaca ──
    Warna brand tiap bank/e-wallet (di-set inline lewat JS) tetap
    dipertahankan apa adanya — cukup ditambahkan lapisan glossy
@@ -2478,9 +2495,13 @@ body{background:var(--bg);transition:background .35s;}
 
         <!-- KARTU PANEL -->
         <div id="sv-kartu-panel">
-          <div style="padding:0 16px;margin-bottom:12px;">
-            <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px;" id="wlt-ttl">My Wallets &amp; Cards</div>
-            <div style="font-size:12px;color:var(--t3);" id="wlt-sub">Swipe to view · Tap ⋮ to manage</div>
+          <div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+            <div style="min-width:0;">
+              <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px;" id="wlt-ttl">My Wallets &amp; Cards</div>
+              <div style="font-size:12px;color:var(--t3);" id="wlt-sub">Swipe to view · Tap ⋮ to manage</div>
+              <div style="font-size:11px;color:var(--t3);margin-top:2px;" id="wlt-reorder-hint"></div>
+            </div>
+            <button id="walletReorderDoneBtn" onclick="exitWalletReorderMode()" style="display:none;background:var(--navy);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap;">✓ Selesai</button>
           </div>
           <div class="wallet-scroll" id="walletsContainer"></div>
           <div style="padding:0 16px;"><div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;" id="wlt-summary">Total Across All Cards</div><div id="walletSummary"></div></div>
@@ -2591,6 +2612,11 @@ body{background:var(--bg);transition:background .35s;}
         <div class="st-item" onclick="openDebtsOverlay()">
           <div class="st-ico" style="background:#FFFBEB;"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
           <div class="st-info"><div class="st-nm">Utang &amp; Piutang</div><div class="st-sub">Catat siapa berutang ke siapa</div></div>
+          <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
+        </div>
+        <div class="st-item" onclick="openBackupOvr()">
+          <div class="st-ico" style="background:#EBF9F1;"><svg viewBox="0 0 24 24" stroke="#0B9B5C"><path d="M21 8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+          <div class="st-info"><div class="st-nm">Backup & Pulihkan Data</div><div class="st-sub">Backup otomatis harian · download · bagikan · restore</div></div>
           <span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span>
         </div>
       </div>
@@ -2807,14 +2833,17 @@ body{background:var(--bg);transition:background .35s;}
   <div class="msheet" style="padding:20px 20px 28px;">
     <div class="mhandle"></div>
     <div class="mhdr"><div class="mttl" id="gm-title">New Savings Goal</div><button class="mcls" onclick="closeGoalModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
-    <div class="albl" id="gm-namelbl">GOAL NAME</div>
-    <div class="iwrap" style="margin-bottom:16px;"><span class="iico"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg></span><input class="finput" id="goalName" placeholder="e.g. Emergency Fund"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="albl" id="gm-namelbl" style="margin-bottom:0;">GOAL NAME</div>
+      <div id="gmIconPreview" class="goal-ico" style="width:34px;height:34px;border-radius:10px;"></div>
+    </div>
+    <div class="iwrap" style="margin-bottom:16px;"><span class="iico"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg></span><input class="finput" id="goalName" placeholder="e.g. Emergency Fund" oninput="updateGoalIconPreview()"></div>
     <div class="albl" id="gm-sublbl">DESCRIPTION (OPTIONAL)</div>
     <div class="iwrap" style="margin-bottom:16px;"><span class="iico"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg></span><input class="finput" id="goalDesc" placeholder="e.g. 6 months runway"></div>
     <div class="albl" id="gm-targetlbl">TARGET AMOUNT</div>
-    <div class="awrap" style="margin-bottom:16px;"><span class="acurr" id="goalCurr">$</span><input class="ainput hv" type="number" id="goalTarget" placeholder="10000" style="font-size:32px;"></div>
+    <div class="awrap" style="margin-bottom:16px;"><span class="acurr" id="goalCurr">$</span><input class="ainput hv" type="text" inputmode="decimal" id="goalTarget" placeholder="10.000" style="font-size:32px;" oninput="formatCurrencyInput(this)"></div>
     <div class="albl" id="gm-currlbl">CURRENT SAVED</div>
-    <div class="awrap" style="margin-bottom:20px;"><span class="acurr" id="goalCurr2">$</span><input class="ainput hv" type="number" id="goalCurrent" placeholder="0" style="font-size:32px;"></div>
+    <div class="awrap" style="margin-bottom:20px;"><span class="acurr" id="goalCurr2">$</span><input class="ainput hv" type="text" inputmode="decimal" id="goalCurrent" placeholder="0" style="font-size:32px;" oninput="formatCurrencyInput(this)"></div>
     <div class="albl" style="margin-bottom:8px;">ICON COLOR</div>
     <div style="display:flex;gap:8px;margin-bottom:20px;" id="goalColorPicker">
       <div class="goal-color-opt" data-color="#1A56C4" onclick="selectGoalColor(this)" style="width:32px;height:32px;border-radius:50%;background:#1A56C4;cursor:pointer;border:3px solid #1A56C4;box-shadow:0 0 0 2px white;flex-shrink:0;"></div>
@@ -2837,7 +2866,7 @@ body{background:var(--bg);transition:background .35s;}
     <div class="albl" id="wm-numlbl">CARD NUMBER (LAST 4 DIGITS)</div>
     <div class="iwrap" style="margin-bottom:16px;"><span class="iico"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span><input class="finput" id="walletNum" placeholder="e.g. 4512" maxlength="4" type="text"></div>
     <div class="albl" id="wm-ballbl">CURRENT BALANCE</div>
-    <div class="awrap" style="margin-bottom:16px;"><span class="acurr" id="walletCurr">$</span><input class="ainput hv" type="number" id="walletBal" placeholder="0" style="font-size:32px;"></div>
+    <div class="awrap" style="margin-bottom:16px;"><span class="acurr" id="walletCurr">$</span><input class="ainput hv" type="text" inputmode="decimal" id="walletBal" placeholder="0" style="font-size:32px;" oninput="formatCurrencyInput(this)"></div>
     <div class="albl" style="margin-bottom:8px;">CARD COLOR</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;" id="walletColorPicker">
       <div class="wc-opt" data-color="#1A56C4,#2A6FD6" onclick="selectWalletColor(this)" style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#1A56C4,#2A6FD6);cursor:pointer;border:3px solid #1A56C4;box-shadow:0 0 0 2px white;flex-shrink:0;"></div>
@@ -2869,12 +2898,15 @@ body{background:var(--bg);transition:background .35s;}
     <div class="mhandle"></div>
     <div class="mhdr"><div class="mttl" id="egm-title">Edit Goal</div><button class="mcls" onclick="closeEditGoalModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <input type="hidden" id="editGoalId">
-    <div class="albl">GOAL NAME</div>
-    <div class="iwrap" style="margin-bottom:14px;"><span class="iico"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg></span><input class="finput" id="egName"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="albl" style="margin-bottom:0;">GOAL NAME</div>
+      <div id="egmIconPreview" class="goal-ico" style="width:34px;height:34px;border-radius:10px;"></div>
+    </div>
+    <div class="iwrap" style="margin-bottom:14px;"><span class="iico"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg></span><input class="finput" id="egName" oninput="updateEditGoalIconPreview()"></div>
     <div class="albl">TARGET AMOUNT</div>
-    <div class="awrap" style="margin-bottom:14px;"><span class="acurr" id="egCurr">$</span><input class="ainput hv" type="number" id="egTarget" style="font-size:30px;"></div>
+    <div class="awrap" style="margin-bottom:14px;"><span class="acurr" id="egCurr">$</span><input class="ainput hv" type="text" inputmode="decimal" id="egTarget" style="font-size:30px;" oninput="formatCurrencyInput(this)"></div>
     <div class="albl">ADD FUNDS NOW</div>
-    <div class="awrap" style="margin-bottom:20px;"><span class="acurr" id="egCurr2">$</span><input class="ainput hv" type="number" id="egAdd" placeholder="0" style="font-size:30px;"></div>
+    <div class="awrap" style="margin-bottom:20px;"><span class="acurr" id="egCurr2">$</span><input class="ainput hv" type="text" inputmode="decimal" id="egAdd" placeholder="0" style="font-size:30px;" oninput="formatCurrencyInput(this)"></div>
     <button class="btn btn-p" onclick="updateGoal()" style="margin-bottom:8px;" id="egm-save">Save Changes</button>
     <button class="btn btn-danger" onclick="deleteGoal()">Delete Goal</button>
   </div>
@@ -2908,7 +2940,7 @@ body{background:var(--bg);transition:background .35s;}
     </div>
     <div class="albl" id="qa-amt-lbl">JUMLAH YANG DITAMBAHKAN</div>
     <div class="awrap" style="margin-bottom:20px;">
-      <input class="ainput hv" type="number" id="qaAmount" placeholder="0" style="font-size:30px;padding-left:16px;" oninput="updateQAPreview()">
+      <input class="ainput hv" type="text" inputmode="decimal" id="qaAmount" placeholder="0" style="font-size:30px;padding-left:16px;" oninput="formatCurrencyInput(this);updateQAPreview()">
     </div>
     <!-- Preview after add -->
     <div id="qa-preview" style="display:none;background:rgba(26,86,196,.06);border-radius:12px;padding:10px 14px;margin-bottom:16px;border:1.5px solid var(--blue2);">
@@ -2949,7 +2981,7 @@ body{background:var(--bg);transition:background .35s;}
       <div style="font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:6px;">SALDO</div>
       <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:10px 14px;">
         <span style="font-size:13px;font-weight:700;color:var(--blue);" id="ewCurr">Rp</span>
-        <input type="number" id="ewBal" style="flex:1;border:none;background:transparent;font-family:var(--f);font-size:18px;font-weight:700;color:var(--navy);outline:none;min-width:0;">
+        <input type="text" inputmode="decimal" id="ewBal" oninput="formatCurrencyInput(this);updateEWPreview()" style="flex:1;border:none;background:transparent;font-family:var(--f);font-size:18px;font-weight:700;color:var(--navy);outline:none;min-width:0;">
       </div>
     </div>
     <!-- Card Color picker -->
@@ -3016,12 +3048,6 @@ body{background:var(--bg);transition:background .35s;}
         <div class="sec-row" onclick="showLoginActivityView()"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Aktivitas Login</div><div class="sec-row-sub">Riwayat kapan & lewat mana akun ini diakses</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
       </div>
     </div>
-    <div class="sec-section">
-      <div class="sec-sec-ttl">DATA & BACKUP</div>
-      <div class="sec-grp">
-        <div class="sec-row" onclick="showBackupView()"><div class="sec-row-ico" style="background:#EBF9F1;"><svg viewBox="0 0 24 24" stroke="#0B9B5C"><path d="M21 8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Backup & Pulihkan Data</div><div class="sec-row-sub">Backup otomatis harian · gratis, tidak perlu upgrade plan</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
-      </div>
-    </div>
   </div>
 
   <!-- AKTIVITAS LOGIN VIEW -->
@@ -3032,25 +3058,6 @@ body{background:var(--bg);transition:background .35s;}
     </div>
     <div id="loginActivityBox"></div>
     <button class="btn btn-s" onclick="hideLoginActivityView()" style="width:100%;margin-top:18px;">Kembali</button>
-  </div>
-
-  <!-- BACKUP & RESTORE VIEW -->
-  <div id="backupView" style="display:none;padding:0 20px 20px;">
-    <div style="text-align:center;margin-bottom:18px;">
-      <div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;">Backup & Pulihkan Data</div>
-      <div style="font-size:12px;color:var(--t3);line-height:1.5;">Backup otomatis dibuat 1x/hari saat app dipakai (disimpan 7 hari terakhir). Backup sebelum melakukan hal berisiko (mis. update app) supaya lebih aman.</div>
-    </div>
-    <button id="manualBackupBtn" onclick="manualBackupNow()" style="width:100%;background:var(--accent,#1A56C4);color:#fff;border:none;border-radius:14px;padding:14px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;">📦 Backup Sekarang</button>
-    <div style="display:flex;gap:10px;margin-bottom:18px;">
-      <button onclick="downloadBackupFile()" style="flex:1;background:var(--surface2);color:var(--navy);border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">⬇️ Download File</button>
-      <button onclick="shareBackupToWhatsApp()" style="flex:1;background:#25D366;color:#fff;border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">📤 Bagikan ke WA</button>
-    </div>
-    <div style="font-size:11px;color:var(--t3);line-height:1.5;margin:-10px 0 14px;">Download/Bagikan mengambil kondisi data TERKINI langsung dari app (bukan file lama) — bukan integrasi resmi WhatsApp, cuma memakai menu share bawaan HP kamu. Di sebagian browser desktop, tombol Bagikan otomatis jadi download biasa. Setiap kali diminta, kamu bisa pilih lindungi file dengan kata sandi (opsional) — kosongkan saja kalau tidak perlu.</div>
-    <input type="file" id="restoreFileInput" accept="application/json,.json" style="display:none;" onchange="restoreFromUploadedFile(event)">
-    <button onclick="triggerRestoreFromFilePicker()" style="width:100%;background:var(--surface2);color:var(--navy);border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:18px;">📂 Pulihkan dari File (biasa/terenkripsi)</button>
-    <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.6px;margin-bottom:10px;">BACKUP TERSEDIA</div>
-    <div id="backupListBox"></div>
-    <button class="btn btn-s" onclick="hideBackupView()" style="width:100%;margin-top:18px;">Kembali</button>
   </div>
   <div id="pinChangeView" style="display:none;padding:0 20px 20px;">
     <div style="text-align:center;margin-bottom:22px;"><div style="font-family:var(--f);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:6px;" id="pin-instruction">Masukkan PIN Baru</div><div style="font-size:12px;color:var(--t3);">Masukkan PIN 4 digit</div></div>
@@ -3462,7 +3469,7 @@ function getCachedLastGain(){
 }
 let pinBuf='',pinStp=0,newPinSaved='';
 let goalColor='#1A56C4', walletColorSel='#1A56C4,#2A6FD6', walletTypeSel='Debit', editWalletColorSel='#1A56C4,#2A6FD6';
-let editingGoalId=null, editingWalletId=null, openMenuId=null;
+let editingGoalId=null, editingGoalColor='#1A56C4', editingWalletId=null, openMenuId=null;
 let savedPin='', lockPinBuf='', appHidden=false;
 // ── Hashing PIN (SHA-256 + salt = uid user) ──
 // PIN app-lock (4 digit) TIDAK BOLEH disimpan sebagai teks polos — baik di
@@ -4123,13 +4130,53 @@ function renderNI(n){
 // ============================================================
 let goals=[];
 let goalIdCtr=1;
-const goalIcons={
-  '#1A56C4':'<svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
-  '#0B7A63':'<svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
-  '#F59E0B':'<svg viewBox="0 0 24 24" stroke="#F59E0B"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.12 2.2 2 2 0 012.11 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6z"/></svg>',
-  '#EF4444':'<svg viewBox="0 0 24 24" stroke="#EF4444"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>',
-  '#9333EA':'<svg viewBox="0 0 24 24" stroke="#9333EA"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>',
+// ── AUTO ICON: bentuk ikon ditentukan dari NAMA tujuan (bukan warna).
+// Warna (goalColor) tetap dipilih manual dan dipakai sebagai aksen/stroke.
+const goalIconLib={
+  wedding:  '<circle cx="8.5" cy="15.5" r="4.5"/><circle cx="15.5" cy="15.5" r="4.5"/><path d="M9 8.5l3-6 3 6"/>',
+  education:'<path d="M21.42 10.92a1 1 0 000-1.84L12.83 5.18a2 2 0 00-1.66 0L2.6 9.08a1 1 0 000 1.84l8.57 3.9a2 2 0 001.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16c0 1.66 2.69 3 6 3s6-1.34 6-3v-3.5"/>',
+  health:   '<path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/>',
+  house:    '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>',
+  car:      '<path d="M14 16H9m10 0h3v-3.15a1 1 0 00-.84-.99L16 11l-2.7-3.6a1 1 0 00-.8-.4H5.24a2 2 0 00-1.8 1.1l-.8 1.63A6 6 0 002 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
+  travel:   '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/>',
+  gadget:   '<rect x="4" y="3" width="16" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+  emergency:'<path d="M12 2C7 6 5 10 5 13a7 7 0 0014 0c0-3-2-7-7-11z"/>',
+  gift:     '<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13"/><path d="M19 8V6a2 2 0 00-2-2h-1.5a2.5 2.5 0 000 5H19zM5 8V6a2 2 0 012-2h1.5a2.5 2.5 0 010 5H5z"/>',
+  invest:   '<polyline points="3,17 9,11 13,15 21,7"/><polyline points="14,7 21,7 21,14"/>',
+  retirement:'<circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>',
+  business: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>',
+  family:   '<circle cx="9" cy="7" r="4"/><path d="M17 11a4 4 0 100-8 4 4 0 000 8z"/><path d="M1 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M23 21v-2a4 4 0 00-3-3.87"/>',
+  default:  '<polygon points="12,2 15,9 22,9 16.5,13.5 18.5,21 12,17 5.5,21 7.5,13.5 2,9 9,9"/>',
 };
+// Urutan penting: kategori lebih spesifik dicek lebih dulu agar tidak "ketutup"
+// kategori umum (mis. "sekolah anak" harus kena 'education', bukan 'family').
+const goalIconCategories=[
+  {icon:'wedding',   keywords:['nikah','wedding','pernikahan','tunangan','mahar','resepsi','marriage']},
+  {icon:'education', keywords:['sekolah','kuliah','pendidikan','education','school','kursus','spp','skripsi','wisuda','kampus','tuition']},
+  {icon:'health',    keywords:['kesehatan','sakit','obat','medis','health','medical','operasi','rawat','rumah sakit','bpjs']},
+  {icon:'house',     keywords:['rumah','kpr','properti','house','home','apartemen','apartment','kontrakan','renovasi']},
+  {icon:'car',       keywords:['mobil','motor','kendaraan','car','vehicle','motorcycle','dp motor','dp mobil']},
+  {icon:'travel',    keywords:['liburan','travel','wisata','trip','vacation','holiday','piknik','umroh','haji','honeymoon','jalan-jalan','staycation']},
+  {icon:'gadget',    keywords:['laptop','gadget','ponsel','iphone','komputer','camera','kamera','phone','hp baru','electronic','elektronik']},
+  {icon:'emergency', keywords:['darurat','emergency']},
+  {icon:'gift',      keywords:['hadiah','kado','gift','present','kejutan','surprise']},
+  {icon:'invest',    keywords:['investasi','saham','invest','reksadana','crypto','trading','emas','gold']},
+  {icon:'retirement',keywords:['pensiun','retirement','hari tua','masa tua']},
+  {icon:'business',  keywords:['bisnis','usaha','modal','business','startup','toko','warung']},
+  {icon:'family',    keywords:['anak','bayi','baby','keluarga','family']},
+];
+function detectGoalIcon(name){
+  const n=(name||'').toLowerCase();
+  for(const cat of goalIconCategories){
+    if(cat.keywords.some(k=>n.includes(k))) return cat.icon;
+  }
+  return 'default';
+}
+function goalIconSvg(name,color){
+  const key=detectGoalIcon(name);
+  const inner=goalIconLib[key]||goalIconLib.default;
+  return `<svg viewBox="0 0 24 24" stroke="${color}">${inner}</svg>`;
+}
 function renderGoals(){
   const c=document.getElementById('goalsContainer');if(!c)return;
   // Hapus semua card lama; pertahankan event listener delegation yang sudah terpasang
@@ -4154,7 +4201,7 @@ function renderGoals(){
 
     div.innerHTML = `
       <div class="goal-h">
-        <div class="goal-ico" style="background:${g.color}18;">${goalIcons[g.color]||goalIcons['#1A56C4']}</div>
+        <div class="goal-ico" style="background:${g.color}18;">${goalIconSvg(g.name,g.color)}</div>
         <button class="goal-more">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
           <div class="ctx-menu" style="display:none;">
@@ -4285,7 +4332,7 @@ function quickAdd(id){
 }
 function updateQAPreview(){
   const g = goals.find(x => x.id === _qaGoalId); if(!g) return;
-  const raw = parseFloat(document.getElementById('qaAmount').value) || 0;
+  const raw = _parseCurrencyInputValue('qaAmount');
   const rp  = isModeRp() ? raw : Math.round(raw * exRate);
   const ePreview = document.getElementById('qa-preview');
   const eAfterVal = document.getElementById('qa-after-val');
@@ -4305,7 +4352,7 @@ function closeQuickAddModal(){
 }
 function confirmQuickAdd(){
   const g = goals.find(x => x.id === _qaGoalId); if(!g) return;
-  const raw = parseFloat(document.getElementById('qaAmount').value);
+  const raw = _parseCurrencyInputValue('qaAmount');
   if(!raw || isNaN(raw) || raw <= 0){
     toast(lang==='id' ? '⚠️ Masukkan jumlah yang valid' : '⚠️ Enter a valid amount');
     return;
@@ -4322,15 +4369,22 @@ function confirmQuickAdd(){
   renderGoals(); updateSavingsTotal();
   fbAutoSave();
 }
-function openNewGoalModal(){document.getElementById('goalName').value='';document.getElementById('goalDesc').value='';document.getElementById('goalTarget').value='';document.getElementById('goalCurrent').value='';goalColor='#1A56C4';updateGCP();document.getElementById('goalModal').classList.add('on');}
+function openNewGoalModal(){document.getElementById('goalName').value='';document.getElementById('goalDesc').value='';document.getElementById('goalTarget').value='';document.getElementById('goalCurrent').value='';goalColor='#1A56C4';updateGCP();updateGoalIconPreview();document.getElementById('goalModal').classList.add('on');}
+function updateGoalIconPreview(){
+  const name=document.getElementById('goalName').value;
+  const el=document.getElementById('gmIconPreview');
+  if(!el)return;
+  el.style.background=goalColor+'18';
+  el.innerHTML=goalIconSvg(name,goalColor);
+}
 function closeGoalModal(){document.getElementById('goalModal').classList.remove('on');}
-function selectGoalColor(el){goalColor=el.getAttribute('data-color');updateGCP();}
+function selectGoalColor(el){goalColor=el.getAttribute('data-color');updateGCP();updateGoalIconPreview();}
 function updateGCP(){document.querySelectorAll('.goal-color-opt').forEach(o=>{const m=o.getAttribute('data-color')===goalColor;o.style.border=m?`3px solid ${goalColor}`:'3px solid transparent';o.style.boxShadow=m?'0 0 0 2px white':'none';});}
 function saveGoal(){
   const name=document.getElementById('goalName').value.trim();
   if(!name){toast('⚠️ Goal name required');return;}
-  const tgt=parseFloat(document.getElementById('goalTarget').value)||0;
-  const cur=parseFloat(document.getElementById('goalCurrent').value)||0;
+  const tgt=_parseCurrencyInputValue('goalTarget');
+  const cur=_parseCurrencyInputValue('goalCurrent');
   const rpT=isModeRp()?tgt:Math.round(tgt*exRate);
   const rpC=isModeRp()?cur:Math.round(cur*exRate);
   goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor});
@@ -4339,9 +4393,16 @@ function saveGoal(){
   toast(`🎯 Goal "${name}" created!`);
   fbAutoSave();
 }
-function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';document.getElementById('editGoalModal').classList.add('on');}
+function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;editingGoalColor=g.color||'#1A56C4';document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target).toLocaleString('id-ID'):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';updateEditGoalIconPreview();document.getElementById('editGoalModal').classList.add('on');}
+function updateEditGoalIconPreview(){
+  const name=document.getElementById('egName').value;
+  const el=document.getElementById('egmIconPreview');
+  if(!el)return;
+  el.style.background=editingGoalColor+'18';
+  el.innerHTML=goalIconSvg(name,editingGoalColor);
+}
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=parseFloat(document.getElementById('egTarget').value)||0;g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=parseFloat(document.getElementById('egAdd').value)||0;if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
@@ -4606,9 +4667,125 @@ function _detectBrand(name){
   return null;
 }
 
+// ── Geser Manual Urutan Kartu/Wallet ──
+// Tahan (long-press) sebuah kartu ~380ms → masuk "Mode Atur Urutan": semua
+// kartu bergetar halus (indikasi visual siap digeser, mirip atur ulang ikon
+// di homescreen HP). Geser kartu ke kiri/kanan utk tukar posisi dgn kartu
+// tetangga secara real-time. Tekan "✓ Selesai" utk keluar dari mode ini.
+// Urutan akhir = urutan DOM saat itu, dituliskan balik ke array `wallets`
+// (posisi array = posisi tampil di carousel) lalu di-autosave ke cloud.
+//
+// Pakai Pointer Events (bukan touch/mouse terpisah) supaya satu kode jalan
+// konsisten baik di HP (touch) maupun desktop (mouse/trackpad).
+let _walletReorderMode = false;
+let _walletLongPressTimer = null;
+
+function _attachWalletDragHandlers(cardEl, walletId){
+  cardEl.addEventListener('pointerdown', (e)=>{
+    if(e.target.closest('.wc-more')) return; // jangan ganggu tombol menu (⋮) kartu
+    if(e.pointerType==='mouse' && e.button!==0) return; // cuma klik kiri utk mouse
+    const startX = e.clientX, startY = e.clientY;
+    clearTimeout(_walletLongPressTimer);
+    let cancelled = false;
+    const onEarlyMove = (ev)=>{
+      const dx=Math.abs(ev.clientX-startX), dy=Math.abs(ev.clientY-startY);
+      // Gerakan signifikan SEBELUM long-press terpicu = user cuma mau
+      // swipe/scroll carousel biasa, BUKAN mau reorder — batalkan.
+      if(dx>10||dy>10){ cancelled=true; clearTimeout(_walletLongPressTimer); cleanup(); }
+    };
+    const onEarlyUp = ()=>{ cancelled=true; clearTimeout(_walletLongPressTimer); cleanup(); };
+    const cleanup = ()=>{
+      cardEl.removeEventListener('pointermove', onEarlyMove);
+      cardEl.removeEventListener('pointerup', onEarlyUp);
+      cardEl.removeEventListener('pointercancel', onEarlyUp);
+    };
+    cardEl.addEventListener('pointermove', onEarlyMove);
+    cardEl.addEventListener('pointerup', onEarlyUp, {once:true});
+    cardEl.addEventListener('pointercancel', onEarlyUp, {once:true});
+    _walletLongPressTimer = setTimeout(()=>{
+      cleanup();
+      if(!cancelled) _startWalletDrag(cardEl, e);
+    }, 380);
+  });
+}
+
+function _startWalletDrag(cardEl, startEvent){
+  if(navigator.vibrate) { try{ navigator.vibrate(15); }catch(e){} } // getar halus kalau device support — aman diabaikan kalau tidak ada
+  enterWalletReorderMode();
+  cardEl.classList.add('wallet-dragging');
+  try{ cardEl.setPointerCapture(startEvent.pointerId); }catch(e){}
+  const startX = startEvent.clientX;
+
+  const onMove = (ev)=>{
+    ev.preventDefault();
+    const dx = ev.clientX - startX;
+    cardEl.style.transform = `translateX(${dx}px) scale(1.05)`;
+    _checkWalletSwap(cardEl, ev.clientX);
+  };
+  const onUp = (ev)=>{
+    try{ cardEl.releasePointerCapture(ev.pointerId); }catch(e){}
+    cardEl.removeEventListener('pointermove', onMove);
+    cardEl.removeEventListener('pointerup', onUp);
+    cardEl.removeEventListener('pointercancel', onUp);
+    cardEl.classList.remove('wallet-dragging');
+    cardEl.style.transform = '';
+    _commitWalletOrder();
+  };
+  cardEl.addEventListener('pointermove', onMove);
+  cardEl.addEventListener('pointerup', onUp);
+  cardEl.addEventListener('pointercancel', onUp);
+}
+
+// Cek apakah kartu yang sedang di-drag sudah "melewati" titik tengah kartu
+// tetangga — kalau iya, tukar posisi DOM-nya (bukan cuma visual, langsung
+// pindah node-nya) supaya urutan yang terlihat = urutan yang akan disimpan.
+function _checkWalletSwap(draggedEl, pointerX){
+  const container = document.getElementById('walletsContainer');
+  if(!container) return;
+  const siblings = Array.from(container.querySelectorAll('.wallet-card')).filter(x=>x!==draggedEl);
+  const draggedRect = draggedEl.getBoundingClientRect();
+  const draggedMid = draggedRect.left + draggedRect.width/2;
+  for(const sib of siblings){
+    const r = sib.getBoundingClientRect();
+    if(draggedMid > r.left && draggedMid < r.right){
+      const sibMid = r.left + r.width/2;
+      if(draggedMid < sibMid) container.insertBefore(draggedEl, sib);
+      else container.insertBefore(draggedEl, sib.nextSibling);
+      break;
+    }
+  }
+}
+
+// Tuliskan urutan DOM saat ini balik ke array `wallets`, lalu simpan.
+function _commitWalletOrder(){
+  const container = document.getElementById('walletsContainer');
+  if(!container) return;
+  const orderedIds = Array.from(container.querySelectorAll('.wallet-card')).map(el=>parseInt(el.dataset.walletId,10));
+  wallets.sort((a,b)=> orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id));
+  fbAutoSave();
+}
+
+function enterWalletReorderMode(){
+  if(_walletReorderMode) return;
+  _walletReorderMode = true;
+  const c = document.getElementById('walletsContainer');
+  if(c) c.classList.add('reorder-mode');
+  const btn = document.getElementById('walletReorderDoneBtn');
+  if(btn) btn.style.display='inline-block';
+}
+function exitWalletReorderMode(){
+  _walletReorderMode = false;
+  const c = document.getElementById('walletsContainer');
+  if(c) c.classList.remove('reorder-mode');
+  const btn = document.getElementById('walletReorderDoneBtn');
+  if(btn) btn.style.display='none';
+}
+
 function renderWallets(){
   _ensureWalletCtxPortal();
   _hideWalletCtx();
+  const hintEl = document.getElementById('wlt-reorder-hint');
+  if(hintEl) hintEl.textContent = lang==='id' ? '☰ Tahan & geser kartu untuk urutkan' : '☰ Hold & drag a card to reorder';
   if(!Array.isArray(wallets)) wallets=[];
   const c=document.getElementById('walletsContainer');if(!c)return;c.innerHTML='';
   if(wallets.length===0){
@@ -4702,6 +4879,8 @@ function renderWallets(){
         <div class="wc-num">•••• •••• •••• ${escapeHtml(w.num)}</div>
         <div class="wc-footer"><div><div class="wc-bal">${fmt(w.balance)}</div><div class="wc-type">${w.type}</div></div></div>`;
     }
+    div.dataset.walletId = w.id;
+    _attachWalletDragHandlers(div, w.id);
     c.appendChild(div);
   });
   const ab=document.createElement('button');ab.className='add-wallet-btn';ab.onclick=openWalletModal;
@@ -4737,7 +4916,7 @@ function saveWallet(){
   const bank=document.getElementById('walletBank').value.trim();
   if(!bank){toast('⚠️ Bank name required');return;}
   const num=document.getElementById('walletNum').value.trim()||'0000';
-  const bal=parseFloat(document.getElementById('walletBal').value)||0;
+  const bal=_parseCurrencyInputValue('walletBal');
   // Jika mode USD, konversi ke Rupiah; jika sudah Rp, langsung pakai
   const rp=isModeRp()?bal:Math.round(bal*exRate);
   const newId = walletIdCtr++;
@@ -4759,7 +4938,7 @@ function openEditWallet(id){
   document.getElementById('ewModalTitle').textContent = (lang==='id'?'Edit ':'Edit ')+w.bank;
   document.getElementById('ewBank').value = w.bank;
   document.getElementById('ewNum').value = w.num;
-  document.getElementById('ewBal').value = isModeRp() ? Math.round(w.balance) : (w.balance / exRate).toFixed(2);
+  document.getElementById('ewBal').value = isModeRp() ? Math.round(w.balance).toLocaleString('id-ID') : (w.balance / exRate).toFixed(2);
   document.getElementById('ewCurr').textContent = isModeRp() ? 'Rp' : '$';
   // Load color: pakai customColor jika ada, else brand gradient, else w.color
   const _brand = _detectBrand(w.bank);
@@ -4791,7 +4970,7 @@ function updateEWPreview(){
   const prev=document.getElementById('ewCardPreview'); if(!prev) return;
   const bank=document.getElementById('ewBank')?.value||'';
   const num=document.getElementById('ewNum')?.value||'0000';
-  const bal=parseFloat(document.getElementById('ewBal')?.value)||0;
+  const bal=_parseCurrencyInputValue('ewBal');
   const [c1,c2]=editWalletColorSel.split(',');
   prev.style.background=`linear-gradient(135deg,${c1},${c2})`;
   document.getElementById('ewPreviewBank').textContent=bank.toUpperCase();
@@ -4805,7 +4984,7 @@ function updateWallet(){
   if(!w){toast('⚠️ Kartu tidak ditemukan');return;}
   w.bank=document.getElementById('ewBank').value.trim()||w.bank;
   w.num=document.getElementById('ewNum').value.trim()||w.num;
-  const raw=parseFloat(document.getElementById('ewBal').value)||0;
+  const raw=_parseCurrencyInputValue('ewBal');
   w.balance=isModeRp()?raw:Math.round(raw*exRate);
   // Simpan ke customColor agar brand card bisa di-override warnanya
   w.color = editWalletColorSel;
@@ -6201,8 +6380,8 @@ async function requestPushPermission(){
 }
 function showPinChange(){document.getElementById('secMain').style.display='none';document.getElementById('pinChangeView').style.display='block';pinBuf='';pinStp=0;newPinSaved='';updatePinDisplay();document.getElementById('pin-instruction').textContent='Enter New PIN';}
 function hidePinChange(){document.getElementById('secMain').style.display='block';document.getElementById('pinChangeView').style.display='none';pinBuf='';pinStp=0;newPinSaved='';}
-function showBackupView(){document.getElementById('secMain').style.display='none';document.getElementById('backupView').style.display='block';renderBackupList();}
-function hideBackupView(){document.getElementById('secMain').style.display='block';document.getElementById('backupView').style.display='none';}
+function openBackupOvr(){ document.getElementById('backupOvr').style.display='flex'; renderBackupList(); }
+function closeBackupOvr(){ document.getElementById('backupOvr').style.display='none'; }
 function updatePinDisplay(){for(let i=0;i<4;i++)document.getElementById('pd'+i)?.classList.toggle('fill',i<pinBuf.length);}
 // Catatan: pinKey() versi asli yang benar-benar dipakai (yang menyimpan
 // savedPin) ada di bagian "PIN SETUP" di bawah file. Definisi duplikat yang
@@ -8800,7 +8979,6 @@ function openSecOverlay(){
   document.getElementById('secOvr').classList.add('on');
   document.getElementById('secMain').style.display='block';
   document.getElementById('pinChangeView').style.display='none';
-  document.getElementById('backupView').style.display='none';
   document.getElementById('loginActivityView').style.display='none';
   syncSettingsToggles();
 }
@@ -10875,6 +11053,40 @@ function selectAnggaranCat(el, c){
   selAnggaranCat = c.id;
 }
 
+// ── Formatter input uang terpadu (dipakai di form Goal, Wallet, Quick Add) ──
+// Sadar mode mata uang aktif (isModeRp() = true kalau bahasa app = Indonesia,
+// yang berarti Rupiah/bilangan bulat; false = mode USD/asing yang boleh
+// desimal). Ini SENGAJA fungsi terpisah dari formatAnggaranInput/
+// formatTagihanNominal (yang SELALU integer Rupiah) karena field goal/wallet
+// bisa dipakai dalam 2 mode berbeda tergantung bahasa app.
+function formatCurrencyInput(el){
+  if(isModeRp()){
+    // Mode Rupiah: bilangan bulat, titik ribuan — sama seperti field lain.
+    let raw = el.value.replace(/[^0-9]/g,'');
+    if(raw===''){ el.value=''; return; }
+    el.value = parseInt(raw,10).toLocaleString('id-ID');
+  } else {
+    // Mode USD/asing: boleh SATU titik desimal. Sengaja TIDAK diformat
+    // ribuan di mode ini — angkanya biasanya kecil (USD), dan format-ulang
+    // live saat mengetik desimal gampang bikin kursor loncat/mengganggu.
+    let raw = el.value.replace(/[^0-9.]/g,'');
+    const parts = raw.split('.');
+    if(parts.length>2) raw = parts[0]+'.'+parts.slice(1).join('');
+    el.value = raw;
+  }
+}
+// Baca nilai NUMERIK asli dari input yang sudah diformat formatCurrencyInput()
+// — jangan pernah pakai parseFloat() langsung ke .value field ini, karena
+// "10.000.000" (format ribuan Rupiah) akan salah diparse jadi 10 oleh
+// parseFloat biasa.
+function _parseCurrencyInputValue(elId){
+  const el = document.getElementById(elId);
+  if(!el) return 0;
+  const v = el.value || '';
+  if(isModeRp()) return parseInt(v.replace(/[^0-9]/g,''),10) || 0;
+  return parseFloat(v.replace(/[^0-9.]/g,'')) || 0;
+}
+
 function formatAnggaranInput(el){
   let raw = el.value.replace(/[^0-9]/g,'');
   const num = parseInt(raw)||0;
@@ -11220,6 +11432,29 @@ function closeAnggaranRiwayat(){
 <!-- ══════════════════════════════════════════════════════════
      UTANG & PIUTANG — overlay
 ════════════════════════════════════════════════════════════ -->
+<div id="backupOvr" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
+  <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">
+    <button onclick="closeBackupOvr()" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" stroke-width="2.5"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <div style="font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);flex:1;">Backup & Pulihkan Data</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px 20px 20px;">
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:12px;color:var(--t3);line-height:1.5;">Backup otomatis dibuat 1x/hari saat app dipakai (disimpan 7 hari terakhir). Backup sebelum melakukan hal berisiko (mis. update app) supaya lebih aman.</div>
+    </div>
+    <button id="manualBackupBtn" onclick="manualBackupNow()" style="width:100%;background:var(--accent,#1A56C4);color:#fff;border:none;border-radius:14px;padding:14px;font-family:var(--f);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;">📦 Backup Sekarang</button>
+    <div style="display:flex;gap:10px;margin-bottom:18px;">
+      <button onclick="downloadBackupFile()" style="flex:1;background:var(--surface2);color:var(--navy);border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">⬇️ Download File</button>
+      <button onclick="shareBackupToWhatsApp()" style="flex:1;background:#25D366;color:#fff;border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">📤 Bagikan ke WA</button>
+    </div>
+    <div style="font-size:11px;color:var(--t3);line-height:1.5;margin:-10px 0 14px;">Download/Bagikan mengambil kondisi data TERKINI langsung dari app (bukan file lama) — bukan integrasi resmi WhatsApp, cuma memakai menu share bawaan HP kamu. Di sebagian browser desktop, tombol Bagikan otomatis jadi download biasa. Setiap kali diminta, kamu bisa pilih lindungi file dengan kata sandi (opsional) — kosongkan saja kalau tidak perlu.</div>
+    <input type="file" id="restoreFileInput" accept="application/json,.json" style="display:none;" onchange="restoreFromUploadedFile(event)">
+    <button onclick="triggerRestoreFromFilePicker()" style="width:100%;background:var(--surface2);color:var(--navy);border:none;border-radius:14px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:18px;">📂 Pulihkan dari File (biasa/terenkripsi)</button>
+    <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.6px;margin-bottom:10px;">BACKUP TERSEDIA</div>
+    <div id="backupListBox"></div>
+  </div>
+</div>
 <div id="debts-overlay" style="display:none;position:fixed;inset:0;z-index:900;background:var(--bg);flex-direction:column;">
   <div style="display:flex;align-items:center;padding:16px 16px 0;gap:10px;flex-shrink:0;">
     <button onclick="closeDebtsOverlay()" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">

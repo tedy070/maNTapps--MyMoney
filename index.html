@@ -1498,20 +1498,22 @@ body{background:var(--bg);transition:background .35s;}
 .wallet-card::before{content:'';position:absolute;top:-25px;right:-25px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none;}
 .wallet-card::after{content:'';position:absolute;bottom:-35px;left:10px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none;}
 
-/* ── Mode Atur Urutan Kartu (long-press lalu geser) ──
-   Semua kartu bergetar halus sbg indikasi visual "siap digeser" (mirip
-   atur ulang ikon di homescreen HP). Kartu yang sedang aktif di-drag
-   berhenti bergetar & tampil terangkat (scale + shadow lebih tebal). */
-@keyframes walletWiggle{
-  0%{transform:rotate(-1deg);}
-  50%{transform:rotate(1deg);}
-  100%{transform:rotate(-1deg);}
+/* ── Mode Atur Urutan (long-press lalu geser) ──
+   v2: reorder sekarang dilakukan di BARIS daftar "Total Semua Kartu",
+   bukan di kartu horizontal lagi. Tahan baris ~380ms → semua baris
+   bergetar halus (indikasi "siap digeser"), baris yang sedang aktif
+   di-drag berhenti bergetar & terangkat (shadow lebih tebal). */
+@keyframes walletRowWiggle{
+  0%{transform:translateX(-1.5px);}
+  50%{transform:translateX(1.5px);}
+  100%{transform:translateX(-1.5px);}
 }
-.wallet-scroll.reorder-mode{scroll-snap-type:none;}
-.wallet-scroll.reorder-mode .wallet-card{animation:walletWiggle .22s ease-in-out infinite;touch-action:none;}
-.wallet-scroll.reorder-mode .wallet-card.wallet-dragging{
-  animation:none;opacity:.92;z-index:50;
-  box-shadow:0 18px 36px rgba(13,33,82,.4);
+.wallet-summary-row{display:flex;justify-content:space-between;align-items:center;padding:9px 6px;border-bottom:1px solid var(--border);border-radius:9px;}
+.wallet-summary-list.reorder-mode .wallet-summary-row{animation:walletRowWiggle .18s ease-in-out infinite;touch-action:none;}
+.wallet-summary-list.reorder-mode .wallet-summary-row.row-dragging{
+  animation:none;position:relative;z-index:50;
+  background:var(--surface2);
+  box-shadow:0 12px 28px rgba(13,33,82,.28);
   transition:none;
 }
 
@@ -2495,16 +2497,21 @@ body{background:var(--bg);transition:background .35s;}
 
         <!-- KARTU PANEL -->
         <div id="sv-kartu-panel">
-          <div style="padding:0 16px;margin-bottom:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
-            <div style="min-width:0;">
-              <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px;" id="wlt-ttl">My Wallets &amp; Cards</div>
-              <div style="font-size:12px;color:var(--t3);" id="wlt-sub">Swipe to view · Tap ⋮ to manage</div>
-              <div style="font-size:11px;color:var(--t3);margin-top:2px;" id="wlt-reorder-hint"></div>
-            </div>
-            <button id="walletReorderDoneBtn" onclick="exitWalletReorderMode()" style="display:none;background:var(--navy);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap;">✓ Selesai</button>
+          <div style="padding:0 16px;margin-bottom:12px;">
+            <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);margin-bottom:3px;" id="wlt-ttl">My Wallets &amp; Cards</div>
+            <div style="font-size:12px;color:var(--t3);" id="wlt-sub">Swipe to view · Tap ⋮ to manage</div>
           </div>
           <div class="wallet-scroll" id="walletsContainer"></div>
-          <div style="padding:0 16px;"><div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px;" id="wlt-summary">Total Across All Cards</div><div id="walletSummary"></div></div>
+          <div style="padding:0 16px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;">
+              <div style="min-width:0;">
+                <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);" id="wlt-summary">Total Across All Cards</div>
+                <div style="font-size:11px;color:var(--t3);margin-top:2px;" id="wlt-reorder-hint"></div>
+              </div>
+              <button id="walletReorderDoneBtn" onclick="exitWalletReorderMode()" style="display:none;background:var(--navy);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap;">✓ Selesai</button>
+            </div>
+            <div id="walletSummary"></div>
+          </div>
         </div>
 
         <!-- ANGGARAN PANEL -->
@@ -4402,7 +4409,7 @@ function updateEditGoalIconPreview(){
   el.innerHTML=goalIconSvg(name,editingGoalColor);
 }
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');g.target=isModeRp()?rawT:Math.round(rawT*exRate);const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast('✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
@@ -4668,21 +4675,26 @@ function _detectBrand(name){
 }
 
 // ── Geser Manual Urutan Kartu/Wallet ──
-// Tahan (long-press) sebuah kartu ~380ms → masuk "Mode Atur Urutan": semua
-// kartu bergetar halus (indikasi visual siap digeser, mirip atur ulang ikon
-// di homescreen HP). Geser kartu ke kiri/kanan utk tukar posisi dgn kartu
-// tetangga secara real-time. Tekan "✓ Selesai" utk keluar dari mode ini.
-// Urutan akhir = urutan DOM saat itu, dituliskan balik ke array `wallets`
-// (posisi array = posisi tampil di carousel) lalu di-autosave ke cloud.
+// v2: reorder sekarang dilakukan lewat BARIS di daftar "Total Semua Kartu"
+// (bukan lagi drag horizontal langsung di kartu). Tahan (long-press) sebuah
+// baris ~380ms → masuk "Mode Atur Urutan": semua baris bergetar halus
+// (indikasi visual siap digeser). Geser baris ke ATAS/BAWAH utk tukar posisi
+// dgn baris tetangga secara real-time. Tekan "✓ Selesai" utk keluar mode ini.
+// Urutan akhir = urutan DOM baris saat itu, dituliskan balik ke array
+// `wallets`, lalu kartu horizontal di atas ikut di-render ulang mengikuti
+// urutan baru (satu sumber data yang sama), lalu di-autosave ke cloud.
 //
 // Pakai Pointer Events (bukan touch/mouse terpisah) supaya satu kode jalan
-// konsisten baik di HP (touch) maupun desktop (mouse/trackpad).
+// konsisten baik di HP (touch) maupun desktop (mouse/trackpad). Sama seperti
+// versi kartu sebelumnya: selama jeda long-press (sebelum 380ms), gerakan
+// >10px dianggap niat SCROLL HALAMAN biasa (bukan reorder) dan dibatalkan —
+// scroll native tetap jalan normal karena belum ada preventDefault() yang
+// dipanggil pada fase ini.
 let _walletReorderMode = false;
 let _walletLongPressTimer = null;
 
-function _attachWalletDragHandlers(cardEl, walletId){
-  cardEl.addEventListener('pointerdown', (e)=>{
-    if(e.target.closest('.wc-more')) return; // jangan ganggu tombol menu (⋮) kartu
+function _attachWalletRowDragHandlers(rowEl, walletId){
+  rowEl.addEventListener('pointerdown', (e)=>{
     if(e.pointerType==='mouse' && e.button!==0) return; // cuma klik kiri utk mouse
     const startX = e.clientX, startY = e.clientY;
     clearTimeout(_walletLongPressTimer);
@@ -4690,93 +4702,96 @@ function _attachWalletDragHandlers(cardEl, walletId){
     const onEarlyMove = (ev)=>{
       const dx=Math.abs(ev.clientX-startX), dy=Math.abs(ev.clientY-startY);
       // Gerakan signifikan SEBELUM long-press terpicu = user cuma mau
-      // swipe/scroll carousel biasa, BUKAN mau reorder — batalkan.
+      // scroll halaman biasa, BUKAN mau reorder — batalkan.
       if(dx>10||dy>10){ cancelled=true; clearTimeout(_walletLongPressTimer); cleanup(); }
     };
     const onEarlyUp = ()=>{ cancelled=true; clearTimeout(_walletLongPressTimer); cleanup(); };
     const cleanup = ()=>{
-      cardEl.removeEventListener('pointermove', onEarlyMove);
-      cardEl.removeEventListener('pointerup', onEarlyUp);
-      cardEl.removeEventListener('pointercancel', onEarlyUp);
+      rowEl.removeEventListener('pointermove', onEarlyMove);
+      rowEl.removeEventListener('pointerup', onEarlyUp);
+      rowEl.removeEventListener('pointercancel', onEarlyUp);
     };
-    cardEl.addEventListener('pointermove', onEarlyMove);
-    cardEl.addEventListener('pointerup', onEarlyUp, {once:true});
-    cardEl.addEventListener('pointercancel', onEarlyUp, {once:true});
+    rowEl.addEventListener('pointermove', onEarlyMove);
+    rowEl.addEventListener('pointerup', onEarlyUp, {once:true});
+    rowEl.addEventListener('pointercancel', onEarlyUp, {once:true});
     _walletLongPressTimer = setTimeout(()=>{
       cleanup();
-      if(!cancelled) _startWalletDrag(cardEl, e);
+      if(!cancelled) _startWalletRowDrag(rowEl, e);
     }, 380);
   });
 }
 
-function _startWalletDrag(cardEl, startEvent){
+function _startWalletRowDrag(rowEl, startEvent){
   if(navigator.vibrate) { try{ navigator.vibrate(15); }catch(e){} } // getar halus kalau device support — aman diabaikan kalau tidak ada
   enterWalletReorderMode();
-  cardEl.classList.add('wallet-dragging');
-  try{ cardEl.setPointerCapture(startEvent.pointerId); }catch(e){}
-  const startX = startEvent.clientX;
+  rowEl.classList.add('row-dragging');
+  try{ rowEl.setPointerCapture(startEvent.pointerId); }catch(e){}
+  const startY = startEvent.clientY;
 
   const onMove = (ev)=>{
     ev.preventDefault();
-    const dx = ev.clientX - startX;
-    cardEl.style.transform = `translateX(${dx}px) scale(1.05)`;
-    _checkWalletSwap(cardEl, ev.clientX);
+    const dy = ev.clientY - startY;
+    rowEl.style.transform = `translateY(${dy}px)`;
+    _checkWalletRowSwap(rowEl);
   };
   const onUp = (ev)=>{
-    try{ cardEl.releasePointerCapture(ev.pointerId); }catch(e){}
-    cardEl.removeEventListener('pointermove', onMove);
-    cardEl.removeEventListener('pointerup', onUp);
-    cardEl.removeEventListener('pointercancel', onUp);
-    cardEl.classList.remove('wallet-dragging');
-    cardEl.style.transform = '';
+    try{ rowEl.releasePointerCapture(ev.pointerId); }catch(e){}
+    rowEl.removeEventListener('pointermove', onMove);
+    rowEl.removeEventListener('pointerup', onUp);
+    rowEl.removeEventListener('pointercancel', onUp);
+    rowEl.classList.remove('row-dragging');
+    rowEl.style.transform = '';
     _commitWalletOrder();
   };
-  cardEl.addEventListener('pointermove', onMove);
-  cardEl.addEventListener('pointerup', onUp);
-  cardEl.addEventListener('pointercancel', onUp);
+  rowEl.addEventListener('pointermove', onMove);
+  rowEl.addEventListener('pointerup', onUp);
+  rowEl.addEventListener('pointercancel', onUp);
 }
 
-// Cek apakah kartu yang sedang di-drag sudah "melewati" titik tengah kartu
-// tetangga — kalau iya, tukar posisi DOM-nya (bukan cuma visual, langsung
-// pindah node-nya) supaya urutan yang terlihat = urutan yang akan disimpan.
-function _checkWalletSwap(draggedEl, pointerX){
-  const container = document.getElementById('walletsContainer');
-  if(!container) return;
-  const siblings = Array.from(container.querySelectorAll('.wallet-card')).filter(x=>x!==draggedEl);
+// Cek apakah baris yang sedang di-drag sudah "melewati" titik tengah baris
+// tetangga (ATAS/BAWAH) — kalau iya, tukar posisi DOM-nya (bukan cuma
+// visual, langsung pindah node-nya) supaya urutan yang terlihat = urutan
+// yang akan disimpan.
+function _checkWalletRowSwap(draggedEl){
+  const list = draggedEl.closest('.wallet-summary-list');
+  if(!list) return;
+  const siblings = Array.from(list.querySelectorAll('.wallet-summary-row')).filter(x=>x!==draggedEl);
   const draggedRect = draggedEl.getBoundingClientRect();
-  const draggedMid = draggedRect.left + draggedRect.width/2;
+  const draggedMid = draggedRect.top + draggedRect.height/2;
   for(const sib of siblings){
     const r = sib.getBoundingClientRect();
-    if(draggedMid > r.left && draggedMid < r.right){
-      const sibMid = r.left + r.width/2;
-      if(draggedMid < sibMid) container.insertBefore(draggedEl, sib);
-      else container.insertBefore(draggedEl, sib.nextSibling);
+    if(draggedMid > r.top && draggedMid < r.bottom){
+      const sibMid = r.top + r.height/2;
+      if(draggedMid < sibMid) list.insertBefore(draggedEl, sib);
+      else list.insertBefore(draggedEl, sib.nextSibling);
       break;
     }
   }
 }
 
-// Tuliskan urutan DOM saat ini balik ke array `wallets`, lalu simpan.
+// Tuliskan urutan DOM baris saat ini balik ke array `wallets`, render ulang
+// kartu horizontal + daftar (biar keduanya sinkron), lalu simpan.
 function _commitWalletOrder(){
-  const container = document.getElementById('walletsContainer');
-  if(!container) return;
-  const orderedIds = Array.from(container.querySelectorAll('.wallet-card')).map(el=>parseInt(el.dataset.walletId,10));
+  const list = document.querySelector('.wallet-summary-list');
+  if(!list) return;
+  const orderedIds = Array.from(list.querySelectorAll('.wallet-summary-row')).map(el=>parseInt(el.dataset.wid,10));
   wallets.sort((a,b)=> orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id));
+  renderWallets(); // render ulang kartu (ikut urutan baru) + daftar; status "reorder-mode" dipulihkan otomatis kalau masih aktif
   fbAutoSave();
 }
 
 function enterWalletReorderMode(){
   if(_walletReorderMode) return;
   _walletReorderMode = true;
-  const c = document.getElementById('walletsContainer');
-  if(c) c.classList.add('reorder-mode');
+  const list = document.querySelector('.wallet-summary-list');
+  if(list) list.classList.add('reorder-mode');
   const btn = document.getElementById('walletReorderDoneBtn');
   if(btn) btn.style.display='inline-block';
 }
 function exitWalletReorderMode(){
   _walletReorderMode = false;
-  const c = document.getElementById('walletsContainer');
-  if(c) c.classList.remove('reorder-mode');
+  const list = document.querySelector('.wallet-summary-list');
+  if(list) list.classList.remove('reorder-mode');
   const btn = document.getElementById('walletReorderDoneBtn');
   if(btn) btn.style.display='none';
 }
@@ -4784,8 +4799,6 @@ function exitWalletReorderMode(){
 function renderWallets(){
   _ensureWalletCtxPortal();
   _hideWalletCtx();
-  const hintEl = document.getElementById('wlt-reorder-hint');
-  if(hintEl) hintEl.textContent = lang==='id' ? '☰ Tahan & geser kartu untuk urutkan' : '☰ Hold & drag a card to reorder';
   if(!Array.isArray(wallets)) wallets=[];
   const c=document.getElementById('walletsContainer');if(!c)return;c.innerHTML='';
   if(wallets.length===0){
@@ -4880,7 +4893,6 @@ function renderWallets(){
         <div class="wc-footer"><div><div class="wc-bal">${fmt(w.balance)}</div><div class="wc-type">${w.type}</div></div></div>`;
     }
     div.dataset.walletId = w.id;
-    _attachWalletDragHandlers(div, w.id);
     c.appendChild(div);
   });
   const ab=document.createElement('button');ab.className='add-wallet-btn';ab.onclick=openWalletModal;
@@ -4891,14 +4903,27 @@ function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!
 function renderWalletSummary(){
   const e=document.getElementById('walletSummary');if(!e)return;
   const list=Array.isArray(wallets)?wallets:[];
+  const hintEl = document.getElementById('wlt-reorder-hint');
+  if(hintEl) hintEl.textContent = lang==='id' ? '☰ Tahan salah satu baris untuk urutkan' : '☰ Hold any row to reorder';
   try{
     const t=list.reduce((s,w)=>s+(typeof w.balance==='number'&&!isNaN(w.balance)?w.balance:0),0);
     const rows=list.map(w=>{
       const col=(w.color||'#1A56C4,#2A6FD6').split(',');
       const bank=escapeHtml(w.bank||'Wallet'), num=escapeHtml(w.num||'0000');
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,${col[0]},${col[1]||col[0]});"></div><span style="font-size:13px;color:var(--t2);">${bank} ••••${num}</span></div><span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${fmt(typeof w.balance==='number'&&!isNaN(w.balance)?w.balance:0)}</span></div>`;
+      return `<div class="wallet-summary-row" data-wid="${w.id}"><div style="display:flex;align-items:center;gap:8px;"><div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,${col[0]},${col[1]||col[0]});flex-shrink:0;"></div><span style="font-size:13px;color:var(--t2);">${bank} ••••${num}</span></div><span style="font-family:var(--f);font-size:13px;font-weight:600;color:var(--navy);">${fmt(typeof w.balance==='number'&&!isNaN(w.balance)?w.balance:0)}</span></div>`;
     }).join('');
-    e.innerHTML=`<div class="lg-list-card" style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${list.length} cards</div></div>${rows}</div>`;
+    e.innerHTML=`<div class="lg-list-card wallet-summary-list" style="background:var(--surface);border-radius:14px;padding:16px;box-shadow:var(--sh2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">TOTAL ALL CARDS</div><div style="font-family:var(--f);font-size:22px;font-weight:800;color:var(--navy);">${fmt(t)}</div></div><div style="font-size:12px;color:var(--t3);">${list.length} cards</div></div>${rows}</div>`;
+    // Pasang handler drag per baris + pulihkan status "reorder-mode" (kalau
+    // user sedang dalam mode atur urutan saat render ulang ini terjadi,
+    // mis. setelah commit satu drag, biar bisa lanjut drag baris lain
+    // tanpa perlu tahan ulang dari awal).
+    const wrap = e.querySelector('.wallet-summary-list');
+    if(wrap){
+      if(_walletReorderMode) wrap.classList.add('reorder-mode');
+      wrap.querySelectorAll('.wallet-summary-row').forEach(rowEl=>{
+        _attachWalletRowDragHandlers(rowEl, parseInt(rowEl.dataset.wid,10));
+      });
+    }
   }catch(err){
     console.error('renderWalletSummary error:', err);
     // Jangan biarkan kosong sama sekali — tampilkan fallback minimal

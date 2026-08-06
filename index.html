@@ -2902,7 +2902,7 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- EDIT GOAL MODAL -->
 <div class="moverlay" id="editGoalModal">
-  <div class="msheet">
+  <div class="msheet" style="padding:20px 20px calc(var(--safe-bot) + 28px);">
     <div class="mhandle"></div>
     <div class="mhdr"><div class="mttl" id="egm-title">Edit Goal</div><button class="mcls" onclick="closeEditGoalModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <input type="hidden" id="editGoalId">
@@ -2922,7 +2922,7 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- TRANSACTION DETAIL MODAL — tap baris riwayat utk lihat rincian + Edit/Hapus -->
 <div class="moverlay" id="txDetailModal">
-  <div class="msheet">
+  <div class="msheet" style="padding:20px 20px calc(var(--safe-bot) + 28px);">
     <div class="mhandle"></div>
     <div class="mhdr"><div class="mttl" id="txd-title">Detail Transaksi</div><button class="mcls" onclick="closeTxDetailModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <input type="hidden" id="txDetailId">
@@ -2939,14 +2939,14 @@ body{background:var(--bg);transition:background .35s;}
       <div id="txd-row-src" style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--t3);">Dari</span><span id="txd-src" style="color:var(--navy);font-weight:600;"></span></div>
       <div id="txd-row-dest" style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--t3);">Ke</span><span id="txd-dest" style="color:var(--navy);font-weight:600;"></span></div>
     </div>
-    <button class="btn btn-p" onclick="openEditTxFromDetail()" style="margin-bottom:8px;">✏️ Edit Transaksi</button>
-    <button class="btn btn-danger" onclick="deleteTransactionItem(parseInt(document.getElementById('txDetailId').value))">🗑️ Hapus Transaksi</button>
+    <button class="btn btn-p" onclick="openEditTxFromDetail()" style="margin-bottom:8px;">Edit Transaksi</button>
+    <button class="btn btn-danger" onclick="deleteTransactionItem(parseInt(document.getElementById('txDetailId').value))">Hapus Transaksi</button>
   </div>
 </div>
 
 <!-- EDIT TRANSACTION MODAL -->
 <div class="moverlay" id="editTxModal">
-  <div class="msheet">
+  <div class="msheet" style="padding:20px 20px calc(var(--safe-bot) + 28px);">
     <div class="mhandle"></div>
     <div class="mhdr"><div class="mttl">Edit Transaksi</div><button class="mcls" onclick="closeEditTxModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <input type="hidden" id="editTxId">
@@ -4460,7 +4460,7 @@ function updateEditGoalIconPreview(){
 }
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
 function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
-function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" deleted`);fbAutoSave();}
+function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`))return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
   const goalTotal  = goals.reduce((s,g) => s + (g.current||0), 0);
@@ -5077,6 +5077,7 @@ function deleteWallet(){
   const w=wallets.find(x=>x.id===id);
   if(!w){toast('⚠️ Kartu tidak ditemukan');return;}
   const nama=w.bank;
+  if(!confirm(lang==='id'?`Hapus kartu "${nama} ••••${w.num}"?`:`Delete card "${nama} ••••${w.num}"?`)) return;
   wallets=wallets.filter(x=>x.id!==id);
   closeEditWalletModal();
   renderWallets();
@@ -5305,16 +5306,19 @@ function renderHistory(){
   c.innerHTML = filtered.map(h => {
     const nm = escapeHtml(h.langKey ? (T(h.langKey)||h.name) : h.name);
     const isTarik = isTarikTx(h);
-    const icon = isTarik
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
-      : h.pos
-        ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
-        : '<svg viewBox="0 0 24 24" stroke="var(--red)"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>';
+    const isPindah = isPindahBankTx(h);
+    const icon = isPindah
+      ? REPEAT_ICON_SVG
+      : isTarik
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
+        : h.pos
+          ? '<svg viewBox="0 0 24 24" stroke="var(--green)"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>'
+          : '<svg viewBox="0 0 24 24" stroke="var(--red)"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>';
     const catBadge = h.cat ? `<span style="font-size:10px;background:${h.catColor||'#e8effe'};color:${isTarik?'#6B7280':'#1A56C4'};border-radius:6px;padding:2px 6px;margin-left:6px;">${catDisplayName(h.cat)}</span>` : '';
     const srcInfo  = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${escapeHtml(h.src)}</span>` : '';
     const destInfo = isTarik && h.dest ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">→ ${escapeHtml(h.dest)}</span>` : '';
     const amtColor = isTarik ? 'color:#6B7280;' : '';
-    const amtSign  = isTarik ? '🏧 ' : (h.pos ? '+' : '-');
+    const amtSign  = isPindah ? '🔄 ' : (isTarik ? '🏧 ' : (h.pos ? '+' : '-'));
     const dateBadge = searchActive ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${new Date(h.ts||0).toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'})}</span>` : '';
     return `<div class="h-item" onclick="openTxDetail(${h.id})" style="cursor:pointer;">
       <div class="h-ico" style="${isTarik?'background:#F4F6FC;':''}">${icon}</div>
@@ -5346,7 +5350,7 @@ function openTxDetail(id){
     ? '<svg width="22" height="22" viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
     : '<svg width="22" height="22" viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>');
   const amtEl = document.getElementById('txd-amt');
-  amtEl.textContent = (isTarik?'🏧 ':(h.pos?'+':'-')) + fmt(Math.abs(h.amt));
+  amtEl.textContent = (isPindahBankTx(h) ? '🔄 ' : (isTarik?'🏧 ':(h.pos?'+':'-'))) + fmt(Math.abs(h.amt));
   amtEl.style.color = isTarik ? '#6B7280' : (h.pos ? 'var(--green)' : 'var(--red)');
   document.getElementById('txd-cat').textContent = h.cat ? catDisplayName(h.cat) : '—';
   const rowSrc  = document.getElementById('txd-row-src');
@@ -7281,14 +7285,17 @@ function renderRecentTxList(){
     item.className = 'tx-item';
     const isPos = h.pos || h.amt > 0;
     const isTarik = isTarikTx(h);
-    const amtSign = isTarik ? '🏧 ' : (isPos ? '+' : '-');
+    const isPindah = isPindahBankTx(h);
+    const amtSign = isPindah ? '🔄 ' : (isTarik ? '🏧 ' : (isPos ? '+' : '-'));
     const amtClass = isTarik ? '' : (isPos ? 'pos' : 'neg');
     const catColor = isTarik ? '#F4F6FC' : (h.catColor || (isPos ? '#EBFEF3' : '#FEEBEB'));
-    const catIco   = isTarik
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
-      : (h.catIco || (isPos
-        ? '<svg viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
-        : '<svg viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'));
+    const catIco   = isPindah
+      ? REPEAT_ICON_SVG
+      : isTarik
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1" fill="#6B7280"/></svg>'
+        : (h.catIco || (isPos
+          ? '<svg viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
+          : '<svg viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>'));
     const nm = escapeHtml(h.langKey ? (T(h.langKey)||h.name) : h.name);
     const amtStyle = isTarik ? 'color:#6B7280;' : '';
     item.innerHTML = `<div class="tx-ico" style="background:${catColor};">${catIco}</div>
@@ -7420,6 +7427,12 @@ function selectAnalyticsBulan(y, m) {
 function isTarikTx(h) {
   return h.type === 'tarik' || h.cat === 'tarik' || h.cat === 'pindah_bank';
 }
+// 'Pindah Bank' adalah perpindahan saldo antar bank milik sendiri — ikon yang
+// relevan adalah ikon repeat/mengulang (bukan ikon ATM yang dipakai utk Tarik Tunai).
+function isPindahBankTx(h) {
+  return h.cat === 'pindah_bank';
+}
+const REPEAT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 10V8a4 4 0 014-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 14v2a4 4 0 01-4 4H3"/></svg>';
 
 // ── Kumpulkan data per-periode ──
 function getAnalyticsData(period) {
@@ -10007,6 +10020,7 @@ function renderTagihanRiwayat() {
 
 function hapusRiwayatTagihan(id) {
   const t = tagihan.find(x=>x.id===id);
+  if(!confirm(lang==='id'?`Hapus "${t?.nama||'tagihan'}" dari riwayat?`:`Delete "${t?.nama||'bill'}" from history?`)) return;
   tagihan = tagihan.filter(x=>x.id!==id);
   renderTagihanList();
   if (_tagihanTab === 'riwayat') renderTagihanRiwayat();
@@ -10016,6 +10030,7 @@ function hapusRiwayatTagihan(id) {
 
 function hapusRiwayatBulanan(id) {
   const r = tagihanRiwayatBulanan.find(x=>x.id===id);
+  if(!confirm(lang==='id'?`Hapus "${r?.nama||'riwayat'}" ini?`:`Delete "${r?.nama||'this entry'}"?`)) return;
   tagihanRiwayatBulanan = tagihanRiwayatBulanan.filter(x=>x.id!==id);
   renderTagihanRiwayat();
   toast(`\uD83D\uDDD1\uFE0F ${r?.nama||'Riwayat'} dihapus`);
@@ -11508,6 +11523,7 @@ function editAnggaran(id){
 function hapusAnggaran(){
   const id = parseInt(document.getElementById('anggaran-edit-id').value)||0;
   if(!id) return;
+  if(!confirm(lang==='id'?'Hapus anggaran ini?':'Delete this budget?')) return;
   budgets = budgets.filter(b => b.id !== id);
   closeAnggaranModal();
   renderAnggaranList();

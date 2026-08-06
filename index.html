@@ -689,6 +689,7 @@ function _applyStateFromDB(data){
     // ── Simpan snapshot lama (full copy) sebelum historyItems ditimpa ──
     const _oldSnapshot = historyItems ? historyItems.map(h => Object.assign({}, h)) : null;
     historyItems = data.historyItems;
+    _migrateHistoryIds();
     // ── KUNCI FIX: rekonsiliasi h.ts dari h.time ──────────────────────────────
     // User lebih mudah mengubah h.time (string seperti "25 Mei 2026, 10:30") di RTDB
     // daripada mengubah h.ts (integer Unix ms). Setelah rekonsiliasi, h.ts akan
@@ -2919,6 +2920,55 @@ body{background:var(--bg);transition:background .35s;}
   </div>
 </div>
 
+<!-- TRANSACTION DETAIL MODAL — tap baris riwayat utk lihat rincian + Edit/Hapus -->
+<div class="moverlay" id="txDetailModal">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mhdr"><div class="mttl" id="txd-title">Detail Transaksi</div><button class="mcls" onclick="closeTxDetailModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <input type="hidden" id="txDetailId">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+      <div id="txd-ico" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+      <div style="min-width:0;">
+        <div id="txd-name" style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);"></div>
+        <div id="txd-time" style="font-size:12px;color:var(--t3);margin-top:2px;"></div>
+      </div>
+    </div>
+    <div id="txd-amt" style="font-family:var(--f);font-size:28px;font-weight:800;text-align:center;margin-bottom:18px;"></div>
+    <div style="background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:20px;">
+      <div id="txd-row-cat" style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--t3);">Kategori</span><span id="txd-cat" style="color:var(--navy);font-weight:600;"></span></div>
+      <div id="txd-row-src" style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--t3);">Dari</span><span id="txd-src" style="color:var(--navy);font-weight:600;"></span></div>
+      <div id="txd-row-dest" style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--t3);">Ke</span><span id="txd-dest" style="color:var(--navy);font-weight:600;"></span></div>
+    </div>
+    <button class="btn btn-p" onclick="openEditTxFromDetail()" style="margin-bottom:8px;">✏️ Edit Transaksi</button>
+    <button class="btn btn-danger" onclick="deleteTransactionItem(parseInt(document.getElementById('txDetailId').value))">🗑️ Hapus Transaksi</button>
+  </div>
+</div>
+
+<!-- EDIT TRANSACTION MODAL -->
+<div class="moverlay" id="editTxModal">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mhdr"><div class="mttl">Edit Transaksi</div><button class="mcls" onclick="closeEditTxModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <input type="hidden" id="editTxId">
+    <div class="albl">JUMLAH</div>
+    <div class="awrap" style="margin-bottom:14px;"><span class="acurr" id="etxCurr">Rp</span><input class="ainput hv" type="text" inputmode="decimal" id="etxAmount" style="font-size:28px;" oninput="formatCurrencyInput(this)"></div>
+    <div class="albl">KATEGORI</div>
+    <select id="etxCat" style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);margin-bottom:14px;"></select>
+    <div class="albl">TANGGAL</div>
+    <input type="date" id="etxDate" style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);margin-bottom:14px;box-sizing:border-box;">
+    <div id="etxSrcRow" style="display:none;">
+      <div class="albl">DARI KARTU / SUMBER</div>
+      <select id="etxSrc" style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);margin-bottom:14px;"></select>
+    </div>
+    <div id="etxDestRow" style="display:none;">
+      <div class="albl">KE KARTU / TUJUAN</div>
+      <select id="etxDest" style="width:100%;background:var(--surface2);border:none;border-radius:12px;padding:12px 14px;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);margin-bottom:14px;"></select>
+    </div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">☝️ Saldo kartu lama & baru otomatis disesuaikan begitu perubahan disimpan.</div>
+    <button class="btn btn-p" onclick="saveEditedTx()">Simpan Perubahan</button>
+  </div>
+</div>
+
 <!-- QUICK ADD DANA MODAL -->
 <div class="moverlay" id="quickAddModal">
   <div class="msheet" style="padding:20px 20px 28px;">
@@ -4899,7 +4949,7 @@ function renderWallets(){
   ab.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Add Card</span>';
   c.appendChild(ab);renderWalletSummary();
 }
-function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);w.balance+=rp;addNotif('wallet',T('notif-topup'),`${fmt(rp)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,rp,true);toast(`✅ ${fmt(rp)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
+function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);w.balance+=rp;addNotif('wallet',T('notif-topup'),`${fmt(rp)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,rp,true,{type:'income',dest:`${w.bank} ••••${w.num}`,destWalletId:w.id});toast(`✅ ${fmt(rp)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
 function renderWalletSummary(){
   const e=document.getElementById('walletSummary');if(!e)return;
   const list=Array.isArray(wallets)?wallets:[];
@@ -5041,6 +5091,30 @@ function deleteWallet(){
 // HISTORY
 // ============================================================
 let historyItems=[];
+let historyIdCtr=1;
+
+// ── Migrasi ID transaksi lama ──
+// Transaksi yang dibuat SEBELUM fitur Edit/Hapus ini tidak punya field
+// `id` (cuma dibedakan lewat posisi array). Supaya SEMUA transaksi —
+// lama maupun baru — bisa diedit/dihapus dgn aman, kita kasih `id`
+// permanen ke item lama yang belum punya, sekali saja saat data dimuat.
+function _migrateHistoryIds(){
+  if(!Array.isArray(historyItems)) return;
+  const existingMax = historyItems.reduce((m,h)=> (typeof h.id==='number' && h.id>m ? h.id : m), 0);
+  if(existingMax+1 > historyIdCtr) historyIdCtr = existingMax+1;
+  historyItems.forEach(h=>{
+    if(typeof h.id!=='number') h.id = historyIdCtr++;
+  });
+}
+// Transaksi lama (sebelum fitur ini) juga tidak menyimpan srcWalletId/
+// destWalletId — cuma label teks (mis. "BCA ••1234"). Kalau nanti item
+// itu di-edit/dihapus, cari wallet yg cocok dari labelnya sbg fallback.
+// Kalau tidak ketemu (kartu sudah dihapus/ganti nama), dianggap Saldo Utama.
+function _resolveWalletIdFromLabel(label){
+  if(!label) return null;
+  const w = wallets.find(w => `${w.bank} ••••${w.num}`===label || `${w.bank} ••${w.num}`===label);
+  return w ? w.id : null;
+}
 // ============================================================
 // HISTORY — Bulan Filter + E-Statement
 // ============================================================
@@ -5132,6 +5206,7 @@ function addHistoryItem(name,usd,pos,extra={}){
   const now=new Date();
   const t=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   historyItems.unshift({
+    id:historyIdCtr++,
     name, time:`${T('today')||'Today'}, ${t}`, amt:usd, pos, ts:now.getTime(),
     cat:extra.cat||selCat, catColor:extra.catColor||selCatColor,
     catIco:extra.catIco||selCatIco, src:extra.src||'', dest:extra.dest||'',
@@ -5241,7 +5316,7 @@ function renderHistory(){
     const amtColor = isTarik ? 'color:#6B7280;' : '';
     const amtSign  = isTarik ? '🏧 ' : (h.pos ? '+' : '-');
     const dateBadge = searchActive ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${new Date(h.ts||0).toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'})}</span>` : '';
-    return `<div class="h-item">
+    return `<div class="h-item" onclick="openTxDetail(${h.id})" style="cursor:pointer;">
       <div class="h-ico" style="${isTarik?'background:#F4F6FC;':''}">${icon}</div>
       <div style="flex:1;">
         <div class="h-nm">${nm}${catBadge}</div>
@@ -5250,6 +5325,205 @@ function renderHistory(){
       <div class="h-a ${h.pos?'pos':'neg'}" style="${amtColor}">${amtSign}${fmt(Math.abs(h.amt))}</div>
     </div>`;
   }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// DETAIL / EDIT / HAPUS TRANSAKSI
+// Tap baris riwayat manapun (tab Riwayat, 5 transaksi terbaru di Home,
+// atau riwayat per-kategori di Anggaran) → buka modal detail ini.
+// ══════════════════════════════════════════════════════════════
+function openTxDetail(id){
+  const h = historyItems.find(x=>x.id===id);
+  if(!h) return;
+  document.getElementById('txDetailId').value = id;
+  const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
+  const isTarik = isTarikTx(h);
+  document.getElementById('txd-name').textContent = nm;
+  document.getElementById('txd-time').textContent = fmtItemTime(h);
+  const icoEl = document.getElementById('txd-ico');
+  icoEl.style.background = isTarik ? '#F4F6FC' : (h.catColor || (h.pos?'#EBFEF3':'#FEEBEB'));
+  icoEl.innerHTML = h.catIco || (h.pos
+    ? '<svg width="22" height="22" viewBox="0 0 24 24" stroke="#22C55E"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
+    : '<svg width="22" height="22" viewBox="0 0 24 24" stroke="#EF4444"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>');
+  const amtEl = document.getElementById('txd-amt');
+  amtEl.textContent = (isTarik?'🏧 ':(h.pos?'+':'-')) + fmt(Math.abs(h.amt));
+  amtEl.style.color = isTarik ? '#6B7280' : (h.pos ? 'var(--green)' : 'var(--red)');
+  document.getElementById('txd-cat').textContent = h.cat ? catDisplayName(h.cat) : '—';
+  const rowSrc  = document.getElementById('txd-row-src');
+  const rowDest = document.getElementById('txd-row-dest');
+  if(h.src){ rowSrc.style.display='flex'; document.getElementById('txd-src').textContent = h.src; } else rowSrc.style.display='none';
+  if(h.dest && (isTarik || h.type==='transfer' || h.type==='income')){ rowDest.style.display='flex'; document.getElementById('txd-dest').textContent = h.dest; } else rowDest.style.display='none';
+  document.getElementById('txDetailModal').classList.add('on');
+}
+function closeTxDetailModal(){ document.getElementById('txDetailModal').classList.remove('on'); }
+
+function deleteTransactionItem(id){
+  const h = historyItems.find(x=>x.id===id);
+  if(!h) return;
+  const nm = h.langKey ? (T(h.langKey)||h.name) : h.name;
+  const msg = lang==='id'
+    ? `Hapus transaksi "${nm}"? Saldo kartu terkait akan dikembalikan seperti semula.`
+    : `Delete transaction "${nm}"? The related card balance will be restored.`;
+  if(!confirm(msg)) return;
+  _reverseHistoryEffect(h);
+  historyItems = historyItems.filter(x=>x.id!==id);
+  recalcTotalBalance();
+  updateAllAmounts();
+  renderWallets();
+  renderHistory();
+  renderRecentTxList();
+  refreshAnalytics();
+  const angPanel = document.getElementById('sv-anggaran-panel');
+  if(angPanel && angPanel.style.display!=='none') renderAnggaranList();
+  closeTxDetailModal();
+  toast('🗑️ ' + (lang==='id'?'Transaksi dihapus':'Transaction deleted'));
+  fbAutoSave();
+}
+
+// ── Edit Transaksi ──
+let editingTxId = null;
+function openEditTxFromDetail(){
+  const id = parseInt(document.getElementById('txDetailId').value, 10);
+  closeTxDetailModal();
+  openEditTx(id);
+}
+function openEditTx(id){
+  const h = historyItems.find(x=>x.id===id);
+  if(!h) return;
+  editingTxId = id;
+
+  document.getElementById('editTxId').value = id;
+  document.getElementById('etxCurr').textContent = isModeRp() ? 'Rp' : '$';
+  document.getElementById('etxAmount').value = isModeRp()
+    ? Math.round(Math.abs(h.amt)).toLocaleString('id-ID')
+    : (Math.abs(h.amt)/exRate).toFixed(2);
+
+  // Kategori — hanya kategori yang relevan dgn tipe transaksi ini yang muncul
+  const catSel = document.getElementById('etxCat');
+  const catType = h.type==='tarik' ? 'expense' : h.type;
+  const opts = pickableCatsForTxType(catType);
+  catSel.innerHTML = opts.map(c=>`<option value="${escapeHtml(c.id)}" ${c.id===h.cat?'selected':''}>${escapeHtml(catLabel(c))}</option>`).join('');
+
+  // Tanggal
+  const d = new Date(h.ts || Date.now());
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('etxDate').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+  // Wallet sumber/tujuan — field mana yang muncul tergantung tipe transaksi
+  const swid = ('srcWalletId' in h)  ? h.srcWalletId  : _resolveWalletIdFromLabel(h.src);
+  const dwid = ('destWalletId' in h) ? h.destWalletId : _resolveWalletIdFromLabel(h.dest);
+  const mainLbl = lang==='id' ? 'Saldo Utama' : 'Main Balance';
+  const walletOpts = wallets.map(w=>`<option value="${w.id}">${escapeHtml(w.bank)} ••${escapeHtml(w.num)}</option>`).join('');
+  const srcRow = document.getElementById('etxSrcRow'), destRow = document.getElementById('etxDestRow');
+  const srcSel = document.getElementById('etxSrc'), destSel = document.getElementById('etxDest');
+
+  if(h.type==='income'){
+    srcRow.style.display='none'; destRow.style.display='block';
+    destSel.innerHTML = `<option value="">${mainLbl}</option>` + walletOpts;
+    destSel.value = dwid || '';
+  } else if(h.type==='transfer'){
+    srcRow.style.display='block'; destRow.style.display='block';
+    srcSel.innerHTML  = `<option value="">${mainLbl}</option>` + walletOpts;
+    destSel.innerHTML = `<option value="">${mainLbl}</option>` + walletOpts;
+    srcSel.value = swid || ''; destSel.value = dwid || '';
+  } else if(h.type==='tarik'){
+    // Tarik tunai: tujuan SELALU wallet Cash, tidak bisa diubah — cuma sumbernya yang bisa diganti
+    srcRow.style.display='block'; destRow.style.display='none';
+    srcSel.innerHTML = `<option value="">${mainLbl}</option>` + walletOpts;
+    srcSel.value = swid || '';
+  } else { // expense
+    srcRow.style.display='block'; destRow.style.display='none';
+    srcSel.innerHTML = `<option value="">${mainLbl}</option>` + walletOpts;
+    srcSel.value = swid || '';
+  }
+
+  document.getElementById('editTxModal').classList.add('on');
+}
+function closeEditTxModal(){
+  document.getElementById('editTxModal').classList.remove('on');
+  editingTxId = null;
+}
+function saveEditedTx(){
+  const h = historyItems.find(x=>x.id===editingTxId);
+  if(!h) return;
+
+  const rawInput = _parseCurrencyInputValue('etxAmount');
+  const rawAmt = isModeRp() ? Math.round(rawInput) : Math.round(rawInput * exRate);
+  if(rawAmt<=0){ toast('⚠️ '+(lang==='id'?'Masukkan jumlah yang valid!':'Please enter a valid amount!')); return; }
+  const newCat = document.getElementById('etxCat').value;
+  if(!newCat){ toast('⚠️ '+(lang==='id'?'Pilih kategori dahulu!':'Please select a category!')); return; }
+
+  const dateVal = document.getElementById('etxDate').value;
+  const oldTsDate = new Date(h.ts || Date.now());
+  let newTs = oldTsDate;
+  if(dateVal){
+    const [Y,M,D] = dateVal.split('-').map(Number);
+    newTs = new Date(Y, M-1, D, oldTsDate.getHours(), oldTsDate.getMinutes(), oldTsDate.getSeconds());
+  }
+
+  let newSwid=null, newDwid=null;
+  if(h.type==='income'){
+    const v = document.getElementById('etxDest').value;
+    newDwid = v ? parseInt(v,10) : null;
+  } else if(h.type==='transfer'){
+    const sv = document.getElementById('etxSrc').value, dv = document.getElementById('etxDest').value;
+    newSwid = sv ? parseInt(sv,10) : null;
+    newDwid = dv ? parseInt(dv,10) : null;
+    if(newSwid===newDwid){ toast('⚠️ '+(lang==='id'?'Sumber dan tujuan tidak boleh sama!':'Source and destination cannot be the same!')); return; }
+  } else if(h.type==='tarik'){
+    const sv = document.getElementById('etxSrc').value;
+    newSwid = sv ? parseInt(sv,10) : null;
+    const cashWallet = wallets.find(w=>(w.type||'').toLowerCase()==='cash');
+    newDwid = cashWallet ? cashWallet.id : null;
+  } else { // expense
+    const sv = document.getElementById('etxSrc').value;
+    newSwid = sv ? parseInt(sv,10) : null;
+  }
+
+  // ── Validasi saldo SEBELUM mutasi apapun ──
+  // Hitung saldo wallet sumber SEANDAINYA efek transaksi lama sudah
+  // dibalikkan (tanpa benar-benar mengubah data), lalu cek cukup/tidak
+  // utk jumlah baru. Kalau tidak cukup, batal — data lama tetap utuh.
+  if(h.type==='expense' || h.type==='transfer' || h.type==='tarik'){
+    const availBal = _walletBalanceAfterReversal(h, newSwid);
+    if(availBal < rawAmt){
+      const lbl = newSwid==null ? (lang==='id'?'Saldo Utama':'Main Balance') : (wallets.find(w=>w.id===newSwid)?.bank || '');
+      toast(`❌ ${lang==='id'?'Saldo tidak cukup':'Insufficient balance'}: ${fmt(availBal)} [${lbl}]`);
+      return;
+    }
+  }
+
+  // ── Lolos validasi → balikkan efek lama, terapkan efek baru ──
+  _reverseHistoryEffect(h);
+  _applyHistoryEffect(h.type, newSwid, newDwid, rawAmt);
+
+  // ── Update field-field historyItem ──
+  h.amt = h.type==='income' ? rawAmt : -rawAmt;
+  h.cat = newCat;
+  const cObj = allPickableCats().find(c=>c.id===newCat);
+  if(cObj){ h.catColor = cObj.bg||cObj.color; h.catIco = catIconInnerHtml(cObj); }
+  delete h.langKey; // nama kategori bisa berubah, jangan pakai key terjemahan nama lama lagi
+  h.ts = newTs.getTime();
+  h.time = `${newTs.toLocaleDateString(lang==='id'?'id-ID':'en-US',{day:'2-digit',month:'short',year:'numeric'})}, ${newTs.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+  h.srcWalletId = newSwid;
+  h.destWalletId = newDwid;
+  const swObj = wallets.find(w=>w.id===newSwid), dwObj = wallets.find(w=>w.id===newDwid);
+  h.src  = swObj ? `${swObj.bank} ••••${swObj.num}` : (lang==='id'?'Saldo Utama':'Main Balance');
+  h.dest = dwObj ? `${dwObj.bank} ••••${dwObj.num}` : (lang==='id'?'Saldo Utama':'Main Balance');
+
+  recalcTotalBalance();
+  updateAllAmounts();
+  renderWallets();
+  histFilterYear  = newTs.getFullYear();
+  histFilterMonth = newTs.getMonth();
+  renderHistory();
+  renderRecentTxList();
+  refreshAnalytics();
+  const angPanel = document.getElementById('sv-anggaran-panel');
+  if(angPanel && angPanel.style.display!=='none') renderAnggaranList();
+  closeEditTxModal();
+  toast('✅ ' + (lang==='id'?'Transaksi diperbarui':'Transaction updated'));
+  fbAutoSave();
 }
 
 // SAVINGS TABS
@@ -6673,6 +6947,66 @@ function getDestLabel() {
   return lang==='id' ? 'Saldo Utama' : 'Main Balance';
 }
 
+// ══════════════════════════════════════════════════════════════
+// EDIT / HAPUS TRANSAKSI — helper inti utk balikkan & terapkan
+// ulang efek saldo. Dipakai oleh deleteTransactionItem() &
+// saveEditedTx(). walletId `null` = Saldo Utama (variabel global
+// `balance`), bukan salah satu kartu di array `wallets`.
+// ══════════════════════════════════════════════════════════════
+function _applyWalletDelta(walletId, delta){
+  if(walletId!=null){
+    const w = wallets.find(x=>x.id===walletId);
+    if(w){ w.balance += delta; return; }
+  }
+  balance += delta;
+}
+// Balikkan efek sebuah historyItem yang SUDAH tercatat sebelumnya
+// (dipakai sebelum hapus, atau sebelum menerapkan nilai edit yang baru).
+function _reverseHistoryEffect(h){
+  const swid = ('srcWalletId' in h)  ? h.srcWalletId  : _resolveWalletIdFromLabel(h.src);
+  const dwid = ('destWalletId' in h) ? h.destWalletId : _resolveWalletIdFromLabel(h.dest);
+  const absAmt = Math.abs(h.amt);
+  if(h.type==='income'){
+    _applyWalletDelta(dwid, -absAmt);
+  } else if(h.type==='transfer' || h.type==='tarik'){
+    _applyWalletDelta(swid, +absAmt);
+    _applyWalletDelta(dwid, -absAmt);
+  } else { // expense (default)
+    _applyWalletDelta(swid, +absAmt);
+  }
+}
+// Terapkan efek transaksi (dipakai saat menyimpan hasil edit dgn nilai baru).
+function _applyHistoryEffect(type, swid, dwid, absAmt){
+  if(type==='income'){
+    _applyWalletDelta(dwid, +absAmt);
+  } else if(type==='transfer' || type==='tarik'){
+    _applyWalletDelta(swid, -absAmt);
+    _applyWalletDelta(dwid, +absAmt);
+  } else {
+    _applyWalletDelta(swid, -absAmt);
+  }
+}
+// Saldo wallet tertentu SEANDAINYA efek lama historyItem `h` sudah
+// dibalikkan (tapi efek baru BELUM diterapkan) — dipakai utk validasi
+// "cukup/tidaknya" saldo sebelum benar-benar menyimpan perubahan edit,
+// tanpa perlu mengubah data nyata dulu (baru mutasi setelah lolos validasi).
+function _walletBalanceAfterReversal(h, walletId){
+  const base = walletId==null ? balance : (wallets.find(w=>w.id===walletId)?.balance ?? 0);
+  const swid = ('srcWalletId' in h)  ? h.srcWalletId  : _resolveWalletIdFromLabel(h.src);
+  const dwid = ('destWalletId' in h) ? h.destWalletId : _resolveWalletIdFromLabel(h.dest);
+  const absAmt = Math.abs(h.amt);
+  let delta = 0;
+  if(h.type==='income'){
+    if(walletId===dwid) delta -= absAmt;
+  } else if(h.type==='transfer' || h.type==='tarik'){
+    if(walletId===swid) delta += absAmt;
+    if(walletId===dwid) delta -= absAmt;
+  } else {
+    if(walletId===swid) delta += absAmt;
+  }
+  return base + delta;
+}
+
 function updateTxSummary() {
   const preview = document.getElementById('txSummaryPreview');
   if (!preview || !rawAmountNum) { if(preview) preview.style.display = 'none'; return; }
@@ -6809,6 +7143,7 @@ function completeTx(){
     renderWallets();
 
     const hItem = {
+      id:     historyIdCtr++,
       name:   note || (lang==='id'?'Tarik Tunai':'Cash Withdrawal'),
       time:   `${dateStr}, ${timeStr}`,
       amt:    -rp,      // tampil sebagai pengurangan dari bank
@@ -6819,7 +7154,9 @@ function completeTx(){
       src:    srcLabel,
       dest:   cashWallet.bank + ' ••••' + cashWallet.num,
       type:   'tarik',  // tipe khusus — bukan expense, bukan transfer biasa
-      ts:     now.getTime()
+      ts:     now.getTime(),
+      srcWalletId:  srcWallet ? srcWallet.id : null,
+      destWalletId: cashWallet.id
     };
     historyItems.unshift(hItem);
     histFilterYear  = now.getFullYear();
@@ -6878,6 +7215,7 @@ function completeTx(){
 
   // ── Add to historyItems — amt dalam RUPIAH ──────────────────────
   const hItem = {
+    id:     historyIdCtr++,
     name:   note,
     time:   `${dateStr}, ${timeStr}`,
     amt:    isIncome ? rp : -rp,
@@ -6888,7 +7226,9 @@ function completeTx(){
     src:    srcLabel,
     dest:   destLabel,
     type:   txType,
-    ts:     now.getTime()
+    ts:     now.getTime(),
+    srcWalletId:  srcWallet ? srcWallet.id : null,
+    destWalletId: destWallet ? destWallet.id : null
   };
   historyItems.unshift(hItem);
   // Reset filter ke bulan transaksi yang baru ditambahkan agar langsung terlihat
@@ -6954,6 +7294,8 @@ function renderRecentTxList(){
     item.innerHTML = `<div class="tx-ico" style="background:${catColor};">${catIco}</div>
       <div style="flex:1"><div class="tx-name">${nm}</div><div class="tx-meta">${fmtItemTime(h)}</div></div>
       <div class="tx-amt ${amtClass}" style="${amtStyle}">${amtSign}${fmt(Math.abs(h.amt||0))}</div>`;
+    item.style.cursor = 'pointer';
+    item.onclick = ()=>openTxDetail(h.id);
     list.appendChild(item);
   });
 }
@@ -8400,6 +8742,7 @@ async function enterApp(initialState){
     }
     if(Array.isArray(initialState.historyItems)){
       historyItems = initialState.historyItems;
+      _migrateHistoryIds();
       _reconcileTsFromTime();
     }
 
@@ -11214,7 +11557,7 @@ function openAnggaranRiwayat(id){
     listEl.innerHTML = txs.map(h => {
       const nm = escapeHtml(h.langKey ? (T(h.langKey)||h.name) : h.name);
       const srcInfo = h.src ? `<span style="font-size:10px;color:var(--t3);margin-left:4px;">· ${escapeHtml(h.src)}</span>` : '';
-      return `<div class="h-item">
+      return `<div class="h-item" onclick="openTxDetail(${h.id})" style="cursor:pointer;">
         <div class="h-ico">${c.svg ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c.stroke}" stroke-width="1.8">${c.svg}</svg>` : ''}</div>
         <div style="flex:1;">
           <div class="h-nm">${nm}</div>

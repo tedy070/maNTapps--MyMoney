@@ -2100,20 +2100,20 @@ body{background:var(--bg);transition:background .35s;}
       </div>
 
       <!-- Ringkasan Jatah Belanja Harian (adaptif dari anggaran bulanan) -->
-      <div id="dailyBudgetHomeCard" style="display:none;background:var(--surface);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--sh2);cursor:pointer;" onclick="openDailyBudgetHome()">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div id="dailyBudgetHomeCard" style="display:none;background:var(--surface);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--sh2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;" onclick="openDailyBudgetHome()">
           <div style="display:flex;align-items:center;gap:8px;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>
             <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Jatah Belanja Hari Ini</span>
           </div>
           <span style="font-size:10px;color:var(--t3);" id="dbh-date"></span>
         </div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;cursor:pointer;" onclick="openDailyBudgetHome()">
           <span style="font-family:var(--f);font-size:30px;font-weight:800;color:var(--navy);letter-spacing:-1px;" id="dbh-total">Rp 0</span>
           <span style="font-size:12px;color:var(--t3);">/hari</span>
         </div>
         <div style="font-size:11px;color:var(--t3);margin-bottom:14px;" id="dbh-sub"></div>
-        <div style="display:flex;flex-direction:column;gap:8px;" id="dbh-list"></div>
+        <div class="tc" id="dbh-list" style="max-height:220px;"></div>
       </div>
 
       <div class="sec-hdr"><div class="sec-ttl" id="h-recent">Recent Transactions</div><span class="sec-lnk" onclick="switchTab('analytics')" id="h-view">View Details</span></div>
@@ -10566,8 +10566,6 @@ function renderDailyBudgetHome(){
   if(!rows.length){ card.style.display = 'none'; return; }
 
   rows.sort((a,b) => b.jatah - a.jatah);
-  const shown = rows.slice(0, 3);
-  const more  = rows.length - shown.length;
 
   const dateEl  = document.getElementById('dbh-date');
   const totalEl = document.getElementById('dbh-total');
@@ -10577,12 +10575,14 @@ function renderDailyBudgetHome(){
   if(totalEl) totalEl.textContent = fmt(total);
   if(subEl)   subEl.textContent   = `Dari ${monthBudgets.length} anggaran aktif · dihitung ulang tiap hari`;
   if(listEl){
-    listEl.innerHTML = shown.map(r => `
+    // List di-scroll internal (sama seperti card Kategori Teratas / Pengeluaran Harian),
+    // jadi semua kategori aktif ditampilkan tanpa perlu dipotong ke "+N lainnya".
+    listEl.innerHTML = rows.map(r => `
       <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:9px 12px;">
         <div style="width:28px;height:28px;border-radius:9px;background:${r.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.icon}</div>
         <span style="flex:1;font-size:12px;color:var(--navy);font-weight:500;">${escapeHtml(r.name)}</span>
         <span style="font-family:var(--f);font-size:13px;font-weight:700;color:${r.isOver?'var(--red)':'var(--navy)'};">${r.isOver ? 'Rp 0' : fmt(r.jatah)}${r.isOver?' <span style="font-size:9px;font-weight:400;">(lewat)</span>':''}</span>
-      </div>`).join('') + (more > 0 ? `<div style="text-align:center;font-size:11px;color:var(--t3);padding-top:2px;">+${more} anggaran lainnya</div>` : '');
+      </div>`).join('');
   }
 
   card.style.display = 'block';

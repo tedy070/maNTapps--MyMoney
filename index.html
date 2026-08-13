@@ -2099,23 +2099,6 @@ body{background:var(--bg);transition:background .35s;}
         </div>
       </div>
 
-      <!-- Ringkasan Jatah Belanja Harian (adaptif dari anggaran bulanan) -->
-      <div id="dailyBudgetHomeCard" style="display:none;background:var(--surface);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--sh2);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;" onclick="openDailyBudgetHome()">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>
-            <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Jatah Belanja Hari Ini</span>
-          </div>
-          <span style="font-size:10px;color:var(--t3);" id="dbh-date"></span>
-        </div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;cursor:pointer;" onclick="openDailyBudgetHome()">
-          <span style="font-family:var(--f);font-size:30px;font-weight:800;color:var(--navy);letter-spacing:-1px;" id="dbh-total">Rp 0</span>
-          <span style="font-size:12px;color:var(--t3);">/hari</span>
-        </div>
-        <div style="font-size:11px;color:var(--t3);margin-bottom:14px;" id="dbh-sub"></div>
-        <div class="tc" id="dbh-list" style="max-height:220px;"></div>
-      </div>
-
       <div class="sec-hdr"><div class="sec-ttl" id="h-recent">Recent Transactions</div><span class="sec-lnk" onclick="switchTab('analytics')" id="h-view">View Details</span></div>
       <div class="tx-list" id="txList">
         <!-- Transaksi diisi otomatis dari data nyata -->
@@ -2277,6 +2260,23 @@ body{background:var(--bg);transition:background .35s;}
         <div class="tc" id="daily-list">
           <div id="daily-empty" style="text-align:center;padding:18px 0;color:var(--t3);font-size:12px;">Tidak ada pengeluaran pada hari ini.</div>
         </div>
+      </div>
+
+      <!-- Ringkasan Jatah Belanja Harian (adaptif dari anggaran bulanan) -->
+      <div id="dailyBudgetHomeCard" style="display:none;background:var(--surface);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--sh2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;" onclick="openDailyBudgetHome()">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>
+            <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Jatah Belanja Hari Ini</span>
+          </div>
+          <span style="font-size:10px;color:var(--t3);" id="dbh-date"></span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;cursor:pointer;" onclick="openDailyBudgetHome()">
+          <span style="font-family:var(--f);font-size:30px;font-weight:800;color:var(--navy);letter-spacing:-1px;" id="dbh-total">Rp 0</span>
+          <span style="font-size:12px;color:var(--t3);">/hari</span>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:14px;" id="dbh-sub"></div>
+        <div class="tc" id="dbh-list" style="max-height:220px;"></div>
       </div>
 
       <!-- DAILY DATE PICKER MODAL -->
@@ -6463,7 +6463,6 @@ function switchTab(tab){
   document.getElementById('nav-'+tab)?.classList.add('on');
   if(tab==='savings'){ renderGoals(); updateSavingsTotal(); renderWalletSummary(); }
   if(tab==='analytics'){ refreshAnalytics(); }
-  if(tab==='home'){ renderDailyBudgetHome(); }
   moveNavIndicator(tab);
 }
 
@@ -8326,6 +8325,7 @@ function refreshAnalytics() {
   buildIncomeExpenseDonut();
   buildTopCats();
   buildDailySpending();
+  renderDailyBudgetHome();
   buildSmartTip();
   refreshWeeklyBar(wBarMode);
   buildMonthlyChart();
@@ -10588,7 +10588,7 @@ function renderDailyBudgetHome(){
   card.style.display = 'block';
 }
 
-// Tap widget Home → langsung buka panel Anggaran di tab Savings
+// Tap widget Jatah Belanja (tab Analitik) → langsung buka panel Anggaran di tab Savings
 function openDailyBudgetHome(){
   switchTab('savings');
   switchWalletSubTab('anggaran');
@@ -11513,8 +11513,9 @@ function renderAnggaranList(){
     </div>`;
   }).join('');
 
-  // Widget Home ikut disinkronkan tiap kali daftar anggaran dirender ulang,
-  // supaya toggle/edit/tambah/hapus anggaran langsung terrefleksi di Beranda juga.
+  // Widget Jatah Belanja (di tab Analitik) ikut disinkronkan tiap kali daftar
+  // anggaran dirender ulang, supaya toggle/edit/tambah/hapus anggaran langsung
+  // terrefleksi di sana juga.
   renderDailyBudgetHome();
 }
 

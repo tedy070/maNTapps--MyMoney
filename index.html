@@ -2284,48 +2284,9 @@ body{background:var(--bg);transition:background .35s;}
         <div class="tc" id="dbh-list" style="max-height:220px;"></div>
       </div>
 
-      <!-- Perbandingan Sisa Anggaran vs Wallet Utama (wallet murni referensi tampilan) -->
-      <div id="budgetWalletCompareCard" style="display:none;background:var(--surface);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--sh2);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="var(--blue2)" stroke="none"/></svg>
-            <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Sisa Anggaran vs Wallet Utama</span>
-          </div>
-          <span id="bwc-status-badge" style="display:none;font-size:9px;font-weight:800;letter-spacing:.3px;padding:3px 8px;border-radius:8px;color:#fff;"></span>
-        </div>
-        <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bandingkan sisa anggaran bulan ini dengan saldo wallet acuan</div>
-
-        <div style="display:flex;gap:10px;margin-bottom:14px;">
-          <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;cursor:pointer;" onclick="toggleBudgetRemainingBreakdown()">
-            <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;display:flex;align-items:center;gap:3px;">
-              <span>SISA ANGGARAN</span>
-              <svg id="bwc-remaining-chevron" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="3" style="transition:transform .2s;"><polyline points="6,9 12,15 18,9"/></svg>
-            </div>
-            <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-remaining">Rp 0</div>
-          </div>
-          <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;cursor:pointer;" onclick="openMainWalletPicker()">
-            <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;display:flex;align-items:center;gap:3px;">
-              <span id="bwc-wallet-label">WALLET UTAMA</span>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="3"><polyline points="6,9 12,15 18,9"/></svg>
-            </div>
-            <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-wallet-balance">Rp 0</div>
-          </div>
-        </div>
-
-        <!-- Rincian sisa anggaran per kategori — collapsed by default -->
-        <div id="bwc-breakdown" style="display:none;margin-bottom:14px;">
-          <div class="tc" id="bwc-breakdown-list" style="max-height:220px;"></div>
-        </div>
-
-        <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;margin-bottom:8px;">
-          <div id="bwc-bar" style="height:100%;border-radius:5px;width:0%;background:var(--green);transition:width .3s;"></div>
-        </div>
-        <div style="font-size:11px;color:var(--t3);" id="bwc-note"></div>
-
-        <div id="bwc-empty-wallet" style="display:none;text-align:center;padding:12px 0 2px;">
-          <button onclick="openMainWalletPicker()" style="background:var(--blue);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;">Pilih Wallet Utama</button>
-        </div>
-      </div>
+      <!-- Catatan: Card "Sisa Anggaran vs Wallet Utama" sudah dipindah ke
+           Menu Tabungan (Savings) > Kartu & Anggaran > sub-panel Anggaran.
+           Di sana ia auto-bergantian (crossfade) dengan Card "Total Anggaran". -->
 
       <!-- MAIN WALLET PICKER MODAL -->
       <div id="main-wallet-picker" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeMainWalletPicker()">
@@ -2606,25 +2567,82 @@ body{background:var(--bg);transition:background .35s;}
             </button>
           </div>
 
-          <!-- Summary Card (liquid glass: gel bening) -->
-          <div class="anggaran-summary-card">
-            <div class="bal-sheen"></div>
-            <div style="font-size:12px;color:var(--t3);margin-bottom:4px;" id="anggaran-summary-lbl">Total Anggaran (Bulan ini)</div>
-            <div style="font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;color:var(--blue2);letter-spacing:-1px;margin-bottom:14px;" id="anggaran-total-amt">Rp 0</div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-              <div>
-                <div style="font-size:12px;color:var(--t3);">Terpakai</div>
-                <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);" id="anggaran-terpakai-amt">Rp 0</div>
+          <!-- ── Summary Card Stack: Total Anggaran <-> Sisa Anggaran vs Wallet Utama ──
+               Dua card berbagi satu slot dan auto-bergantian (crossfade) setiap
+               beberapa detik saat panel Anggaran sedang dibuka. Kalau belum ada
+               Wallet Utama / anggaran aktif dipilih (card kedua kosong), hanya
+               Card Total Anggaran yang tampil dan rotasi tidak berjalan. -->
+          <div id="anggaran-summary-stack" style="position:relative;">
+
+            <!-- Card 1: Total Anggaran (liquid glass: gel bening) -->
+            <div class="anggaran-summary-card" id="asc-total" style="opacity:1;transition:opacity .3s ease;">
+              <div class="bal-sheen"></div>
+              <div style="font-size:12px;color:var(--t3);margin-bottom:4px;" id="anggaran-summary-lbl">Total Anggaran (Bulan ini)</div>
+              <div style="font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;color:var(--blue2);letter-spacing:-1px;margin-bottom:14px;" id="anggaran-total-amt">Rp 0</div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                <div>
+                  <div style="font-size:12px;color:var(--t3);">Terpakai</div>
+                  <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);" id="anggaran-terpakai-amt">Rp 0</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:12px;color:var(--t3);">Sisa</div>
+                  <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--teal2);" id="anggaran-sisa-amt">Rp 0</div>
+                </div>
               </div>
-              <div style="text-align:right;">
-                <div style="font-size:12px;color:var(--t3);">Sisa</div>
-                <div style="font-family:var(--f);font-size:16px;font-weight:700;color:var(--teal2);" id="anggaran-sisa-amt">Rp 0</div>
+              <div style="background:#E8EEF8;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px;">
+                <div id="anggaran-progress-bar" style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue),var(--blue2));transition:width .6s ease;width:0%;"></div>
+              </div>
+              <div style="font-size:11px;color:var(--t3);text-align:right;" id="anggaran-pct-label">0% Terpakai</div>
+            </div>
+
+            <!-- Card 2: Sisa Anggaran vs Wallet Utama (dipindah dari tab Analitik) -->
+            <div id="budgetWalletCompareCard" style="display:none;opacity:0;transition:opacity .3s ease;background:var(--surface);border-radius:20px;padding:18px;margin:0 16px 16px;box-shadow:var(--sh);">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="var(--blue2)" stroke="none"/></svg>
+                  <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Sisa Anggaran vs Wallet Utama</span>
+                </div>
+                <span id="bwc-status-badge" style="display:none;font-size:9px;font-weight:800;letter-spacing:.3px;padding:3px 8px;border-radius:8px;color:#fff;"></span>
+              </div>
+              <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bandingkan sisa anggaran bulan ini dengan saldo wallet acuan</div>
+
+              <div style="display:flex;gap:10px;margin-bottom:14px;">
+                <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;cursor:pointer;" onclick="toggleBudgetRemainingBreakdown()">
+                  <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;display:flex;align-items:center;gap:3px;">
+                    <span>SISA ANGGARAN</span>
+                    <svg id="bwc-remaining-chevron" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="3" style="transition:transform .2s;"><polyline points="6,9 12,15 18,9"/></svg>
+                  </div>
+                  <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-remaining">Rp 0</div>
+                </div>
+                <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;cursor:pointer;" onclick="openMainWalletPicker()">
+                  <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;display:flex;align-items:center;gap:3px;">
+                    <span id="bwc-wallet-label">WALLET UTAMA</span>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="3"><polyline points="6,9 12,15 18,9"/></svg>
+                  </div>
+                  <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-wallet-balance">Rp 0</div>
+                </div>
+              </div>
+
+              <!-- Rincian sisa anggaran per kategori — collapsed by default -->
+              <div id="bwc-breakdown" style="display:none;margin-bottom:14px;">
+                <div class="tc" id="bwc-breakdown-list" style="max-height:220px;"></div>
+              </div>
+
+              <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;margin-bottom:8px;">
+                <div id="bwc-bar" style="height:100%;border-radius:5px;width:0%;background:var(--green);transition:width .3s;"></div>
+              </div>
+              <div style="font-size:11px;color:var(--t3);" id="bwc-note"></div>
+
+              <div id="bwc-empty-wallet" style="display:none;text-align:center;padding:12px 0 2px;">
+                <button onclick="openMainWalletPicker()" style="background:var(--blue);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;">Pilih Wallet Utama</button>
               </div>
             </div>
-            <div style="background:#E8EEF8;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px;">
-              <div id="anggaran-progress-bar" style="height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue),var(--blue2));transition:width .6s ease;width:0%;"></div>
+
+            <!-- Dot indicator — hanya muncul kalau kedua card tersedia utk dirotasi -->
+            <div id="asc-dots" style="display:none;justify-content:center;align-items:center;gap:5px;margin:-8px 0 16px;">
+              <span id="asc-dot-0" class="asc-dot" onclick="_ascManualGoTo(0)" style="width:16px;height:6px;border-radius:4px;background:var(--blue2);cursor:pointer;transition:all .25s ease;"></span>
+              <span id="asc-dot-1" class="asc-dot" onclick="_ascManualGoTo(1)" style="width:6px;height:6px;border-radius:4px;background:var(--border);cursor:pointer;transition:all .25s ease;"></span>
             </div>
-            <div style="font-size:11px;color:var(--t3);text-align:right;" id="anggaran-pct-label">0% Terpakai</div>
           </div>
 
           <!-- Kategori Anggaran List -->
@@ -5625,7 +5643,7 @@ function switchSvTab(t){
   // Sembunyikan FAB tagihan jika tidak di goals tab
   const fab = document.getElementById('fab-tambah-tagihan');
   if(fab) fab.style.display='none';
-  if(t==='wallets'){ switchWalletSubTab('kartu'); }
+  if(t==='wallets'){ switchWalletSubTab('kartu'); } else { stopAnggaranSummaryRotate(); }
   if(t==='history'){ updateHistNavbarLabel(); populateHistSearchCatOptions(); renderHistory(); }
 }
 
@@ -5641,6 +5659,7 @@ function switchWalletSubTab(t){
     anggaranBtn.style.background='transparent'; anggaranBtn.style.color='var(--t3)'; anggaranBtn.style.boxShadow='none';
     kartuPanel.style.display='block'; anggaranPanel.style.display='none';
     renderWallets();
+    stopAnggaranSummaryRotate();
   } else {
     anggaranBtn.style.background='var(--surface)'; anggaranBtn.style.color='var(--navy)'; anggaranBtn.style.boxShadow='var(--sh2)';
     kartuBtn.style.background='transparent'; kartuBtn.style.color='var(--t3)'; kartuBtn.style.boxShadow='none';
@@ -6524,6 +6543,7 @@ function switchTab(tab){
   document.getElementById('nav-'+tab)?.classList.add('on');
   if(tab==='savings'){ renderGoals(); updateSavingsTotal(); renderWalletSummary(); }
   if(tab==='analytics'){ refreshAnalytics(); }
+  if(tab!=='savings'){ stopAnggaranSummaryRotate(); }
   moveNavIndicator(tab);
 }
 
@@ -10722,7 +10742,7 @@ function renderBudgetWalletCompare(){
   if(!card) return;
 
   const { total: remaining, count, items } = calcTotalBudgetRemaining();
-  if(!count){ card.style.display = 'none'; return; }
+  if(!count){ card.dataset.hasData = '0'; anggaranSummaryStackSync(); return; }
 
   const remainingEl  = document.getElementById('bwc-remaining');
   const walletLblEl  = document.getElementById('bwc-wallet-label');
@@ -10755,7 +10775,7 @@ function renderBudgetWalletCompare(){
     if(barEl){ barEl.style.width = '0%'; }
     if(noteEl) noteEl.textContent = 'Pilih wallet utama untuk melihat perbandingan saldo.';
     if(emptyWalletEl) emptyWalletEl.style.display = 'block';
-    card.style.display = 'block';
+    card.dataset.hasData = '1'; anggaranSummaryStackSync();
     return;
   }
 
@@ -10790,7 +10810,88 @@ function renderBudgetWalletCompare(){
   if(barEl) barEl.style.background = color;
   if(noteEl) noteEl.textContent = note;
 
-  card.style.display = 'block';
+  card.dataset.hasData = '1'; anggaranSummaryStackSync();
+}
+
+// ── Rotasi otomatis: Card Total Anggaran ⇄ Card Sisa Anggaran vs Wallet Utama ──
+// Kedua card berbagi satu slot (#anggaran-summary-stack). Kalau card kedua
+// tidak punya data (belum ada anggaran aktif bulan ini / belum pilih Wallet
+// Utama), hanya Card Total Anggaran yang tampil & rotasi tidak berjalan.
+let _angRotateTimer = null;
+let _angRotateIdx = 0;
+
+function anggaranSummaryStackSync(){
+  const totalCard   = document.getElementById('asc-total');
+  const compareCard = document.getElementById('budgetWalletCompareCard');
+  const dots        = document.getElementById('asc-dots');
+  const panel       = document.getElementById('sv-anggaran-panel');
+  if(!totalCard || !compareCard) return;
+
+  // offsetParent null → elemen (atau salah satu ancestor-nya) sedang display:none,
+  // jadi ini cara paling aman utk tahu panel Anggaran benar² sedang terlihat.
+  const panelVisible   = !!(panel && panel.offsetParent !== null);
+  const hasCompareData = compareCard.dataset.hasData === '1';
+
+  if(!panelVisible || !hasCompareData){
+    stopAnggaranSummaryRotate();
+    _angRotateIdx = 0;
+    totalCard.style.display = 'block'; totalCard.style.opacity = '1';
+    compareCard.style.display = 'none'; compareCard.style.opacity = '0';
+    if(dots) dots.style.display = 'none';
+    return;
+  }
+
+  if(dots) dots.style.display = 'flex';
+  if(!_angRotateTimer) startAnggaranSummaryRotate();
+}
+
+function startAnggaranSummaryRotate(startIdx){
+  stopAnggaranSummaryRotate();
+  _angRotateIdx = startIdx || 0;
+  _ascGoTo(_angRotateIdx);
+  _angRotateTimer = setInterval(()=>{
+    _ascGoTo(_angRotateIdx === 0 ? 1 : 0);
+  }, 5000);
+}
+function stopAnggaranSummaryRotate(){
+  if(_angRotateTimer){ clearInterval(_angRotateTimer); _angRotateTimer = null; }
+}
+
+// Tap dot indicator → pindah manual & restart timer rotasi dari card yg dipilih,
+// supaya tidak langsung "kelewat" balik ke card sebelumnya sesaat setelah tap.
+function _ascManualGoTo(idx){
+  const compareCard = document.getElementById('budgetWalletCompareCard');
+  if(idx === 1 && (!compareCard || compareCard.dataset.hasData !== '1')) return;
+  startAnggaranSummaryRotate(idx);
+}
+
+// Pindah ke card index tertentu (0=Total Anggaran, 1=Sisa vs Wallet Utama)
+// dengan crossfade halus. Bisa dipanggil manual lewat tap dot indicator.
+function _ascGoTo(idx){
+  const totalCard   = document.getElementById('asc-total');
+  const compareCard = document.getElementById('budgetWalletCompareCard');
+  const dot0        = document.getElementById('asc-dot-0');
+  const dot1        = document.getElementById('asc-dot-1');
+  if(!totalCard || !compareCard) return;
+  _angRotateIdx = idx;
+
+  const showEl = idx === 0 ? totalCard : compareCard;
+  const hideEl = idx === 0 ? compareCard : totalCard;
+
+  hideEl.style.opacity = '0';
+  setTimeout(()=>{
+    hideEl.style.display = 'none';
+    showEl.style.display = 'block';
+    void showEl.offsetWidth; // paksa reflow biar transisi opacity jalan
+    showEl.style.opacity = '1';
+  }, 260);
+
+  if(dot0 && dot1){
+    dot0.style.background = idx === 0 ? 'var(--blue2)' : 'var(--border)';
+    dot0.style.width      = idx === 0 ? '16px' : '6px';
+    dot1.style.background = idx === 1 ? 'var(--blue2)' : 'var(--border)';
+    dot1.style.width      = idx === 1 ? '16px' : '6px';
+  }
 }
 
 // Expand/collapse rincian sisa anggaran per kategori. State disimpan di

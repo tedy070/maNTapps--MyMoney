@@ -2575,7 +2575,7 @@ body{background:var(--bg);transition:background .35s;}
           <div id="anggaran-summary-stack" style="position:relative;">
 
             <!-- Card 1: Total Anggaran (liquid glass: gel bening) -->
-            <div class="anggaran-summary-card" id="asc-total" style="opacity:1;transition:opacity .3s ease;">
+            <div class="anggaran-summary-card" id="asc-total" style="opacity:1;transition:opacity .3s ease;" onclick="_ascOnInteract()">
               <div class="bal-sheen"></div>
               <div style="font-size:12px;color:var(--t3);margin-bottom:4px;" id="anggaran-summary-lbl">Total Anggaran (Bulan ini)</div>
               <div style="font-family:var(--f);font-size:clamp(24px,7vw,32px);font-weight:800;color:var(--blue2);letter-spacing:-1px;margin-bottom:14px;" id="anggaran-total-amt">Rp 0</div>
@@ -2596,7 +2596,7 @@ body{background:var(--bg);transition:background .35s;}
             </div>
 
             <!-- Card 2: Sisa Anggaran vs Wallet Utama (dipindah dari tab Analitik) -->
-            <div id="budgetWalletCompareCard" style="display:none;opacity:0;transition:opacity .3s ease;background:var(--surface);border-radius:20px;padding:18px;margin:0 16px 16px;box-shadow:var(--sh);">
+            <div id="budgetWalletCompareCard" style="display:none;opacity:0;transition:opacity .3s ease;background:var(--surface);border-radius:20px;padding:18px;margin:0 16px 16px;box-shadow:var(--sh);" onclick="_ascOnInteract()">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="var(--blue2)" stroke="none"/></svg>
@@ -5643,7 +5643,7 @@ function switchSvTab(t){
   // Sembunyikan FAB tagihan jika tidak di goals tab
   const fab = document.getElementById('fab-tambah-tagihan');
   if(fab) fab.style.display='none';
-  if(t==='wallets'){ switchWalletSubTab('kartu'); } else { stopAnggaranSummaryRotate(); }
+  if(t==='wallets'){ switchWalletSubTab('kartu'); } else { _ascFullStop(); }
   if(t==='history'){ updateHistNavbarLabel(); populateHistSearchCatOptions(); renderHistory(); }
 }
 
@@ -5659,7 +5659,7 @@ function switchWalletSubTab(t){
     anggaranBtn.style.background='transparent'; anggaranBtn.style.color='var(--t3)'; anggaranBtn.style.boxShadow='none';
     kartuPanel.style.display='block'; anggaranPanel.style.display='none';
     renderWallets();
-    stopAnggaranSummaryRotate();
+    _ascFullStop();
   } else {
     anggaranBtn.style.background='var(--surface)'; anggaranBtn.style.color='var(--navy)'; anggaranBtn.style.boxShadow='var(--sh2)';
     kartuBtn.style.background='transparent'; kartuBtn.style.color='var(--t3)'; kartuBtn.style.boxShadow='none';
@@ -6543,7 +6543,7 @@ function switchTab(tab){
   document.getElementById('nav-'+tab)?.classList.add('on');
   if(tab==='savings'){ renderGoals(); updateSavingsTotal(); renderWalletSummary(); }
   if(tab==='analytics'){ refreshAnalytics(); }
-  if(tab!=='savings'){ stopAnggaranSummaryRotate(); }
+  if(tab!=='savings'){ _ascFullStop(); }
   moveNavIndicator(tab);
 }
 
@@ -10817,8 +10817,16 @@ function renderBudgetWalletCompare(){
 // Kedua card berbagi satu slot (#anggaran-summary-stack). Kalau card kedua
 // tidak punya data (belum ada anggaran aktif bulan ini / belum pilih Wallet
 // Utama), hanya Card Total Anggaran yang tampil & rotasi tidak berjalan.
+//
+// Interaksi: kalau card-nya disentuh/diklik (termasuk tap dot indicator, buka
+// rincian sisa anggaran, atau buka pemilih wallet), rotasi otomatis DIJEDA.
+// Kalau tidak ada sentuhan lagi selama ANGGARAN_ROTATE_RESUME_DELAY, rotasi
+// otomatis lanjut lagi dari card yg sedang tampil.
+const ANGGARAN_ROTATE_RESUME_DELAY = 8000; // 8 detik jeda sebelum lanjut auto lagi
 let _angRotateTimer = null;
 let _angRotateIdx = 0;
+let _angIdleTimer = null;
+let _angPaused = false;
 
 function anggaranSummaryStackSync(){
   const totalCard   = document.getElementById('asc-total');
@@ -10833,7 +10841,7 @@ function anggaranSummaryStackSync(){
   const hasCompareData = compareCard.dataset.hasData === '1';
 
   if(!panelVisible || !hasCompareData){
-    stopAnggaranSummaryRotate();
+    _ascFullStop();
     _angRotateIdx = 0;
     totalCard.style.display = 'block'; totalCard.style.opacity = '1';
     compareCard.style.display = 'none'; compareCard.style.opacity = '0';
@@ -10842,7 +10850,9 @@ function anggaranSummaryStackSync(){
   }
 
   if(dots) dots.style.display = 'flex';
-  if(!_angRotateTimer) startAnggaranSummaryRotate();
+  // Jangan mulai rotasi kalau sedang dijeda (user baru saja menyentuh card) —
+  // biarkan idle timer yang menentukan kapan lanjut lagi.
+  if(!_angRotateTimer && !_angPaused) startAnggaranSummaryRotate();
 }
 
 function startAnggaranSummaryRotate(startIdx){
@@ -10856,13 +10866,40 @@ function startAnggaranSummaryRotate(startIdx){
 function stopAnggaranSummaryRotate(){
   if(_angRotateTimer){ clearInterval(_angRotateTimer); _angRotateTimer = null; }
 }
+function _clearAnggaranIdleTimer(){
+  if(_angIdleTimer){ clearTimeout(_angIdleTimer); _angIdleTimer = null; }
+}
+// Dipakai saat benar² keluar dari panel Anggaran (ganti tab/sub-tab) — beda
+// dgn stopAnggaranSummaryRotate() biasa yg hanya berhenti sementara saat card
+// disentuh (idle timer & flag jeda tetap aktif menunggu waktunya lanjut lagi).
+function _ascFullStop(){
+  stopAnggaranSummaryRotate();
+  _clearAnggaranIdleTimer();
+  _angPaused = false;
+}
 
-// Tap dot indicator → pindah manual & restart timer rotasi dari card yg dipilih,
-// supaya tidak langsung "kelewat" balik ke card sebelumnya sesaat setelah tap.
+// Dipanggil setiap kali card di-tap/disentuh: jeda rotasi otomatis, lalu
+// jadwalkan untuk lanjut lagi kalau tidak ada sentuhan susulan.
+function _ascOnInteract(){
+  const compareCard = document.getElementById('budgetWalletCompareCard');
+  if(!compareCard || compareCard.dataset.hasData !== '1') return; // cuma 1 card, tidak ada yg perlu dijeda
+  _angPaused = true;
+  stopAnggaranSummaryRotate();
+  _clearAnggaranIdleTimer();
+  _angIdleTimer = setTimeout(()=>{
+    _angPaused = false;
+    _angIdleTimer = null;
+    startAnggaranSummaryRotate(_angRotateIdx); // lanjut dari card yg sedang tampil
+  }, ANGGARAN_ROTATE_RESUME_DELAY);
+}
+
+// Tap dot indicator → pindah manual ke card yg dipilih & jeda rotasi (sama
+// seperti menyentuh card), lanjut otomatis lagi setelah idle.
 function _ascManualGoTo(idx){
   const compareCard = document.getElementById('budgetWalletCompareCard');
   if(idx === 1 && (!compareCard || compareCard.dataset.hasData !== '1')) return;
-  startAnggaranSummaryRotate(idx);
+  _ascGoTo(idx);
+  _ascOnInteract();
 }
 
 // Pindah ke card index tertentu (0=Total Anggaran, 1=Sisa vs Wallet Utama)

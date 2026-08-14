@@ -190,6 +190,7 @@ async function fbSaveState(_retryCount){
       const s = Object.assign({}, r); delete s.catIco; return s;
     }),
     budgets: (typeof budgets !== 'undefined') ? budgets : [],
+    mainBudgetWalletIds: (typeof mainBudgetWalletIds !== 'undefined') ? mainBudgetWalletIds : [],
     customCategories: (typeof customCategories !== 'undefined') ? customCategories : [],
     debts: (typeof debts !== 'undefined') ? debts : [],
     savedPin,
@@ -714,6 +715,10 @@ function _applyStateFromDB(data){
     budgets = data.budgets;
     if(budgets.length>0) budgetIdCtr = Math.max(...budgets.map(b=>b.id||0))+1;
   }
+  // Migrasi: dukung data lama (field tunggal mainBudgetWalletId: number) →
+  // array mainBudgetWalletIds. Field array baru selalu diprioritaskan kalau ada.
+  if(Array.isArray(data.mainBudgetWalletIds)) mainBudgetWalletIds = data.mainBudgetWalletIds;
+  else if(data.mainBudgetWalletId !== undefined && data.mainBudgetWalletId !== null) mainBudgetWalletIds = [data.mainBudgetWalletId];
   if(data.savedPin    !== undefined) savedPin      = data.savedPin || '';
   if(data.lang)   { lang = data.lang; }
   if(data.darkMode !== undefined){
@@ -2277,6 +2282,54 @@ body{background:var(--bg);transition:background .35s;}
         </div>
         <div style="font-size:11px;color:var(--t3);margin-bottom:14px;" id="dbh-sub"></div>
         <div class="tc" id="dbh-list" style="max-height:220px;"></div>
+      </div>
+
+      <!-- Perbandingan Sisa Anggaran vs Wallet Utama (wallet murni referensi tampilan) -->
+      <div id="budgetWalletCompareCard" style="display:none;background:var(--surface);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--sh2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="var(--blue2)" stroke="none"/></svg>
+            <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Sisa Anggaran vs Wallet Utama</span>
+          </div>
+          <span id="bwc-status-badge" style="display:none;font-size:9px;font-weight:800;letter-spacing:.3px;padding:3px 8px;border-radius:8px;color:#fff;"></span>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bandingkan sisa anggaran bulan ini dengan saldo wallet acuan</div>
+
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;">
+            <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;">SISA ANGGARAN</div>
+            <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-remaining">Rp 0</div>
+          </div>
+          <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;cursor:pointer;" onclick="openMainWalletPicker()">
+            <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;display:flex;align-items:center;gap:3px;">
+              <span id="bwc-wallet-label">WALLET UTAMA</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="3"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-wallet-balance">Rp 0</div>
+          </div>
+        </div>
+
+        <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;margin-bottom:8px;">
+          <div id="bwc-bar" style="height:100%;border-radius:5px;width:0%;background:var(--green);transition:width .3s;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--t3);" id="bwc-note"></div>
+
+        <div id="bwc-empty-wallet" style="display:none;text-align:center;padding:12px 0 2px;">
+          <button onclick="openMainWalletPicker()" style="background:var(--blue);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;">Pilih Wallet Utama</button>
+        </div>
+      </div>
+
+      <!-- MAIN WALLET PICKER MODAL -->
+      <div id="main-wallet-picker" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeMainWalletPicker()">
+        <div style="background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 16px calc(24px + var(--safe-bot));max-height:80vh;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">Pilih Wallet Utama Anggaran</div>
+            <button onclick="closeMainWalletPicker()" style="background:var(--surface2);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--t3);">✕</button>
+          </div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bisa pilih lebih dari 1 wallet — saldonya akan digabung sebagai acuan. Tidak memengaruhi pencatatan transaksi.</div>
+          <div id="mwp-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+          <button onclick="closeMainWalletPicker()" style="width:100%;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">Selesai</button>
+        </div>
       </div>
 
       <!-- DAILY DATE PICKER MODAL -->
@@ -8326,6 +8379,7 @@ function refreshAnalytics() {
   buildTopCats();
   buildDailySpending();
   renderDailyBudgetHome();
+  renderBudgetWalletCompare();
   buildSmartTip();
   refreshWeeklyBar(wBarMode);
   buildMonthlyChart();
@@ -8794,6 +8848,10 @@ async function enterApp(initialState){
       budgets = initialState.budgets;
       if(budgets.length > 0) budgetIdCtr = Math.max(...budgets.map(b=>b.id||0)) + 1;
     }
+    // Migrasi: dukung data lama (field tunggal mainBudgetWalletId: number) →
+    // array mainBudgetWalletIds. Field array baru selalu diprioritaskan kalau ada.
+    if(Array.isArray(initialState.mainBudgetWalletIds)) mainBudgetWalletIds = initialState.mainBudgetWalletIds;
+    else if(initialState.mainBudgetWalletId !== undefined && initialState.mainBudgetWalletId !== null) mainBudgetWalletIds = [initialState.mainBudgetWalletId];
 
     // ── Kategori Kustom ──
     if(Array.isArray(initialState.customCategories)){
@@ -8842,7 +8900,7 @@ async function enterApp(initialState){
   } else {
     // State baru (user baru) — semua sudah di-inisialisasi ke nilai default kosong
     historyItems=[]; goals=[]; wallets=[]; notifications=[]; balance=0;
-    tagihan=[]; tagihanRiwayatBulanan=[]; budgets=[]; customCategories=[]; debts=[];
+    tagihan=[]; tagihanRiwayatBulanan=[]; budgets=[]; mainBudgetWalletIds=[]; customCategories=[]; debts=[];
     appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
     applyPrivacyMode();
     applyThemeColor(currentThemeId, {save:false});
@@ -10426,6 +10484,13 @@ window.addNotif = function(type, title, msg){
 let budgets = [];
 let budgetIdCtr = 1;
 
+// ── Wallet Utama Anggaran ──
+// Hanya dipakai sebagai REFERENSI TAMPILAN untuk membandingkan sisa anggaran
+// dengan saldo GABUNGAN wallet-wallet ini (card "Sisa Anggaran vs Wallet Utama"
+// di tab Analitik). Bisa lebih dari 1 wallet. TIDAK menyentuh alur transaksi/
+// pencatatan sama sekali — murni array pointer id wallet.
+let mainBudgetWalletIds = [];
+
 // Current month navigation for Anggaran
 let anggaranYear  = new Date().getFullYear();
 let anggaranMonth = new Date().getMonth(); // 0-based
@@ -10592,6 +10657,167 @@ function renderDailyBudgetHome(){
 function openDailyBudgetHome(){
   switchTab('savings');
   switchWalletSubTab('anggaran');
+}
+
+// ══════════════════════════════════════════════════════════════
+// PERBANDINGAN SISA ANGGARAN vs WALLET UTAMA
+// Wallet "utama" di sini murni ARRAY POINTER referensi (mainBudgetWalletIds)
+// untuk keperluan tampilan/analitik — bisa lebih dari 1 wallet, saldonya
+// digabung (dijumlah). TIDAK terhubung ke alur transaksi/pencatatan —
+// saldo wallet dibaca apa adanya (read-only), tidak ada pengurangan/penambahan
+// yang dipicu dari sini.
+// ══════════════════════════════════════════════════════════════
+
+// Total sisa anggaran (belum terpakai) bulan berjalan, dijumlah dari semua
+// kategori anggaran aktif. Kategori yang sudah over-budget dihitung 0
+// (bukan negatif) supaya tidak mengecoh angka totalnya.
+function calcTotalBudgetRemaining(){
+  const now = new Date();
+  const periodeKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthBudgets = (typeof budgets !== 'undefined' ? budgets : []).filter(b => b.periode === periodeKey && b.active !== false);
+  if(!monthBudgets.length) return { total: 0, count: 0 };
+
+  const spent = calcSpentForPeriode(periodeKey);
+  let total = 0;
+  monthBudgets.forEach(b => {
+    const spentAmt = spent[b.catId] || 0;
+    total += Math.max(0, b.nominal - spentAmt);
+  });
+  return { total, count: monthBudgets.length };
+}
+
+// Ambil daftar wallet yang sedang jadi acuan + saldo gabungannya
+function getMainBudgetWallets(){
+  const list = (typeof wallets !== 'undefined' ? wallets : []);
+  const ids  = Array.isArray(mainBudgetWalletIds) ? mainBudgetWalletIds : [];
+  const selected = ids.map(id => list.find(w => w.id === id)).filter(Boolean);
+  const totalBalance = selected.reduce((sum, w) => sum + ((typeof w.balance === 'number' && !isNaN(w.balance)) ? w.balance : 0), 0);
+  return { selected, totalBalance };
+}
+
+function renderBudgetWalletCompare(){
+  const card = document.getElementById('budgetWalletCompareCard');
+  if(!card) return;
+
+  const { total: remaining, count } = calcTotalBudgetRemaining();
+  if(!count){ card.style.display = 'none'; return; }
+
+  const remainingEl  = document.getElementById('bwc-remaining');
+  const walletLblEl  = document.getElementById('bwc-wallet-label');
+  const walletBalEl  = document.getElementById('bwc-wallet-balance');
+  const badgeEl       = document.getElementById('bwc-status-badge');
+  const barEl        = document.getElementById('bwc-bar');
+  const noteEl       = document.getElementById('bwc-note');
+  const emptyWalletEl = document.getElementById('bwc-empty-wallet');
+  if(remainingEl) remainingEl.textContent = fmt(remaining);
+
+  const { selected, totalBalance: balance } = getMainBudgetWallets();
+
+  // Belum ada wallet utama dipilih → tampilkan CTA, jangan tampilkan data kosong
+  if(!selected.length){
+    if(walletLblEl) walletLblEl.textContent = 'WALLET UTAMA';
+    if(walletBalEl) walletBalEl.textContent = '— Pilih —';
+    if(badgeEl) badgeEl.style.display = 'none';
+    if(barEl){ barEl.style.width = '0%'; }
+    if(noteEl) noteEl.textContent = 'Pilih wallet utama untuk melihat perbandingan saldo.';
+    if(emptyWalletEl) emptyWalletEl.style.display = 'block';
+    card.style.display = 'block';
+    return;
+  }
+
+  if(emptyWalletEl) emptyWalletEl.style.display = 'none';
+  // Label: nama wallet kalau cuma 1, atau "N WALLET" kalau lebih dari 1
+  if(walletLblEl){
+    walletLblEl.textContent = selected.length === 1
+      ? (selected[0].bank || 'Wallet').toUpperCase()
+      : `${selected.length} WALLET GABUNGAN`;
+  }
+  if(walletBalEl) walletBalEl.textContent = fmt(balance);
+
+  const ratioPct = remaining <= 0 ? 0 : Math.min(100, (remaining / Math.max(balance, 1)) * 100);
+  if(barEl) barEl.style.width = ratioPct + '%';
+
+  let status, color, note;
+  if(balance >= remaining * 1.1){
+    status = 'AMAN'; color = 'var(--green)';
+    note = `Saldo gabungan cukup — lebih ${fmt(balance - remaining)} dari sisa anggaran.`;
+  } else if(balance >= remaining){
+    status = 'MEPET'; color = 'var(--orange)';
+    note = `Saldo gabungan hampir pas dengan sisa anggaran (lebih ${fmt(balance - remaining)}).`;
+  } else {
+    status = 'KURANG'; color = 'var(--red)';
+    note = `Saldo gabungan kurang ${fmt(remaining - balance)} dari sisa anggaran — hati-hati kurang dana.`;
+  }
+  if(badgeEl){
+    badgeEl.style.display = 'inline-block';
+    badgeEl.textContent = status;
+    badgeEl.style.background = color;
+  }
+  if(barEl) barEl.style.background = color;
+  if(noteEl) noteEl.textContent = note;
+
+  card.style.display = 'block';
+}
+
+// Modal pemilih wallet utama — MULTI-SELECT (bisa pilih lebih dari 1 wallet).
+// Toggle checkbox per wallet, hanya set/lepas pointer id, tidak menyentuh
+// saldo/transaksi sama sekali.
+function openMainWalletPicker(){
+  _mwpInitialIdsSnapshot = JSON.stringify((Array.isArray(mainBudgetWalletIds) ? mainBudgetWalletIds : []).slice().sort());
+  renderMainWalletPickerList();
+  const modal = document.getElementById('main-wallet-picker');
+  if(modal) modal.style.display = 'flex';
+}
+let _mwpInitialIdsSnapshot = null;
+
+function renderMainWalletPickerList(){
+  const listEl = document.getElementById('mwp-list');
+  if(!listEl) return;
+
+  const list = (typeof wallets !== 'undefined' ? wallets : []);
+  const ids  = Array.isArray(mainBudgetWalletIds) ? mainBudgetWalletIds : [];
+
+  if(!list.length){
+    listEl.innerHTML = `<div style="text-align:center;padding:18px 0;color:var(--t3);font-size:12px;">Belum ada wallet. Tambah wallet dulu di tab Savings.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = list.map(w => {
+    const active = ids.includes(w.id);
+    return `
+    <div onclick="toggleMainWallet(${w.id})" style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:12px;padding:12px 14px;cursor:pointer;border:1.5px solid ${active ? 'var(--blue)' : 'transparent'};">
+      <div>
+        <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);">${escapeHtml(w.bank || 'Wallet')} ••••${escapeHtml(w.num || '0000')}</div>
+        <div style="font-size:11px;color:var(--t3);">${fmt(w.balance || 0)}</div>
+      </div>
+      <div style="width:20px;height:20px;border-radius:6px;border:1.5px solid ${active ? 'var(--blue)' : 'var(--border)'};background:${active ? 'var(--blue)' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${active ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function closeMainWalletPicker(){
+  const modal = document.getElementById('main-wallet-picker');
+  if(modal) modal.style.display = 'none';
+  renderBudgetWalletCompare();
+  const nowSnapshot = JSON.stringify((Array.isArray(mainBudgetWalletIds) ? mainBudgetWalletIds : []).slice().sort());
+  if(nowSnapshot !== _mwpInitialIdsSnapshot){
+    fbAutoSave();
+    toast('✅ Wallet utama anggaran diperbarui');
+  }
+}
+
+// Toggle wallet masuk/keluar dari daftar acuan — MURNI array pointer referensi
+// tampilan (mainBudgetWalletIds). Tidak memindahkan saldo, tidak mencatat
+// histori, tidak mengubah wallet lain atau alur transaksi.
+function toggleMainWallet(id){
+  if(!Array.isArray(mainBudgetWalletIds)) mainBudgetWalletIds = [];
+  const idx = mainBudgetWalletIds.indexOf(id);
+  if(idx === -1) mainBudgetWalletIds.push(id);
+  else mainBudgetWalletIds.splice(idx, 1);
+  renderMainWalletPickerList();
+  renderBudgetWalletCompare();
 }
 
 // ── Peringatan Anggaran ──
@@ -11513,10 +11739,11 @@ function renderAnggaranList(){
     </div>`;
   }).join('');
 
-  // Widget Jatah Belanja (di tab Analitik) ikut disinkronkan tiap kali daftar
-  // anggaran dirender ulang, supaya toggle/edit/tambah/hapus anggaran langsung
-  // terrefleksi di sana juga.
+  // Widget Jatah Belanja & Perbandingan Wallet Utama (di tab Analitik) ikut
+  // disinkronkan tiap kali daftar anggaran dirender ulang, supaya toggle/edit/
+  // tambah/hapus anggaran langsung terrefleksi di sana juga.
   renderDailyBudgetHome();
+  renderBudgetWalletCompare();
 }
 
 // Toggle ON/OFF anggaran per card

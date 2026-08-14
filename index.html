@@ -2296,8 +2296,11 @@ body{background:var(--bg);transition:background .35s;}
         <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bandingkan sisa anggaran bulan ini dengan saldo wallet acuan</div>
 
         <div style="display:flex;gap:10px;margin-bottom:14px;">
-          <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;">
-            <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;">SISA ANGGARAN</div>
+          <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;cursor:pointer;" onclick="toggleBudgetRemainingBreakdown()">
+            <div style="font-size:9px;color:var(--t3);letter-spacing:.3px;margin-bottom:4px;display:flex;align-items:center;gap:3px;">
+              <span>SISA ANGGARAN</span>
+              <svg id="bwc-remaining-chevron" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="3" style="transition:transform .2s;"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
             <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-remaining">Rp 0</div>
           </div>
           <div style="flex:1;background:var(--surface2);border-radius:14px;padding:12px;cursor:pointer;" onclick="openMainWalletPicker()">
@@ -2307,6 +2310,11 @@ body{background:var(--bg);transition:background .35s;}
             </div>
             <div style="font-family:var(--f);font-size:15px;font-weight:800;color:var(--navy);" id="bwc-wallet-balance">Rp 0</div>
           </div>
+        </div>
+
+        <!-- Rincian sisa anggaran per kategori — collapsed by default -->
+        <div id="bwc-breakdown" style="display:none;margin-bottom:14px;">
+          <div class="tc" id="bwc-breakdown-list" style="max-height:220px;"></div>
         </div>
 
         <div style="height:8px;border-radius:5px;background:var(--surface2);overflow:hidden;margin-bottom:8px;">
@@ -10670,20 +10678,34 @@ function openDailyBudgetHome(){
 
 // Total sisa anggaran (belum terpakai) bulan berjalan, dijumlah dari semua
 // kategori anggaran aktif. Kategori yang sudah over-budget dihitung 0
-// (bukan negatif) supaya tidak mengecoh angka totalnya.
+// (bukan negatif) supaya tidak mengecoh angka totalnya. Juga mengembalikan
+// rincian per kategori (items) untuk breakdown yang bisa di-expand di card.
 function calcTotalBudgetRemaining(){
   const now = new Date();
   const periodeKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const monthBudgets = (typeof budgets !== 'undefined' ? budgets : []).filter(b => b.periode === periodeKey && b.active !== false);
-  if(!monthBudgets.length) return { total: 0, count: 0 };
+  if(!monthBudgets.length) return { total: 0, count: 0, items: [] };
 
   const spent = calcSpentForPeriode(periodeKey);
   let total = 0;
+  const items = [];
   monthBudgets.forEach(b => {
     const spentAmt = spent[b.catId] || 0;
-    total += Math.max(0, b.nominal - spentAmt);
+    const remaining = Math.max(0, b.nominal - spentAmt);
+    const isOver = spentAmt >= b.nominal;
+    total += remaining;
+    const c = allPickableCats().find(x => x.id === b.catId);
+    items.push({
+      name: c ? catLabel(c) : (b.catId || 'Kategori'),
+      icon: c ? catIconInnerHtml(c, 15) : '',
+      bg: c ? (c.bg || c.color) : 'var(--surface2)',
+      remaining,
+      isOver
+    });
   });
-  return { total, count: monthBudgets.length };
+  // Sisa terbesar ditampilkan lebih dulu, biar yang paling "longgar" kelihatan dulu
+  items.sort((a, b) => b.remaining - a.remaining);
+  return { total, count: monthBudgets.length, items };
 }
 
 // Ambil daftar wallet yang sedang jadi acuan + saldo gabungannya
@@ -10699,7 +10721,7 @@ function renderBudgetWalletCompare(){
   const card = document.getElementById('budgetWalletCompareCard');
   if(!card) return;
 
-  const { total: remaining, count } = calcTotalBudgetRemaining();
+  const { total: remaining, count, items } = calcTotalBudgetRemaining();
   if(!count){ card.style.display = 'none'; return; }
 
   const remainingEl  = document.getElementById('bwc-remaining');
@@ -10709,7 +10731,19 @@ function renderBudgetWalletCompare(){
   const barEl        = document.getElementById('bwc-bar');
   const noteEl       = document.getElementById('bwc-note');
   const emptyWalletEl = document.getElementById('bwc-empty-wallet');
+  const breakdownListEl = document.getElementById('bwc-breakdown-list');
   if(remainingEl) remainingEl.textContent = fmt(remaining);
+
+  // Rincian per kategori — item yang sudah habis/lewat ditampilkan "Rp 0 (habis)"
+  // supaya tetap kelihatan di daftar, konsisten dengan pola widget Jatah Belanja Harian.
+  if(breakdownListEl){
+    breakdownListEl.innerHTML = items.map(it => `
+      <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:9px 12px;">
+        <div style="width:28px;height:28px;border-radius:9px;background:${it.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${it.icon}</div>
+        <span style="flex:1;font-size:12px;color:var(--navy);font-weight:500;">${escapeHtml(it.name)}</span>
+        <span style="font-family:var(--f);font-size:13px;font-weight:700;color:${it.isOver ? 'var(--red)' : 'var(--navy)'};">${it.isOver ? 'Rp 0' : fmt(it.remaining)}${it.isOver ? ' <span style="font-size:9px;font-weight:400;">(habis)</span>' : ''}</span>
+      </div>`).join('');
+  }
 
   const { selected, totalBalance: balance } = getMainBudgetWallets();
 
@@ -10757,6 +10791,17 @@ function renderBudgetWalletCompare(){
   if(noteEl) noteEl.textContent = note;
 
   card.style.display = 'block';
+}
+
+// Expand/collapse rincian sisa anggaran per kategori. State disimpan di
+// variabel session (tidak dipersist) — cukup untuk UX buka/tutup di layar.
+let _bwcBreakdownOpen = false;
+function toggleBudgetRemainingBreakdown(){
+  _bwcBreakdownOpen = !_bwcBreakdownOpen;
+  const box = document.getElementById('bwc-breakdown');
+  const chevron = document.getElementById('bwc-remaining-chevron');
+  if(box) box.style.display = _bwcBreakdownOpen ? 'block' : 'none';
+  if(chevron) chevron.style.transform = _bwcBreakdownOpen ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
 // Modal pemilih wallet utama — MULTI-SELECT (bisa pilih lebih dari 1 wallet).

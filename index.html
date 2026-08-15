@@ -2572,7 +2572,7 @@ body{background:var(--bg);transition:background .35s;}
                beberapa detik saat panel Anggaran sedang dibuka. Kalau belum ada
                Wallet Utama / anggaran aktif dipilih (card kedua kosong), hanya
                Card Total Anggaran yang tampil dan rotasi tidak berjalan. -->
-          <div id="anggaran-summary-stack" style="position:relative;">
+          <div id="anggaran-summary-stack" style="position:relative;touch-action:pan-y;" onpointerdown="_ascSwipeStart(event)" onpointerup="_ascSwipeEnd(event)" onpointercancel="_ascSwipeCancel()">
 
             <!-- Card 1: Total Anggaran (liquid glass: gel bening) -->
             <div class="anggaran-summary-card" id="asc-total" style="opacity:1;transition:opacity .3s ease;" onclick="_ascOnInteract()">
@@ -10900,6 +10900,41 @@ function _ascManualGoTo(idx){
   if(idx === 1 && (!compareCard || compareCard.dataset.hasData !== '1')) return;
   _ascGoTo(idx);
   _ascOnInteract();
+}
+
+// ── Geser manual (swipe) antar card ──
+// Pakai Pointer Events supaya jalan baik di layar sentuh maupun mouse-drag.
+// Geser ke kiri → pindah ke card berikutnya, geser ke kanan → balik ke card
+// sebelumnya. Kalau cuma tap biasa (geseran kecil), tidak dianggap swipe —
+// biar tidak bentrok dgn tombol² kecil di dalam card (rincian, pilih wallet).
+const ANGGARAN_SWIPE_THRESHOLD = 40; // px, jarak minimal horizontal dianggap swipe
+let _ascSwipeStartX = null;
+let _ascSwipeStartY = null;
+
+function _ascSwipeStart(e){
+  _ascSwipeStartX = e.clientX;
+  _ascSwipeStartY = e.clientY;
+}
+function _ascSwipeCancel(){
+  _ascSwipeStartX = null;
+  _ascSwipeStartY = null;
+}
+function _ascSwipeEnd(e){
+  if(_ascSwipeStartX === null){ return; }
+  const dx = e.clientX - _ascSwipeStartX;
+  const dy = e.clientY - _ascSwipeStartY;
+  _ascSwipeStartX = null;
+  _ascSwipeStartY = null;
+
+  // Bukan swipe kalau geserannya kecil, atau lebih vertikal (itu scroll halaman)
+  if(Math.abs(dx) < ANGGARAN_SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+
+  const compareCard = document.getElementById('budgetWalletCompareCard');
+  if(!compareCard || compareCard.dataset.hasData !== '1') return; // cuma 1 card, tidak ada yg bisa digeser
+
+  const nextIdx = dx < 0 ? 1 : 0; // geser kiri → card berikutnya, geser kanan → card sebelumnya
+  if(nextIdx === _angRotateIdx) return; // sudah di card itu, tidak perlu apa-apa
+  _ascManualGoTo(nextIdx);
 }
 
 // Pindah ke card index tertentu (0=Total Anggaran, 1=Sisa vs Wallet Utama)

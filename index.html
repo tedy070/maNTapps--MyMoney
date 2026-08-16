@@ -2286,20 +2286,10 @@ body{background:var(--bg);transition:background .35s;}
 
       <!-- Catatan: Card "Sisa Anggaran vs Wallet Utama" sudah dipindah ke
            Menu Tabungan (Savings) > Kartu & Anggaran > sub-panel Anggaran.
-           Di sana ia auto-bergantian (crossfade) dengan Card "Total Anggaran". -->
-
-      <!-- MAIN WALLET PICKER MODAL -->
-      <div id="main-wallet-picker" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeMainWalletPicker()">
-        <div style="background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 16px calc(24px + var(--safe-bot));max-height:80vh;overflow-y:auto;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">Pilih Wallet Utama Anggaran</div>
-            <button onclick="closeMainWalletPicker()" style="background:var(--surface2);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--t3);">✕</button>
-          </div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bisa pilih lebih dari 1 wallet — saldonya akan digabung sebagai acuan. Tidak memengaruhi pencatatan transaksi.</div>
-          <div id="mwp-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
-          <button onclick="closeMainWalletPicker()" style="width:100%;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">Selesai</button>
-        </div>
-      </div>
+           Di sana ia auto-bergantian (crossfade) dengan Card "Total Anggaran".
+           Modal "Pilih Wallet Utama"-nya sendiri juga sudah dipindah keluar
+           dari tab Analitik (lihat MAIN WALLET PICKER MODAL, sekarang jadi
+           modal global bareng modal² lain, bukan lagi nempel di tab ini). -->
 
       <!-- DAILY DATE PICKER MODAL -->
       <div id="daily-date-picker" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeDailyDatePicker()">
@@ -2731,6 +2721,22 @@ body{background:var(--bg);transition:background .35s;}
         <div class="st-item danger" onclick="doLogout()"><div class="st-ico"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="st-info"><div class="st-nm" id="st-logout">Log Out</div><div class="st-sub" id="st-logoutsub">Securely sign out</div></div></div>
       </div>
       <div class="st-foot"><div class="st-foot-t">MANTAPPS <span id="st-foot-version">V2.5.0</span></div><div class="st-foot-t" style="margin-top:3px;" id="st-hcft">HANDCRAFTED FOR FINANCIAL WELLNESS</div></div>
+    </div>
+  </div>
+
+  <!-- MAIN WALLET PICKER MODAL — dipicu dari Card "Sisa Anggaran vs Wallet
+       Utama" di tab Savings, tapi sengaja ditaruh sbg modal GLOBAL (di luar
+       semua .tp tab) supaya tidak "kejebak" ikut ke-hide saat tab lain aktif
+       lalu tiba² nongol saat pindah tab (bug sebelumnya). -->
+  <div id="main-wallet-picker" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeMainWalletPicker()">
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 16px calc(24px + var(--safe-bot));max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">Pilih Wallet Utama Anggaran</div>
+        <button onclick="closeMainWalletPicker()" style="background:var(--surface2);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--t3);">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bisa pilih lebih dari 1 wallet — saldonya akan digabung sebagai acuan. Tidak memengaruhi pencatatan transaksi.</div>
+      <div id="mwp-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+      <button onclick="closeMainWalletPicker()" style="width:100%;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">Selesai</button>
     </div>
   </div>
 

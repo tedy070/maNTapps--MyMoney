@@ -2269,12 +2269,17 @@ body{background:var(--bg);transition:background .35s;}
 
       <!-- Ringkasan Jatah Belanja Harian (adaptif dari anggaran bulanan) -->
       <div id="dailyBudgetHomeCard" style="display:none;background:var(--surface);border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:var(--sh2);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;" onclick="openDailyBudgetHome()">
-          <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="openDailyBudgetHome()">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>
             <span style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);">Jatah Belanja Hari Ini</span>
           </div>
-          <span style="font-size:10px;color:var(--t3);" id="dbh-date"></span>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <span style="font-size:10px;color:var(--t3);" id="dbh-date"></span>
+            <button onclick="openJatahTipeSettings()" title="Atur kategori Harian vs Bulanan/Sekali Bayar" style="background:var(--surface2);border:none;border-radius:8px;width:24px;height:24px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            </button>
+          </div>
         </div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;cursor:pointer;" onclick="openDailyBudgetHome()">
           <span style="font-family:var(--f);font-size:30px;font-weight:800;color:var(--navy);letter-spacing:-1px;" id="dbh-total">Rp 0</span>
@@ -2282,7 +2287,15 @@ body{background:var(--bg);transition:background .35s;}
         </div>
         <div style="font-size:11px;color:var(--t3);margin-bottom:14px;" id="dbh-sub"></div>
         <div class="tc" id="dbh-list" style="max-height:220px;"></div>
+
+        <!-- Anggaran "Bulanan/Sekali Bayar" (Sewa, Cicilan, dll) — di luar hitungan
+             Jatah Belanja Hari Ini, cukup ditampilkan ringkas sisa & status lunasnya -->
+        <div id="dbh-berkala" style="display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);">
+          <div style="font-size:10px;color:var(--t3);letter-spacing:.3px;margin-bottom:8px;">ANGGARAN BULANAN (DI LUAR JATAH HARIAN)</div>
+          <div class="tc" id="dbh-berkala-list" style="max-height:160px;"></div>
+        </div>
       </div>
+
 
       <!-- Catatan: Card "Sisa Anggaran vs Wallet Utama" sudah dipindah ke
            Menu Tabungan (Savings) > Kartu & Anggaran > sub-panel Anggaran.
@@ -2737,6 +2750,21 @@ body{background:var(--bg);transition:background .35s;}
       <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Bisa pilih lebih dari 1 wallet — saldonya akan digabung sebagai acuan. Tidak memengaruhi pencatatan transaksi.</div>
       <div id="mwp-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
       <button onclick="closeMainWalletPicker()" style="width:100%;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">Selesai</button>
+    </div>
+  </div>
+
+  <!-- JATAH TIPE PICKER MODAL — dipicu dari tombol ⚙️ di Card "Jatah Belanja
+       Hari Ini" (tab Analitik). Modal GLOBAL (di luar semua .tp tab), sama
+       spt main-wallet-picker, biar tidak kena bug "nyangkut" tab tersembunyi. -->
+  <div id="jatah-tipe-picker" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeJatahTipeSettings()">
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 16px calc(24px + var(--safe-bot));max-height:80vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">Atur Tipe Anggaran</div>
+        <button onclick="closeJatahTipeSettings()" style="background:var(--surface2);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--t3);">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Kategori <strong>Harian</strong> ikut dihitung ke Jatah Belanja Hari Ini. Kategori <strong>Bulanan/Sekali Bayar</strong> (mis. Sewa, Cicilan, Asuransi) dikecualikan — nggak masuk akal dipecah per hari.</div>
+      <div id="jtp-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+      <button onclick="closeJatahTipeSettings()" style="width:100%;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">Selesai</button>
     </div>
   </div>
 
@@ -8413,6 +8441,7 @@ function refreshAnalytics() {
   buildTopCats();
   buildDailySpending();
   renderDailyBudgetHome();
+  scheduleDailyBudgetMidnightRefresh();
   renderBudgetWalletCompare();
   buildSmartTip();
   refreshWeeklyBar(wBarMode);
@@ -10632,7 +10661,12 @@ function jatahHarianBudget(b, spentAmt){
 
 // Render widget "Jatah Belanja Hari Ini" di tab Home — total jatah harian
 // digabung dari semua anggaran kategori aktif bulan berjalan (bulan hari ini,
-// bukan bulan yang sedang dinavigasi di halaman Anggaran).
+// bukan bulan yang sedang dinavigasi di halaman Anggaran) yang bertipe
+// "Harian". Anggaran bertipe "Bulanan/Sekali Bayar" (b.jatahTipe==='berkala',
+// mis. Sewa/Cicilan/Asuransi) SENGAJA dikecualikan dari total & list utama —
+// dipecah per hari nggak masuk akal untuk pengeluaran yang keluar sekaligus
+// dalam jumlah besar. Kategori itu tetap ditampilkan, tapi ringkas & terpisah
+// di bagian bawah card (lihat #dbh-berkala), tanpa pecahan "/hari".
 function renderDailyBudgetHome(){
   const card = document.getElementById('dailyBudgetHomeCard');
   if(!card) return;
@@ -10643,54 +10677,184 @@ function renderDailyBudgetHome(){
   if(!monthBudgets.length){ card.style.display = 'none'; return; }
 
   const spent = calcSpentForPeriode(periodeKey);
-  const rows = [];
+  const rows = [];         // kategori Harian → ikut total Jatah Belanja Hari Ini
+  const berkalaRows = [];  // kategori Bulanan/Sekali Bayar → ringkasan terpisah, di luar total
   let total = 0;
 
   monthBudgets.forEach(b => {
     const spentAmt = spent[b.catId] || 0;
     const info = jatahHarianBudget(b, spentAmt);
     if(!info) return;
+
     const c = allPickableCats().find(x => x.id === b.catId);
-    if(!c) return;
-    total += info.jatah;
-    rows.push({
-      name: catLabel(c),
-      icon: catIconInnerHtml(c, 15),
-      bg: c.bg || c.color,
-      jatah: info.jatah,
-      isOver: info.sisa <= 0
-    });
+    const name = c ? catLabel(c) : (b.catId || 'Kategori');
+    const icon = c ? catIconInnerHtml(c, 15) : '';
+    const bg   = c ? (c.bg || c.color) : 'var(--surface2)';
+    // Tetap dihitung meski kategorinya sudah dihapus user — supaya konsisten
+    // dgn Total Anggaran & Sisa Anggaran vs Wallet Utama (menghitung SEMUA
+    // anggaran aktif, bukan cuma yg kategorinya masih ada).
+    const isHarian = (b.jatahTipe || 'harian') === 'harian';
+
+    if(isHarian){
+      total += info.jatah;
+      rows.push({ name, icon, bg, jatah: info.jatah, isOver: info.sisa <= 0 });
+    } else {
+      berkalaRows.push({ name, icon, bg, sisa: Math.max(0, info.sisa), isPaid: info.sisa <= 0 });
+    }
   });
 
-  if(!rows.length){ card.style.display = 'none'; return; }
+  if(!rows.length && !berkalaRows.length){ card.style.display = 'none'; return; }
 
   rows.sort((a,b) => b.jatah - a.jatah);
+  berkalaRows.sort((a,b) => b.sisa - a.sisa);
 
   const dateEl  = document.getElementById('dbh-date');
   const totalEl = document.getElementById('dbh-total');
   const subEl   = document.getElementById('dbh-sub');
   const listEl  = document.getElementById('dbh-list');
+  const berkalaWrap = document.getElementById('dbh-berkala');
+  const berkalaListEl = document.getElementById('dbh-berkala-list');
+
   if(dateEl)  dateEl.textContent  = now.toLocaleDateString('id-ID', { day:'numeric', month:'short' });
   if(totalEl) totalEl.textContent = fmt(total);
-  if(subEl)   subEl.textContent   = `Dari ${monthBudgets.length} anggaran aktif · dihitung ulang tiap hari`;
+  if(subEl){
+    let subTxt = `Dari ${rows.length} anggaran harian aktif · dihitung ulang tiap hari`;
+    if(!rows.length) subTxt = `Tidak ada anggaran harian aktif bulan ini`;
+    if(berkalaRows.length) subTxt += ` · ${berkalaRows.length} bulanan di luar hitungan`;
+    subEl.textContent = subTxt;
+  }
+
   if(listEl){
     // List di-scroll internal (sama seperti card Kategori Teratas / Pengeluaran Harian),
     // jadi semua kategori aktif ditampilkan tanpa perlu dipotong ke "+N lainnya".
-    listEl.innerHTML = rows.map(r => `
+    listEl.innerHTML = rows.length ? rows.map(r => `
       <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:9px 12px;">
         <div style="width:28px;height:28px;border-radius:9px;background:${r.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.icon}</div>
         <span style="flex:1;font-size:12px;color:var(--navy);font-weight:500;">${escapeHtml(r.name)}</span>
         <span style="font-family:var(--f);font-size:13px;font-weight:700;color:${r.isOver?'var(--red)':'var(--navy)'};">${r.isOver ? 'Rp 0' : fmt(r.jatah)}${r.isOver?' <span style="font-size:9px;font-weight:400;">(lewat)</span>':''}</span>
-      </div>`).join('');
+      </div>`).join('') : `<div style="text-align:center;padding:14px 0;color:var(--t3);font-size:11px;">Semua anggaran aktif ditandai "Bulanan/Sekali Bayar" — atur di tombol ⚙️ di atas.</div>`;
+  }
+
+  if(berkalaWrap && berkalaListEl){
+    if(berkalaRows.length){
+      berkalaWrap.style.display = 'block';
+      berkalaListEl.innerHTML = berkalaRows.map(r => `
+        <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:9px 12px;">
+          <div style="width:28px;height:28px;border-radius:9px;background:${r.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.icon}</div>
+          <span style="flex:1;font-size:12px;color:var(--navy);font-weight:500;">${escapeHtml(r.name)}</span>
+          <span style="font-family:var(--f);font-size:12px;font-weight:700;color:${r.isPaid?'var(--teal2)':'var(--navy)'};">${r.isPaid ? '✅ Lunas' : fmt(r.sisa)}</span>
+        </div>`).join('');
+    } else {
+      berkalaWrap.style.display = 'none';
+    }
   }
 
   card.style.display = 'block';
+}
+
+// ── Tipe Anggaran: Harian vs Bulanan/Sekali Bayar ──
+// b.jatahTipe: 'harian' (default, ikut Jatah Belanja Hari Ini) | 'berkala'
+// (Sewa, Cicilan, Asuransi, dll — dikecualikan dari hitungan per hari).
+// Kata kunci ini cuma dipakai sbg TEBAKAN AWAL saat anggaran baru dibuat,
+// supaya user nggak perlu koreksi manual utk kasus umum. Tetap bisa diubah
+// kapan saja lewat tombol ⚙️ di card / popup "Atur Tipe Anggaran".
+const JATAH_BERKALA_KEYWORDS = ['sewa','kontrak','kos','cicilan','kpr','kredit','asuransi','iuran','langganan','tagihan','pajak','pbb','listrik','pdam','internet','wifi','angsuran'];
+
+function _guessJatahTipeForCat(catId){
+  const c = allPickableCats().find(x => x.id === catId);
+  const name = (c ? catLabel(c) : (catId || '')).toLowerCase();
+  return JATAH_BERKALA_KEYWORDS.some(k => name.includes(k)) ? 'berkala' : 'harian';
+}
+
+function openJatahTipeSettings(){
+  renderJatahTipeList();
+  const modal = document.getElementById('jatah-tipe-picker');
+  if(modal) modal.style.display = 'flex';
+}
+
+function closeJatahTipeSettings(){
+  const modal = document.getElementById('jatah-tipe-picker');
+  if(modal) modal.style.display = 'none';
+  fbAutoSave();
+}
+
+function renderJatahTipeList(){
+  const listEl = document.getElementById('jtp-list');
+  if(!listEl) return;
+
+  const now = new Date();
+  const periodeKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthBudgets = (typeof budgets !== 'undefined' ? budgets : []).filter(b => b.periode === periodeKey && b.active !== false);
+
+  if(!monthBudgets.length){
+    listEl.innerHTML = `<div style="text-align:center;padding:18px 0;color:var(--t3);font-size:12px;">Belum ada anggaran aktif bulan ini.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = monthBudgets.map(b => {
+    const c = allPickableCats().find(x => x.id === b.catId);
+    const name = c ? catLabel(c) : (b.catId || 'Kategori');
+    const icon = c ? catIconInnerHtml(c, 15) : '';
+    const bg   = c ? (c.bg || c.color) : 'var(--surface2)';
+    const isHarian = (b.jatahTipe || 'harian') === 'harian';
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:12px;padding:12px 14px;">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <div style="width:28px;height:28px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${icon}</div>
+        <div style="min-width:0;">
+          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+          <div style="font-size:10px;color:var(--t3);" id="jtp-lbl-${b.id}">${isHarian ? 'Harian' : 'Bulanan / Sekali Bayar'}</div>
+        </div>
+      </div>
+      <button class="tog${isHarian ? ' on' : ''}" id="jtp-tog-${b.id}" onclick="toggleJatahTipeFor(${b.id})"></button>
+    </div>`;
+  }).join('');
+}
+
+// Toggle Harian ⇄ Bulanan untuk 1 anggaran. Live-preview langsung ke card
+// di belakang popup (renderDailyBudgetHome), tapi baru disimpan ke server
+// (fbAutoSave) saat popup ditutup lewat closeJatahTipeSettings() — konsisten
+// dgn pola di picker Wallet Utama.
+function toggleJatahTipeFor(id){
+  const b = budgets.find(x => x.id === id);
+  if(!b) return;
+  const wasHarian = (b.jatahTipe || 'harian') === 'harian';
+  b.jatahTipe = wasHarian ? 'berkala' : 'harian';
+
+  const togEl = document.getElementById('jtp-tog-'+id);
+  const lblEl = document.getElementById('jtp-lbl-'+id);
+  const nowHarian = !wasHarian;
+  if(togEl) togEl.classList.toggle('on', nowHarian);
+  if(lblEl) lblEl.textContent = nowHarian ? 'Harian' : 'Bulanan / Sekali Bayar';
+
+  renderDailyBudgetHome();
 }
 
 // Tap widget Jatah Belanja (tab Analitik) → langsung buka panel Anggaran di tab Savings
 function openDailyBudgetHome(){
   switchTab('savings');
   switchWalletSubTab('anggaran');
+}
+
+// ── Auto-refresh widget "Jatah Belanja Hari Ini" saat lewat tengah malam ──
+// renderDailyBudgetHome() cuma dihitung ulang saat ada trigger (buka tab,
+// transaksi baru, dll) — bukan pakai timer real-time. Kalau app dibiarkan
+// menyala melewati jam 12 malam tanpa interaksi apa pun (mis. dibiarkan
+// terbuka di tab Analitik semalaman), tanggal & jatah harian yang tampil
+// bisa "nyangkut" pakai hitungan hari sebelumnya. Scheduler ini menjadwalkan
+// refresh otomatis tepat saat tengah malam lewat, lalu menjadwalkan ulang
+// utk tengah malam berikutnya — jadi selalu jalan sendiri selama app dibuka.
+let _dailyBudgetMidnightTimer = null;
+function scheduleDailyBudgetMidnightRefresh(){
+  if(_dailyBudgetMidnightTimer) return; // sudah terjadwal, jangan dobel-jadwalkan
+  const now = new Date();
+  const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5); // +5 detik jaga-jaga
+  const ms = nextMidnight.getTime() - now.getTime();
+  _dailyBudgetMidnightTimer = setTimeout(() => {
+    _dailyBudgetMidnightTimer = null;
+    renderDailyBudgetHome();
+    scheduleDailyBudgetMidnightRefresh(); // jadwalkan lagi utk tengah malam berikutnya
+  }, ms);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -12076,12 +12240,18 @@ function simpanAnggaran(){
 
   if(editId){
     const b = budgets.find(x => x.id === editId);
-    if(b){ b.catId=selAnggaranCat; b.nominal=nominal; b.periode=periodeRaw; b.catatan=catatan; b.alerted80=false; b.alerted100=false; }
+    if(b){
+      b.catId=selAnggaranCat; b.nominal=nominal; b.periode=periodeRaw; b.catatan=catatan; b.alerted80=false; b.alerted100=false;
+      // Anggaran lama (dibuat sblm fitur tipe Harian/Bulanan ada) blm punya
+      // field ini — kasih tebakan awal, tapi JANGAN timpa kalau user udah
+      // pernah atur manual lewat popup "Atur Tipe Anggaran".
+      if(!b.jatahTipe) b.jatahTipe = _guessJatahTipeForCat(selAnggaranCat);
+    }
     toast('✅ Anggaran diperbarui');
   } else {
     const existing = budgets.find(b => b.catId===selAnggaranCat && b.periode===periodeRaw);
     if(existing){ toast('⚠️ Anggaran untuk kategori ini sudah ada di bulan ini'); return; }
-    budgets.push({ id:budgetIdCtr++, catId:selAnggaranCat, nominal, periode:periodeRaw, catatan, alerted80:false, alerted100:false });
+    budgets.push({ id:budgetIdCtr++, catId:selAnggaranCat, nominal, periode:periodeRaw, catatan, alerted80:false, alerted100:false, jatahTipe:_guessJatahTipeForCat(selAnggaranCat) });
     toast('✅ Anggaran ditambahkan');
   }
   closeAnggaranModal();

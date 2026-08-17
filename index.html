@@ -12134,18 +12134,35 @@ function renderAnggaranList(){
     const cardOpacity = isActive ? '1' : '0.6';
     const cardFilter  = isActive ? '' : 'filter:grayscale(.5);';
 
-    // Jatah harian adaptif — hanya relevan kalau anggaran aktif & periodenya belum lewat
-    const jatahInfo = isActive ? jatahHarianBudget(b, spentAmt) : null;
-    const jatahRowHtml = jatahInfo ? `
+    // Jatah harian adaptif — hanya relevan kalau anggaran aktif, periodenya
+    // belum lewat, DAN tipe anggarannya "Harian" (bukan Bulanan/Sekali Bayar).
+    // Konsisten dengan filter yang sama dipakai di card "Jatah Belanja Hari
+    // Ini" (tab Analitik) & pengaturannya di popup "Atur Tipe Anggaran".
+    const isHarianType = (b.jatahTipe || 'harian') === 'harian';
+    const jatahInfo = (isActive && isHarianType) ? jatahHarianBudget(b, spentAmt) : null;
+    const jatahRowHtml = jatahInfo ? (() => {
+      // Badge target harian (opsional) — sama seperti di card "Jatah Belanja
+      // Hari Ini" di tab Analitik: bandingkan jatah real-time vs target yang
+      // diset user di popup "Atur Tipe Anggaran".
+      let targetBadge = '';
+      if(b.targetHarian && b.targetHarian > 0){
+        const delta = jatahInfo.jatah - b.targetHarian;
+        targetBadge = delta >= 0
+          ? `<div style="font-size:10px;font-weight:700;color:var(--green);margin-top:2px;">▲ ${fmt(delta)} di atas target ${fmt(b.targetHarian)}</div>`
+          : `<div style="font-size:10px;font-weight:700;color:var(--red);margin-top:2px;">▼ Kurang ${fmt(Math.abs(delta))} dari target ${fmt(b.targetHarian)}</div>`;
+      }
+      return `
       <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:12px;padding:10px 12px;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>
           <div>
             <div style="font-size:11px;color:var(--t3);">Jatah harian &middot; sisa ${jatahInfo.sisaHari} hari</div>
             <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">${jatahInfo.sisa > 0 ? fmt(jatahInfo.jatah) : 'Rp 0'}<span style="font-size:11px;color:var(--t3);font-weight:400;">/hari</span></div>
+            ${targetBadge}
           </div>
         </div>
-      </div>` : '';
+      </div>`;
+    })() : '';
 
     return `<div class="lg-list-card" style="background:var(--surface);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh2);${cardBorder}opacity:${cardOpacity};${cardFilter}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:${isActive?10:0}px;cursor:pointer;" onclick="openAnggaranRiwayat(${b.id})">

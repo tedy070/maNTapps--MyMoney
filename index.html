@@ -2762,7 +2762,7 @@ body{background:var(--bg);transition:background .35s;}
         <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">Atur Tipe Anggaran</div>
         <button onclick="closeJatahTipeSettings()" style="background:var(--surface2);border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px;color:var(--t3);">✕</button>
       </div>
-      <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Kategori <strong>Harian</strong> ikut dihitung ke Jatah Belanja Hari Ini. Kategori <strong>Bulanan/Sekali Bayar</strong> (mis. Sewa, Cicilan, Asuransi) dikecualikan — nggak masuk akal dipecah per hari.</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:14px;">Kategori <strong>Harian</strong> ikut dihitung ke Jatah Belanja Hari Ini. Kategori <strong>Bulanan/Sekali Bayar</strong> (mis. Sewa, Cicilan, Asuransi) dikecualikan — nggak masuk akal dipecah per hari. Untuk kategori Harian, Anda bisa set <strong>Target Harian</strong> sendiri — sistem akan bandingkan dengan jatah real-time yang sebenarnya tersisa.</div>
       <div id="jtp-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
       <button onclick="closeJatahTipeSettings()" style="width:100%;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:12px;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">Selesai</button>
     </div>
@@ -10543,7 +10543,10 @@ window.addNotif = function(type, title, msg){
 // ============================================================
 // Uses the same `cats` array as the transaction form for full consistency
 
-// budgets: array of { id, catId, nominal, periode (YYYY-MM), catatan }
+// budgets: array of { id, catId, nominal, periode (YYYY-MM), catatan,
+//   jatahTipe ('harian'|'berkala'), targetHarian (opsional, cuma relevan kalau
+//   jatahTipe==='harian' — target budget harian yang diset user sendiri utk
+//   dibandingkan dgn jatah real-time di card "Jatah Belanja Hari Ini") }
 let budgets = [];
 let budgetIdCtr = 1;
 
@@ -10697,7 +10700,16 @@ function renderDailyBudgetHome(){
 
     if(isHarian){
       total += info.jatah;
-      rows.push({ name, icon, bg, jatah: info.jatah, isOver: info.sisa <= 0 });
+      const row = { name, icon, bg, jatah: info.jatah, isOver: info.sisa <= 0 };
+      // Target Harian (opsional, diatur user lewat popup "Atur Tipe Anggaran"):
+      // dibandingkan dengan jatah real-time (sisa anggaran ÷ sisa hari) supaya
+      // kelihatan apakah target itu masih realistis, atau kurang karena sisa
+      // anggarannya menipis akibat pengeluaran lebih cepat dari rencana.
+      if(b.targetHarian && b.targetHarian > 0){
+        row.target = b.targetHarian;
+        row.delta = info.jatah - b.targetHarian; // >=0: surplus, <0: kurang (termasuk saat jatah=0 / over-budget → defisit penuh)
+      }
+      rows.push(row);
     } else {
       berkalaRows.push({ name, icon, bg, sisa: Math.max(0, info.sisa), isPaid: info.sisa <= 0 });
     }
@@ -10727,12 +10739,25 @@ function renderDailyBudgetHome(){
   if(listEl){
     // List di-scroll internal (sama seperti card Kategori Teratas / Pengeluaran Harian),
     // jadi semua kategori aktif ditampilkan tanpa perlu dipotong ke "+N lainnya".
-    listEl.innerHTML = rows.length ? rows.map(r => `
+    listEl.innerHTML = rows.length ? rows.map(r => {
+      // Badge kecil di bawah angka jatah: bandingkan Target Harian (kalau diset
+      // user) vs jatah real-time. 🔴 Kurang kalau jatah < target, 🟢 Surplus
+      // kalau jatah ≥ target — jadi kelihatan apakah target itu masih realistis.
+      const targetBadge = (typeof r.target === 'number')
+        ? (r.delta >= 0
+            ? `<div style="font-size:9px;font-weight:700;color:var(--green);margin-top:2px;white-space:nowrap;">▲ ${fmt(r.delta)} di atas target</div>`
+            : `<div style="font-size:9px;font-weight:700;color:var(--red);margin-top:2px;white-space:nowrap;">▼ Kurang ${fmt(Math.abs(r.delta))} dari target</div>`)
+        : '';
+      return `
       <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:9px 12px;">
         <div style="width:28px;height:28px;border-radius:9px;background:${r.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.icon}</div>
         <span style="flex:1;font-size:12px;color:var(--navy);font-weight:500;">${escapeHtml(r.name)}</span>
-        <span style="font-family:var(--f);font-size:13px;font-weight:700;color:${r.isOver?'var(--red)':'var(--navy)'};">${r.isOver ? 'Rp 0' : fmt(r.jatah)}${r.isOver?' <span style="font-size:9px;font-weight:400;">(lewat)</span>':''}</span>
-      </div>`).join('') : `<div style="text-align:center;padding:14px 0;color:var(--t3);font-size:11px;">Semua anggaran aktif ditandai "Bulanan/Sekali Bayar" — atur di tombol ⚙️ di atas.</div>`;
+        <div style="text-align:right;">
+          <span style="font-family:var(--f);font-size:13px;font-weight:700;color:${r.isOver?'var(--red)':'var(--navy)'};">${r.isOver ? 'Rp 0' : fmt(r.jatah)}${r.isOver?' <span style="font-size:9px;font-weight:400;">(lewat)</span>':''}</span>
+          ${targetBadge}
+        </div>
+      </div>`;
+    }).join('') : `<div style="text-align:center;padding:14px 0;color:var(--t3);font-size:11px;">Semua anggaran aktif ditandai "Bulanan/Sekali Bayar" — atur di tombol ⚙️ di atas.</div>`;
   }
 
   if(berkalaWrap && berkalaListEl){
@@ -10797,18 +10822,47 @@ function renderJatahTipeList(){
     const icon = c ? catIconInnerHtml(c, 15) : '';
     const bg   = c ? (c.bg || c.color) : 'var(--surface2)';
     const isHarian = (b.jatahTipe || 'harian') === 'harian';
+    const targetVal = (b.targetHarian && b.targetHarian > 0) ? Math.round(b.targetHarian).toLocaleString('id-ID') : '';
     return `
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:12px;padding:12px 14px;">
-      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-        <div style="width:28px;height:28px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${icon}</div>
-        <div style="min-width:0;">
-          <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
-          <div style="font-size:10px;color:var(--t3);" id="jtp-lbl-${b.id}">${isHarian ? 'Harian' : 'Bulanan / Sekali Bayar'}</div>
+    <div style="background:var(--surface2);border-radius:12px;padding:12px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <div style="width:28px;height:28px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">${icon}</div>
+          <div style="min-width:0;">
+            <div style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+            <div style="font-size:10px;color:var(--t3);" id="jtp-lbl-${b.id}">${isHarian ? 'Harian' : 'Bulanan / Sekali Bayar'}</div>
+          </div>
+        </div>
+        <button class="tog${isHarian ? ' on' : ''}" id="jtp-tog-${b.id}" onclick="toggleJatahTipeFor(${b.id})"></button>
+      </div>
+      <div id="jtp-target-wrap-${b.id}" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);${isHarian ? '' : 'display:none;'}">
+        <label style="font-size:10px;color:var(--t3);display:block;margin-bottom:4px;">Target Harian (opsional)</label>
+        <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border-radius:8px;padding:8px 10px;">
+          <span style="font-size:12px;color:var(--t3);flex-shrink:0;">Rp</span>
+          <input type="text" inputmode="numeric" id="jtp-target-${b.id}" value="${targetVal}" placeholder="mis. 50.000" oninput="formatJtpTarget(this, ${b.id})" style="flex:1;min-width:0;border:none;background:transparent;font-family:var(--f);font-size:13px;color:var(--navy);outline:none;">
         </div>
       </div>
-      <button class="tog${isHarian ? ' on' : ''}" id="jtp-tog-${b.id}" onclick="toggleJatahTipeFor(${b.id})"></button>
     </div>`;
   }).join('');
+}
+
+// Update b.targetHarian saat user mengetik di input "Target Harian (opsional)"
+// di popup "Atur Tipe Anggaran". Live-preview langsung ke badge di card
+// belakang popup (renderDailyBudgetHome), baru disimpan permanen (fbAutoSave)
+// saat popup ditutup — konsisten dgn pola toggleJatahTipeFor.
+function formatJtpTarget(el, id){
+  const b = budgets.find(x => x.id === id);
+  let raw = el.value.replace(/\D/g, '');
+  if(!raw){
+    el.value = '';
+    if(b) b.targetHarian = null;
+    renderDailyBudgetHome();
+    return;
+  }
+  const num = parseInt(raw, 10);
+  el.value = num.toLocaleString('id-ID');
+  if(b) b.targetHarian = num;
+  renderDailyBudgetHome();
 }
 
 // Toggle Harian ⇄ Bulanan untuk 1 anggaran. Live-preview langsung ke card
@@ -10823,9 +10877,11 @@ function toggleJatahTipeFor(id){
 
   const togEl = document.getElementById('jtp-tog-'+id);
   const lblEl = document.getElementById('jtp-lbl-'+id);
+  const targetWrapEl = document.getElementById('jtp-target-wrap-'+id);
   const nowHarian = !wasHarian;
   if(togEl) togEl.classList.toggle('on', nowHarian);
   if(lblEl) lblEl.textContent = nowHarian ? 'Harian' : 'Bulanan / Sekali Bayar';
+  if(targetWrapEl) targetWrapEl.style.display = nowHarian ? 'block' : 'none';
 
   renderDailyBudgetHome();
 }

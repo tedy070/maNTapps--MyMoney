@@ -10745,8 +10745,8 @@ function renderDailyBudgetHome(){
       // kalau jatah ≥ target — jadi kelihatan apakah target itu masih realistis.
       const targetBadge = (typeof r.target === 'number')
         ? (r.delta >= 0
-            ? `<div style="font-size:9px;font-weight:700;color:var(--green);margin-top:2px;white-space:nowrap;">▲ ${fmt(r.delta)} di atas target</div>`
-            : `<div style="font-size:9px;font-weight:700;color:var(--red);margin-top:2px;white-space:nowrap;">▼ Kurang ${fmt(Math.abs(r.delta))} dari target</div>`)
+            ? `<div style="font-size:9px;font-weight:700;color:var(--green);margin-top:2px;white-space:nowrap;">▲ ${fmt(r.delta)} di atas target ${fmt(r.target)}</div>`
+            : `<div style="font-size:9px;font-weight:700;color:var(--red);margin-top:2px;white-space:nowrap;">▼ Kurang ${fmt(Math.abs(r.delta))} dari target ${fmt(r.target)}</div>`)
         : '';
       return `
       <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:9px 12px;">

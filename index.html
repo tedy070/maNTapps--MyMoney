@@ -1807,6 +1807,7 @@ body{background:var(--bg);transition:background .35s;}
   z-index:9999;display:none;text-align:center;
   box-shadow:0 8px 24px rgba(11,122,99,.35);
   max-width:500px;margin:0 auto;
+  touch-action:none;
 }
 @keyframes fiu{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse-red{from{opacity:1;}to{opacity:.55;}}
@@ -8932,15 +8933,76 @@ function initChart(){ refreshAnalytics(); }
 // TOAST
 // ============================================================
 let toastT;
+// ── Toast — kotak notifikasi kecil di atas layar ──
+// Sekarang bisa ditutup 2 cara: (1) nunggu waktunya habis (perilaku lama,
+// tetap dipertahankan), atau (2) SWIPE KE ATAS kayak notifikasi HP pada
+// umumnya. Nyentuh toast juga menjeda hitung mundur otomatisnya selama
+// masih dipegang, biar tidak keburu hilang saat lagi mau dibaca/dibuang.
+let _toastSwipeWired = false;
+let _toastDragStartY = null;
+let _toastDragging = false;
+const TOAST_SWIPE_DISMISS_PX = 30; // jarak minimal geser ke atas dianggap "buang"
+
 function toast(msg, duration=4500){
   const el=document.getElementById('toast');
   if(!el) return;
+  if(!_toastSwipeWired){ _wireToastSwipe(el); _toastSwipeWired = true; }
   el.textContent=msg;
+  el.style.transition='none';
+  el.style.transform='translateY(0)';
   el.style.display='block';
   el.style.opacity='1';
   el.style.animation='fiu .3s ease';
+  _scheduleToastHide(duration);
+}
+function _scheduleToastHide(duration){
   clearTimeout(toastT);
-  toastT=setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.style.display='none',300);}, duration);
+  toastT=setTimeout(_hideToastAuto, duration);
+}
+function _hideToastAuto(){
+  const el=document.getElementById('toast');
+  if(!el) return;
+  el.style.transition='opacity .3s ease, transform .3s ease';
+  el.style.opacity='0';
+  el.style.transform='translateY(-10px)';
+  setTimeout(()=>{ el.style.display='none'; }, 300);
+}
+function _wireToastSwipe(el){
+  el.addEventListener('pointerdown', (e)=>{
+    _toastDragStartY = e.clientY;
+    _toastDragging = true;
+    clearTimeout(toastT); // jeda auto-hide selama toast disentuh
+    el.style.transition = 'none';
+    el.style.animation = 'none';
+    try{ el.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  el.addEventListener('pointermove', (e)=>{
+    if(!_toastDragging || _toastDragStartY===null) return;
+    const dy = e.clientY - _toastDragStartY;
+    if(dy > 0) return; // toast ada di ATAS layar, jadi cuma respons geser ke atas (dy negatif)
+    el.style.transform = `translateY(${dy}px)`;
+    el.style.opacity = String(Math.max(1 + dy/80, 0.15));
+  });
+  const endToastDrag = (e)=>{
+    if(!_toastDragging) return;
+    _toastDragging = false;
+    const dy = _toastDragStartY!==null ? (e.clientY - _toastDragStartY) : 0;
+    _toastDragStartY = null;
+    el.style.transition = 'transform .25s ease, opacity .25s ease';
+    if(dy <= -TOAST_SWIPE_DISMISS_PX){
+      // Digeser cukup jauh ke atas → buang, lanjutkan sampai hilang total
+      el.style.transform = 'translateY(-120%)';
+      el.style.opacity = '0';
+      setTimeout(()=>{ el.style.display='none'; }, 250);
+    } else {
+      // Belum cukup jauh → balik ke posisi semula, lanjut hitung mundur
+      el.style.transform = 'translateY(0)';
+      el.style.opacity = '1';
+      _scheduleToastHide(2500); // sisa waktu lebih pendek krn sempat disentuh
+    }
+  };
+  el.addEventListener('pointerup', endToastDrag);
+  el.addEventListener('pointercancel', endToastDrag);
 }
 
 // ============================================================

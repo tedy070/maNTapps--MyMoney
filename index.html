@@ -9088,7 +9088,10 @@ goTo('splash');
       <div id="calcFmt" style="font-size:11px;color:var(--t3);text-align:right;margin-top:5px;min-height:16px;"></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-      <button class="calc-btn secondary" onclick="calcInput('clear')" style="grid-column:span 2;">AC</button>
+      <button class="calc-btn secondary" onclick="calcInput('clear')">AC</button>
+      <button class="calc-btn secondary" onclick="calcInput('back')" style="display:flex;align-items:center;justify-content:center;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6-7h10a1 1 0 011 1v12a1 1 0 01-1 1H10z"/><line x1="12.5" y1="9.5" x2="17.5" y2="14.5"/><line x1="17.5" y1="9.5" x2="12.5" y2="14.5"/></svg>
+      </button>
       <button class="calc-btn secondary" onclick="calcInput('pct')">%</button>
       <button class="calc-btn op" onclick="calcInput('/')">÷</button>
       <button class="calc-btn" onclick="calcInput('7')">7</button>
@@ -9104,8 +9107,10 @@ goTo('splash');
       <button class="calc-btn" onclick="calcInput('3')">3</button>
       <button class="calc-btn op" onclick="calcInput('+')">+</button>
       <button class="calc-btn" onclick="calcInput('0')" style="grid-column:span 2;">0</button>
+      <button class="calc-btn zeros" onclick="calcInput('00')">00</button>
+      <button class="calc-btn zeros" onclick="calcInput('000')" style="font-size:15px;">000</button>
       <button class="calc-btn" onclick="calcInput('.')">.</button>
-      <button class="calc-btn primary" onclick="calcInput('=')">=</button>
+      <button class="calc-btn primary" onclick="calcInput('=')" style="grid-column:span 3;">=</button>
     </div>
     <button class="btn btn-s" style="margin-top:14px;" onclick="useCalcResult()">
       <span style="display:flex;align-items:center;justify-content:center;gap:7px;">
@@ -9207,6 +9212,8 @@ goTo('splash');
 .calc-btn:active{transform:scale(.91);}
 .calc-btn.op{background:#EBF3FE;color:var(--blue2);}
 .calc-btn.secondary{background:var(--surface2);color:var(--t2);}
+.calc-btn.zeros{background:var(--surface);color:var(--blue2);border:1.5px solid var(--blue2);font-size:16px;}
+.dk .calc-btn.zeros{background:var(--surface2);}
 .calc-btn.primary{background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;box-shadow:0 6px 18px rgba(26,86,196,.28);}
 .dk .calc-btn{background:var(--surface2);}
 .dk .calc-btn.op{background:#1a2e50;}
@@ -10111,42 +10118,82 @@ function openCalcOverlay(){
 function calcInput(btn){
   const d=document.getElementById('calcDisplay');
   const h=document.getElementById('calcHistory');
+
   if(btn==='clear'){ calcVal='0'; calcHist=''; calcPrev=null; calcOp=null; calcNew=true; d.textContent='0'; h.textContent=''; document.getElementById('calcFmt').textContent=''; return; }
+
+  // Hapus satu digit terakhir saja (bukan reset semua kayak AC).
+  if(btn==='back'){
+    let v = calcVal;
+    v = v.length>1 ? v.slice(0,-1) : '0';
+    if(v==='-'||v==='') v='0';
+    calcVal=v; calcNew=false;
+    d.textContent=fmtCalc(calcVal); updCalcFmt();
+    return;
+  }
+
   if(btn==='pct'){ const v=parseFloat(calcVal.replace(/,/g,'').replace(/\./g,'')||'0'); calcVal=(v/100).toString(); d.textContent=fmtCalc(calcVal); updCalcFmt(); return; }
+
+  // Baris history (calcHist) sekarang TERUS BERTAMBAH — tiap kali operator
+  // atau "=" ditekan, operand yg baru selesai diketik ditambahkan (bukan
+  // menimpa) ke calcHist, jadi seluruh rangkaian hitungan tetap kelihatan
+  // (mis. "12 + 8 = 20 × 3 ="). Satu-satunya yg membersihkannya adalah
+  // tombol AC di atas.
   if(btn==='='){
-    if(calcPrev!==null&&calcOp){
-      const a=parseFloat(calcPrev),b=parseFloat(calcVal.replace(/,/g,'').replace(/\./g,'')||'0');
+    if(calcPrev!==null && calcOp){
+      const operand = calcVal.replace(/,/g,'').replace(/\./g,'');
+      const a=parseFloat(calcPrev), b=parseFloat(operand||'0');
       let r;
       if(calcOp==='+')r=a+b; else if(calcOp==='-')r=a-b; else if(calcOp==='*')r=a*b; else r=b?a/b:0;
-      const sym={'+':'+','-':'−','*':'×','/':'÷'}[calcOp];
-      h.textContent=`${fmtCalc(calcPrev)} ${sym} ${fmtCalc(calcVal.replace(/,/g,'').replace(/\./g,''))} =`;
+      calcHist += `${fmtCalc(operand)} = `;
+      h.textContent = calcHist;
       calcVal=r.toString(); d.textContent=fmtCalc(calcVal);
       calcPrev=null; calcOp=null; calcNew=true; updCalcFmt();
     }
     return;
   }
   if(['+','-','*','/'].includes(btn)){
-    // Kalkulator normal: kalau sudah ada operasi tertunda DAN user sudah
-    // mengetik angka baru sejak operator terakhir, hitung dulu hasil
-    // sementaranya sebelum lanjut ke operator berikutnya. Ini yang bikin
+    const sym={'+':'+','-':'−','*':'×','/':'÷'}[btn];
+    // User cuma ganti pikiran operator (belum sempat ketik angka baru) →
+    // cukup ganti simbol operator terakhir di history, jangan nambah operand.
+    if(calcNew && calcOp){
+      calcHist = calcHist.replace(/[+\-×÷]\s*$/, sym+' ');
+      calcOp = btn;
+      h.textContent = calcHist; updCalcFmt();
+      return;
+    }
+    // Kalkulator normal: kalau sudah ada operasi tertunda, hitung dulu hasil
+    // sementaranya sebelum lanjut ke operator berikutnya — supaya
     // "5 + 3 + 2 =" bisa langsung jalan berantai tanpa harus tekan "="
-    // di setiap langkah. Kalau user cuma ganti pikiran operator (belum
-    // sempat ketik angka baru), operator lama cukup diganti saja.
-    if(calcPrev!==null && calcOp && !calcNew){
-      const a=parseFloat(calcPrev), b=parseFloat(calcVal.replace(/,/g,'').replace(/\./g,'')||'0');
+    // di setiap langkah.
+    const operand = calcVal.replace(/,/g,'').replace(/\./g,'');
+    if(calcPrev!==null){
+      const a=parseFloat(calcPrev), b=parseFloat(operand||'0');
       let r;
       if(calcOp==='+')r=a+b; else if(calcOp==='-')r=a-b; else if(calcOp==='*')r=a*b; else r=b?a/b:0;
-      calcVal=r.toString();
+      calcHist += `${fmtCalc(operand)} ${sym} `;
+      calcPrev = r.toString();
+      calcVal  = r.toString();
       d.textContent=fmtCalc(calcVal);
+    } else {
+      calcHist += `${fmtCalc(operand)} ${sym} `;
+      calcPrev = operand;
     }
-    calcPrev=calcVal.replace(/,/g,'').replace(/\./g,''); calcOp=btn; calcNew=true;
-    const sym={'+':'+','-':'−','*':'×','/':'÷'}[btn];
-    h.textContent=`${fmtCalc(calcPrev)} ${sym}`; updCalcFmt(); return;
+    calcOp=btn; calcNew=true;
+    h.textContent = calcHist; updCalcFmt();
+    return;
   }
   if(btn==='.'){
     if(calcNew){calcVal='0.';calcNew=false;}
     else if(!calcVal.includes('.'))calcVal+='.';
     d.textContent=fmtCalc(calcVal); updCalcFmt(); return;
+  }
+  // Tombol cepat "00"/"000" — tidak ngapa-ngapain kalau display masih
+  // kosong/0 (menghindari angka nol di depan yang tidak berarti).
+  if(btn==='00' || btn==='000'){
+    if(calcNew || calcVal==='0') return;
+    calcVal += btn;
+    d.textContent=fmtCalc(calcVal); updCalcFmt();
+    return;
   }
   if(calcNew){calcVal=btn;calcNew=false;}
   else calcVal=calcVal==='0'?btn:calcVal+btn;

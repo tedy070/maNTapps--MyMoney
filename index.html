@@ -1455,7 +1455,25 @@ body{background:var(--bg);transition:background .35s;}
 .tip-ban-lnk{font-size:11px;font-weight:700;text-decoration:underline;cursor:pointer;}
 
 /* GOAL CARD */
-.goal-card{background:var(--surface);border-radius:18px;padding:17px;margin:0 16px 12px;box-shadow:var(--sh2);position:relative;}
+.goal-card{background:var(--surface);border-radius:18px;padding:17px;margin:0 16px 12px;box-shadow:var(--sh2);position:relative;cursor:pointer;}
+.goal-strip{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;padding:8px 10px;background:var(--surface2);border-radius:10px;}
+.goal-strip-l{display:flex;align-items:center;gap:6px;min-width:0;font-size:11px;font-weight:600;color:var(--blue2);}
+.goal-strip-l span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.goal-strip-l svg{width:14px;height:14px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;}
+.goal-strip-pct{font-family:var(--f);font-size:12px;font-weight:800;flex-shrink:0;color:var(--blue2);}
+.goal-strip.warn .goal-strip-l,.goal-strip.warn .goal-strip-pct{color:#D97706;}
+.goal-strip.late .goal-strip-l,.goal-strip.late .goal-strip-pct{color:var(--red);}
+.goal-strip.done .goal-strip-l,.goal-strip.done .goal-strip-pct{color:var(--green);}
+.goal-mt{margin-bottom:13px;padding:9px 10px;background:var(--surface2);border-radius:10px;}
+.goal-mt-r{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.goal-mt-l{font-size:11px;font-weight:600;color:var(--navy);}
+.goal-mt-v{font-family:var(--f);font-size:12px;font-weight:800;color:var(--navy);text-align:right;}
+.goal-mt-s{font-size:10px;color:var(--t3);margin-top:2px;}
+.goal-mt-bar{background:var(--border);border-radius:4px;height:5px;margin-top:7px;overflow:hidden;}
+.goal-mt-bar>div{height:100%;background:var(--green);border-radius:4px;}
+.goal-mt.ok .goal-mt-v{color:var(--green);}
+.goal-mt.late .goal-mt-v{color:var(--red);}
+.goal-mt.mute .goal-mt-v{color:var(--t3);}
 .goal-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
 .goal-ico{width:40px;height:40px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;}
 .goal-ico svg{width:20px;height:20px;fill:none;stroke-width:1.8;}
@@ -3014,6 +3032,11 @@ body{background:var(--bg);transition:background .35s;}
     <div class="awrap" style="margin-bottom:16px;"><span class="acurr" id="goalCurr">$</span><input class="ainput hv" type="text" inputmode="decimal" id="goalTarget" placeholder="10.000" style="font-size:32px;" oninput="formatCurrencyInput(this)"></div>
     <div class="albl" id="gm-currlbl">CURRENT SAVED</div>
     <div class="awrap" style="margin-bottom:20px;"><span class="acurr" id="goalCurr2">$</span><input class="ainput hv" type="text" inputmode="decimal" id="goalCurrent" placeholder="0" style="font-size:32px;" oninput="formatCurrencyInput(this)"></div>
+    <div class="albl" id="gm-deadlbl">TARGET WAKTU (OPSIONAL)</div>
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:14px;padding:12px 16px;margin-bottom:20px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="date" id="goalDeadline" style="flex:1;font-family:var(--f);font-size:15px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;">
+    </div>
     <div class="albl" style="margin-bottom:8px;">ICON COLOR</div>
     <div style="display:flex;gap:8px;margin-bottom:20px;" id="goalColorPicker">
       <div class="goal-color-opt" data-color="#1A56C4" onclick="selectGoalColor(this)" style="width:32px;height:32px;border-radius:50%;background:#1A56C4;cursor:pointer;border:3px solid #1A56C4;box-shadow:0 0 0 2px white;flex-shrink:0;"></div>
@@ -3075,10 +3098,37 @@ body{background:var(--bg);transition:background .35s;}
     <div class="iwrap" style="margin-bottom:14px;"><span class="iico"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg></span><input class="finput" id="egName" oninput="updateEditGoalIconPreview()"></div>
     <div class="albl">TARGET AMOUNT</div>
     <div class="awrap" style="margin-bottom:14px;"><span class="acurr" id="egCurr">$</span><input class="ainput hv" type="text" inputmode="decimal" id="egTarget" style="font-size:30px;" oninput="formatCurrencyInput(this)"></div>
+    <div class="albl" id="egm-deadlbl">TARGET WAKTU (OPSIONAL)</div>
+    <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:14px;padding:12px 16px;margin-bottom:14px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="date" id="egDeadline" style="flex:1;font-family:var(--f);font-size:15px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;">
+    </div>
     <div class="albl">ADD FUNDS NOW</div>
     <div class="awrap" style="margin-bottom:20px;"><span class="acurr" id="egCurr2">$</span><input class="ainput hv" type="text" inputmode="decimal" id="egAdd" placeholder="0" style="font-size:30px;" oninput="formatCurrencyInput(this)"></div>
     <button class="btn btn-p" onclick="updateGoal()" style="margin-bottom:8px;" id="egm-save">Save Changes</button>
     <button class="btn btn-danger" onclick="deleteGoal()">Delete Goal</button>
+  </div>
+</div>
+
+<!-- GOAL HISTORY MODAL — dibuka dgn tap kartu Tujuan. Menampilkan riwayat
+     tambah dana (g.fundLog) + strip progres/target waktu. -->
+<div class="moverlay" id="goalHistoryModal">
+  <div class="msheet" style="padding:20px 20px calc(var(--safe-bot) + 28px);">
+    <div class="mhandle"></div>
+    <div class="mhdr">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div id="gh-ico" class="goal-ico" style="width:40px;height:40px;border-radius:12px;flex-shrink:0;"></div>
+        <div style="min-width:0;">
+          <div class="mttl" id="gh-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Tujuan</div>
+          <div style="font-size:12px;color:var(--t3);margin-top:2px;" id="gh-sub"></div>
+        </div>
+      </div>
+      <button class="mcls" onclick="closeGoalHistoryModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div id="gh-summary" style="margin-bottom:6px;"></div>
+    <div id="gh-note" style="display:none;font-size:11px;color:var(--t3);background:var(--surface2);border-radius:10px;padding:8px 10px;margin-bottom:8px;"></div>
+    <div id="gh-list" style="overflow-y:auto;max-height:44vh;display:flex;flex-direction:column;"></div>
+    <button class="btn btn-p" id="gh-add-btn" onclick="goalHistoryAddFunds()" style="margin-top:14px;">Tambah Dana</button>
   </div>
 </div>
 
@@ -4442,6 +4492,7 @@ function renderGoals(){
     c.innerHTML = emptyIllustrationHTML('goals');
     return;
   }
+  _ensureGoalFundLogs();
   goals.forEach(g=>{
     const pct    = Math.min(100, Math.round((g.current / g.target) * 100));
     const isTeal = g.color === '#0B7A63';
@@ -4474,7 +4525,8 @@ function renderGoals(){
         <span class="goal-cur">${fmt(g.current)}</span>
         <span class="goal-tgt">${lblOf} ${fmt(g.target)}</span>
       </div>
-      <div class="prog-w"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
+      <div class="prog-w" style="margin-bottom:9px;"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
+      ${goalStripHTML(g, pct)}${goalMonthlyHTML(g, pct)}
       <button class="goal-btn ${isTeal?'tl':''}">
         <svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
         ${btnLabel}
@@ -4521,9 +4573,167 @@ function renderGoals(){
     if(e.target.closest('.goal-btn')){
       e.stopPropagation();
       quickAdd(gid);
+      return;
     }
+
+    // Tap di area kartu lainnya → buka riwayat tambah dana
+    document.querySelectorAll('.ctx-menu').forEach(m=>m.style.display='none');
+    openGoalHistory(gid);
   };
   c.addEventListener('click', c._goalDelegate);
+}
+
+// ══════════════════════════════════════════════════════════════
+// TUJUAN: TARGET WAKTU + RIWAYAT TAMBAH DANA
+// g.deadline = 'YYYY-MM-DD' | null
+// g.fundLog  = [{amt, ts, after, pct, legacy?}]  (amt/after dalam Rp)
+// Riwayat dicatat terstruktur dari tombol cepat maupun Edit Tujuan.
+// Untuk tujuan lama (belum punya fundLog) dicoba diisi sekali dari
+// notifikasi "Dana Ditambahkan" yang masih ada (ditandai legacy:true).
+// ══════════════════════════════════════════════════════════════
+function _todayISO(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _logGoalFund(g, added){
+  if(!(added>0)) return;
+  if(!Array.isArray(g.fundLog)) g.fundLog=[];
+  g.fundLog.push({amt:added, ts:Date.now(), after:g.current, pct:g.target>0?Math.min(100,Math.round(g.current/g.target*100)):0});
+}
+function _ensureGoalFundLogs(){
+  let changed=false;
+  goals.forEach(g=>{
+    if(Array.isArray(g.fundLog)) return;
+    g.fundLog=[];
+    changed=true;
+    (notifications||[]).forEach(n=>{
+      if(n.type!=='goal') return;
+      if(n.title!=='Dana Ditambahkan' && n.title!=='Funds Added') return;
+      const msg=String(n.msg||'');
+      if(!msg.includes('→ "'+g.name+'"')) return;
+      const left=msg.split('→')[0];
+      let amt=0;
+      if(/Rp/.test(left)) amt=parseInt(left.replace(/[^0-9]/g,''),10)||0;
+      else { const usd=parseFloat(left.replace(/[^0-9.]/g,'')); amt=isNaN(usd)?0:Math.round(usd*exRate); }
+      if(!(amt>0)) return;
+      const m=msg.match(/(\d+)%\s*$/);
+      const ts=new Date(n.time).getTime();
+      g.fundLog.push({amt, ts:isNaN(ts)?Date.now():ts, after:null, pct:m?parseInt(m[1],10):null, legacy:true});
+    });
+  });
+  if(changed && typeof fbAutoSave==='function'){ try{ fbAutoSave(); }catch(e){} }
+}
+function _fmtGoalDate(iso){
+  const p=String(iso).split('-'); if(p.length<3) return iso;
+  const mn=lang==='id'?['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return parseInt(p[2],10)+' '+mn[parseInt(p[1],10)-1]+' '+p[0];
+}
+function _goalDaysLeft(iso){
+  const p=String(iso).split('-'); if(p.length<3) return null;
+  const t=new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10));
+  const n=new Date(); const today=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+  return Math.round((t-today)/86400000);
+}
+// Strip di kartu: target waktu + persentase capaian dari target
+function goalStripHTML(g, pct){
+  const id=lang==='id';
+  const cal='<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  let cls='', txt;
+  if(g.deadline){
+    const d=_goalDaysLeft(g.deadline);
+    let rest;
+    if(pct>=100){ cls='done'; rest=id?'Tercapai':'Achieved'; }
+    else if(d===null){ rest=''; }
+    else if(d<0){ cls='late'; rest=id?`Lewat ${-d} hari`:`${-d} days overdue`; }
+    else if(d===0){ cls='warn'; rest=id?'Hari ini':'Today'; }
+    else { if(d<=30) cls='warn'; rest=id?`${d} hari lagi`:`${d} days left`; }
+    txt=(id?'Target: ':'Target: ')+_fmtGoalDate(g.deadline)+(rest?' · '+rest:'');
+  } else {
+    if(pct>=100) cls='done';
+    txt=pct>=100?(id?'Tercapai':'Achieved'):(id?'Belum ada target waktu':'No target date');
+  }
+  return `<div class="goal-strip ${cls}"><div class="goal-strip-l">${cal}<span>${escapeHtml(txt)}</span></div><div class="goal-strip-pct">${pct}%</div></div>`;
+}
+
+
+// Target bulanan: (target − terkumpul) ÷ jumlah bulan sampai tanggal target (min 1).
+// Bar "bulan ini" dihitung dari g.fundLog bulan berjalan.
+function _goalThisMonthAdded(g){
+  const n=new Date(), y=n.getFullYear(), m=n.getMonth();
+  return (g.fundLog||[]).reduce((sum,l)=>{
+    const d=new Date(l.ts);
+    return (d.getFullYear()===y && d.getMonth()===m) ? sum+(l.amt||0) : sum;
+  },0);
+}
+function goalMonthlyHTML(g, pct){
+  const id=lang==='id';
+  const row=(cls,l,v,sub,bar)=>`<div class="goal-mt ${cls}"><div class="goal-mt-r"><div class="goal-mt-l">${escapeHtml(l)}</div><div class="goal-mt-v">${escapeHtml(v)}</div></div>${sub?`<div class="goal-mt-s">${escapeHtml(sub)}</div>`:''}${bar||''}</div>`;
+  if(pct>=100 || g.current>=g.target) return row('ok', id?'Tujuan tercapai':'Goal achieved', id?'Selesai':'Done', '', '');
+  const need=Math.max(0,g.target-g.current);
+  if(!g.deadline) return row('mute', id?'Target bulanan':'Monthly target', id?'Atur target waktu dulu':'Set a target date first', id?'Tujuan tanpa tanggal target tidak punya hitungan bulanan':'Goals without a target date have no monthly figure', '');
+  const d=_goalDaysLeft(g.deadline);
+  if(d!==null && d<0) return row('late', (id?'Sisa ':'Remaining ')+fmt(need), id?'Lewat tenggat':'Overdue', id?'Perpanjang target waktu lewat Edit Tujuan':'Extend the target date via Edit Goal', '');
+  const months=Math.max(1,Math.ceil((d||0)/30.4375));
+  const per=Math.ceil(need/months);
+  const added=_goalThisMonthAdded(g);
+  if(added>=per){
+    return row('ok', id?'Target bulanan':'Monthly target', fmt(0)+(id?' / bln':' / mo'), id?'Bulan ini sudah mencukupi, bisa santai':'This month is covered, you can relax', '');
+  }
+  const mp=per>0?Math.min(100,Math.round(added/per*100)):0;
+  const sub=(id?'Sisa ':'Remaining ')+fmt(need)+' ÷ '+months+(id?' bulan lagi':(months>1?' months left':' month left'));
+  const bar=`<div class="goal-mt-bar"><div style="width:${mp}%;"></div></div><div class="goal-mt-s" style="margin-top:4px;">${escapeHtml((id?'Bulan ini sudah ':'This month: ')+fmt(added)+(id?' dari ':' of ')+fmt(per)+' ('+mp+'%)')}</div>`;
+  return row('', id?'Target bulanan':'Monthly target', fmt(per)+(id?' / bln':' / mo'), sub, bar);
+}
+
+let _ghGoalId=null;
+function openGoalHistory(id){
+  const g=goals.find(x=>x.id===id); if(!g) return;
+  _ghGoalId=id;
+  _ensureGoalFundLogs();
+  const idl=lang==='id';
+  const pct=g.target>0?Math.min(100,Math.round(g.current/g.target*100)):0;
+  const ico=document.getElementById('gh-ico');
+  if(ico){ ico.style.background=g.color+'18'; ico.innerHTML=goalIconSvg(g.name,g.color); }
+  document.getElementById('gh-title').textContent=g.name;
+  const log=(g.fundLog||[]).slice().sort((a,b)=>b.ts-a.ts);
+  document.getElementById('gh-sub').textContent=(idl?'Riwayat Tambah Dana · ':'Funds History · ')+log.length+(idl?' kali':' entries');
+  document.getElementById('gh-summary').innerHTML=
+    `<div class="goal-ams" style="margin-bottom:8px;"><span class="goal-cur">${fmt(g.current)}</span><span class="goal-tgt">${idl?'dari':'of'} ${fmt(g.target)}</span></div>`+
+    `<div class="prog-w" style="margin-bottom:9px;"><div class="prog-f" style="width:${pct}%;"></div></div>`+
+    goalStripHTML(g,pct)+goalMonthlyHTML(g,pct).replace('class="goal-mt','style="margin-bottom:6px;" class="goal-mt');
+  const noteEl=document.getElementById('gh-note');
+  if(log.some(l=>l.legacy)){
+    noteEl.style.display='block';
+    noteEl.textContent=idl?'Sebagian data diambil dari notifikasi lama, mungkin tidak lengkap.':'Some entries were recovered from old notifications and may be incomplete.';
+  } else noteEl.style.display='none';
+  const loc=idl?'id-ID':'en-US';
+  const sumLog=log.reduce((s,l)=>s+l.amt,0);
+  const base=Math.max(0,g.current-sumLog);
+  let html='';
+  log.forEach(l=>{
+    const d=new Date(l.ts);
+    const dateTxt=d.toLocaleDateString(loc,{day:'numeric',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
+    let sub='';
+    if(l.after!=null) sub=(idl?'Jadi ':'Now ')+fmt(l.after)+(l.pct!=null?' ('+l.pct+'%)':'');
+    else if(l.pct!=null) sub=(idl?'Jadi ':'Now ')+l.pct+'%';
+    const tag=l.legacy?` <span style="font-size:9px;color:var(--t3);border:1px solid var(--border);border-radius:5px;padding:1px 4px;">${idl?'data lama':'old data'}</span>`:'';
+    html+=`<div class="h-item"><div style="flex:1;"><div class="h-nm">${dateTxt}${tag}</div><div class="h-t">${sub}</div></div><div class="h-a pos">+${fmt(l.amt)}</div></div>`;
+  });
+  if(base>0){
+    html+=`<div class="h-item"><div style="flex:1;"><div class="h-nm">${idl?'Saldo awal':'Initial balance'}</div><div class="h-t">${idl?'Sebelum pencatatan riwayat':'Before history tracking'}</div></div><div class="h-a" style="color:var(--t2);">${fmt(base)}</div></div>`;
+  }
+  if(!html){
+    html=`<div style="text-align:center;padding:26px 0;color:var(--t3);font-size:13px;">${idl?'Belum ada penambahan dana.':'No funds added yet.'}</div>`;
+  }
+  document.getElementById('gh-list').innerHTML=html;
+  document.getElementById('gh-add-btn').textContent=idl?'Tambah Dana':'Add Funds';
+  document.getElementById('goalHistoryModal').classList.add('on');
+}
+function closeGoalHistoryModal(){ document.getElementById('goalHistoryModal').classList.remove('on'); _ghGoalId=null; }
+function goalHistoryAddFunds(){
+  const id=_ghGoalId;
+  closeGoalHistoryModal();
+  if(id!=null) quickAdd(id);
 }
 // Helper delete via event delegation (tidak perlu editGoalModal open dulu)
 function _deleteGoalById(id){
@@ -4615,7 +4825,9 @@ function confirmQuickAdd(){
     return;
   }
   const rp = isModeRp() ? raw : Math.round(raw * exRate);
+  const _before = g.current;
   g.current = Math.min(g.target, g.current + rp);
+  _logGoalFund(g, g.current - _before);
   const pct = Math.round((g.current / g.target) * 100);
   const notifTitle = lang==='id' ? 'Dana Ditambahkan' : 'Funds Added';
   const notifMsg   = `${fmt(rp)} → "${g.name}" · ${pct}%`;
@@ -4626,7 +4838,7 @@ function confirmQuickAdd(){
   renderGoals(); updateSavingsTotal();
   fbAutoSave();
 }
-function openNewGoalModal(){document.getElementById('goalName').value='';document.getElementById('goalDesc').value='';document.getElementById('goalTarget').value='';document.getElementById('goalCurrent').value='';goalColor='#1A56C4';updateGCP();updateGoalIconPreview();document.getElementById('goalModal').classList.add('on');}
+function openNewGoalModal(){document.getElementById('goalName').value='';document.getElementById('goalDesc').value='';document.getElementById('goalTarget').value='';document.getElementById('goalCurrent').value='';{const dl=document.getElementById('goalDeadline');if(dl){dl.value='';dl.min=_todayISO();}const dll=document.getElementById('gm-deadlbl');if(dll)dll.textContent=lang==='id'?'TARGET WAKTU (OPSIONAL)':'TARGET DATE (OPTIONAL)';}goalColor='#1A56C4';updateGCP();updateGoalIconPreview();document.getElementById('goalModal').classList.add('on');}
 function updateGoalIconPreview(){
   const name=document.getElementById('goalName').value;
   const el=document.getElementById('gmIconPreview');
@@ -4644,13 +4856,13 @@ function saveGoal(){
   const cur=_parseCurrencyInputValue('goalCurrent');
   const rpT=isModeRp()?tgt:Math.round(tgt*exRate);
   const rpC=isModeRp()?cur:Math.round(cur*exRate);
-  goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor});
+  goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor,deadline:document.getElementById('goalDeadline').value||null,fundLog:[]});
   closeGoalModal();renderGoals();updateSavingsTotal();
   if(appSettings.notifGoal) addNotif('goal','New Goal Created!',`"${name}" has been added to your savings`);
   toast(`🎯 Goal "${name}" created!`);
   fbAutoSave();
 }
-function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;editingGoalColor=g.color||'#1A56C4';document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target).toLocaleString('id-ID'):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';updateEditGoalIconPreview();document.getElementById('editGoalModal').classList.add('on');}
+function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;editingGoalColor=g.color||'#1A56C4';document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target).toLocaleString('id-ID'):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';{const dl=document.getElementById('egDeadline');if(dl)dl.value=g.deadline||'';const dll=document.getElementById('egm-deadlbl');if(dll)dll.textContent=lang==='id'?'TARGET WAKTU (OPSIONAL)':'TARGET DATE (OPTIONAL)';}document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';updateEditGoalIconPreview();document.getElementById('editGoalModal').classList.add('on');}
 function updateEditGoalIconPreview(){
   const name=document.getElementById('egName').value;
   const el=document.getElementById('egmIconPreview');
@@ -4659,7 +4871,7 @@ function updateEditGoalIconPreview(){
   el.innerHTML=goalIconSvg(name,editingGoalColor);
 }
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);g.current=Math.min(g.target,g.current+rp);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const dlEl=document.getElementById('egDeadline');if(dlEl)g.deadline=dlEl.value||null;const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);const before=g.current;g.current=Math.min(g.target,g.current+rp);_logGoalFund(g,g.current-before);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`))return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──

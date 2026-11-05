@@ -181,6 +181,7 @@ async function fbSaveState(_retryCount){
     balance,
     wallets,
     goals,
+    homeCards: (typeof homeCards !== 'undefined') ? homeCards : [],
     historyItems: historySlim,
     tagihan: (typeof tagihan !== 'undefined') ? tagihan.map(t => {
       const s = Object.assign({}, t); delete s.catIco; return s;
@@ -686,6 +687,10 @@ function _applyStateFromDB(data){
     goals = data.goals;
     if(goals.length>0) goalIdCtr = Math.max(...goals.map(g=>g.id||0))+1;
   }
+  if(Array.isArray(data.homeCards)){
+    homeCards = data.homeCards;
+    if(homeCards.length>0) homeCardIdCtr = Math.max(...homeCards.map(c=>c.id||0))+1;
+  }
   if(Array.isArray(data.historyItems)){
     // ── Simpan snapshot lama (full copy) sebelum historyItems ditimpa ──
     const _oldSnapshot = historyItems ? historyItems.map(h => Object.assign({}, h)) : null;
@@ -1163,6 +1168,26 @@ body{background:var(--bg);transition:background .35s;}
   box-shadow:0 12px 32px rgba(13,33,82,.32);
 }
 .dk .bal-card{background:linear-gradient(135deg,#152a5c,#1a3a7a 55%,#2A6FD6);}
+/* ── Stack card Beranda: Total Saldo + card gabungan buatan user ── */
+.hc-stack{display:grid;margin:0 16px 10px;touch-action:pan-y;}
+.hc-slide{grid-area:1/1;opacity:0;pointer-events:none;transition:opacity .3s ease;min-width:0;}
+.hc-slide.on{opacity:1;pointer-events:auto;}
+.hc-dots{display:flex;justify-content:center;align-items:center;gap:5px;margin:0 0 14px;}
+.hc-dot{height:6px;width:6px;border-radius:4px;background:var(--border);cursor:pointer;transition:all .25s ease;}
+.hc-dot.on{width:16px;background:var(--blue2);}
+.bal-card.hc-custom{background:var(--hc-bg);box-shadow:0 12px 32px var(--hc-sh);}
+.hc-rm{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;}
+.hc-sub{font-size:12px;opacity:.7;margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.hc-add{height:100%;min-height:150px;box-sizing:border-box;border:2px dashed var(--t3);border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:var(--t3);}
+.hc-add-btn{width:48px;height:48px;border-radius:50%;background:var(--blue2);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(42,111,214,.35);}
+.hc-add-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;}
+.hc-swatches{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+.hc-swatch{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;box-sizing:border-box;transition:transform .15s;}
+.hc-swatch.on{border-color:var(--surface);box-shadow:0 0 0 2.5px var(--blue2);transform:scale(1.06);}
+.hc-wrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1.5px solid var(--border);background:var(--surface);margin-bottom:7px;}
+.hc-wrow.on{border-color:var(--blue2);background:rgba(var(--blue2-rgb),.08);}
+.hc-wchk{width:20px;height:20px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px solid var(--t3);color:#fff;font-size:13px;line-height:1;}
+.hc-wrow.on .hc-wchk{background:var(--blue2);border-color:var(--blue2);}
 .bal-card::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none;}
 .bal-card::after{content:'';position:absolute;bottom:-30px;left:20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none;}
 
@@ -2106,7 +2131,9 @@ body{background:var(--bg);transition:background .35s;}
         </div>
       </div>
 
-      <div class="bal-card">
+      <div class="hc-stack" id="hc-stack" onpointerdown="_hcSwipeStart(event)" onpointerup="_hcSwipeEnd(event)" onpointercancel="_hcSwipeCancel()">
+      <div class="hc-slide on" id="hc-main">
+      <div class="bal-card" style="margin:0;height:100%;box-sizing:border-box;">
         <div class="bal-sheen"></div>
         <div class="bal-lbl" id="h-ballbl">TOTAL BALANCE</div>
         <div class="bal-amt" id="displayBalance" onclick="revealBalanceOnce(this)">$12,450.80</div>
@@ -2122,6 +2149,9 @@ body{background:var(--bg);transition:background .35s;}
           </button>
         </div>
       </div>
+      </div>
+      </div>
+      <div class="hc-dots" id="hc-dots"></div>
 
       <div class="sec-hdr"><div class="sec-ttl" id="h-recent">Recent Transactions</div><span class="sec-lnk" onclick="switchTab('analytics')" id="h-view">View Details</span></div>
       <div class="tx-list" id="txList">
@@ -3174,6 +3204,31 @@ body{background:var(--bg);transition:background .35s;}
   </div>
 </div>
 
+<!-- HOME CARD MODAL — form "Tambah Card" (nama + kartu yg diikutsertakan + warna)
+     utk card gabungan di Beranda (di samping Total Saldo). -->
+<div class="moverlay" id="homeCardModal">
+  <div class="msheet" style="padding:20px 20px calc(var(--safe-bot) + 28px);">
+    <div class="mhandle"></div>
+    <div class="mhdr">
+      <div class="mttl" id="hcm-title">Tambah Card</div>
+      <button class="mcls" onclick="closeHomeCardModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="overflow-y:auto;max-height:66vh;padding-bottom:4px;">
+      <div class="albl" id="hcm-namelbl">NAMA CARD</div>
+      <div class="iwrap" style="margin-bottom:16px;"><span class="iico"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><input class="finput" id="hcmName" maxlength="20" placeholder="Contoh: Tabungan, Harian, Investasi" oninput="updateHcmSummary()"></div>
+      <div class="albl" id="hcm-wlbl">KARTU YANG DIIKUTSERTAKAN</div>
+      <div id="hcmWallets" style="margin-bottom:8px;"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--surface2);border-radius:12px;margin-bottom:16px;">
+        <span style="font-size:12px;color:var(--t3);" id="hcmCount">0 kartu dipilih</span>
+        <span style="font-family:var(--f);font-size:14px;font-weight:800;color:var(--navy);" id="hcmTotal">Rp 0</span>
+      </div>
+      <div class="albl" id="hcm-clbl">WARNA CARD</div>
+      <div class="hc-swatches" id="hcmSwatches"></div>
+    </div>
+    <button class="btn btn-p" id="hcmSave" onclick="saveHomeCard()">Simpan Card</button>
+  </div>
+</div>
+
 <!-- BALANCE HISTORY MODAL — dibuka dari tombol di Card Total Saldo (Beranda).
      Menampilkan riwayat Total Saldo di akhir tiap bulan (mundur dari saldo
      sekarang, dihitung dari selisih pemasukan-pengeluaran riil per bulan —
@@ -3184,7 +3239,7 @@ body{background:var(--bg);transition:background .35s;}
     <div class="mhandle"></div>
     <div class="mhdr">
       <div>
-        <div class="mttl">📊 Riwayat Saldo Bulanan</div>
+        <div class="mttl" id="bhm-title">📊 Riwayat Saldo Bulanan</div>
         <div style="font-size:12px;color:var(--t3);margin-top:2px;" id="bhm-sub"></div>
       </div>
       <button class="mcls" onclick="closeBalanceHistoryModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
@@ -3987,6 +4042,7 @@ function applyPrivacyMode(){
     if(!el) return;
     el.classList.toggle('privacy-blur', !!appSettings.privacyMode);
   });
+  document.querySelectorAll('.hc-priv').forEach(el=>el.classList.toggle('privacy-blur', !!appSettings.privacyMode));
 }
 // Tap saldo saat Mode Privasi aktif → buka blur sementara (3 detik)
 function revealBalanceOnce(el){
@@ -4436,6 +4492,8 @@ function renderNI(n){
 // GOALS
 // ============================================================
 let goals=[];
+let homeCards=[];   // card gabungan di Beranda: [{id,name,walletIds,color}]
+let homeCardIdCtr=1;
 let goalIdCtr=1;
 // ── AUTO ICON: bentuk ikon ditentukan dari NAMA tujuan (bukan warna).
 // Warna (goalColor) tetap dipilih manual dan dipakai sebagai aksen/stroke.
@@ -4735,6 +4793,266 @@ function goalHistoryAddFunds(){
   closeGoalHistoryModal();
   if(id!=null) quickAdd(id);
 }
+// ══════════════════════════════════════════════════════════════
+// CARD GABUNGAN DI BERANDA (di samping Total Saldo)
+// homeCards = [{id, name, walletIds:[...], color:'<key HC_GRADS>'}]
+// Card baru = total saldo dari kartu/wallet yang dipilih user, dgn fitur
+// sama seperti Total Saldo (Kenaikan Bulanan + Riwayat Saldo). Card
+// berganti otomatis tiap 10 detik (crossfade), bisa digeser, ada dot.
+// Kotak garis putus-putus ber-"+" = tempat menambah card baru.
+// ══════════════════════════════════════════════════════════════
+var HC_MAX_CUSTOM = 3;
+var HC_ROTATE_MS  = 10000;
+var HC_RESUME_MS  = 8000;
+var HC_GRADS = [
+  {k:'navy',    n:'Samudra',  bg:'linear-gradient(135deg,#0D2152,#1a3a7a 55%,#2A6FD6)', sh:'rgba(13,33,82,.32)'},
+  {k:'ocean',   n:'Laut',     bg:'linear-gradient(135deg,#0A3D62,#1E6FA8 55%,#38BDF8)', sh:'rgba(30,111,168,.32)'},
+  {k:'emerald', n:'Zamrud',   bg:'linear-gradient(135deg,#064E3B,#0B7A63 55%,#34D399)', sh:'rgba(11,122,99,.32)'},
+  {k:'lagoon',  n:'Laguna',   bg:'linear-gradient(135deg,#134E4A,#0D9488 50%,#65A30D)', sh:'rgba(13,148,136,.32)'},
+  {k:'aurora',  n:'Aurora',   bg:'linear-gradient(135deg,#0B7A63,#2A6FD6 55%,#7C3AED)', sh:'rgba(42,111,214,.32)'},
+  {k:'violet',  n:'Ungu',     bg:'linear-gradient(135deg,#3B1F7A,#5B34B0 55%,#8B5CF6)', sh:'rgba(91,52,176,.32)'},
+  {k:'berry',   n:'Berry',    bg:'linear-gradient(135deg,#4A044E,#86198F 55%,#C026D3)', sh:'rgba(134,25,143,.32)'},
+  {k:'orchid',  n:'Anggrek',  bg:'linear-gradient(135deg,#831843,#BE185D 55%,#F472B6)', sh:'rgba(190,24,93,.32)'},
+  {k:'sunset',  n:'Senja',    bg:'linear-gradient(135deg,#EA580C,#EC4899 60%,#7C3AED)', sh:'rgba(236,72,153,.32)'},
+  {k:'ember',   n:'Bara',     bg:'linear-gradient(135deg,#7F1D1D,#DC2626 55%,#FB923C)', sh:'rgba(220,38,38,.32)'},
+  {k:'gold',    n:'Emas',     bg:'linear-gradient(135deg,#78350F,#B45309 50%,#D97706)', sh:'rgba(180,83,9,.32)'},
+  {k:'midnight',n:'Tengah malam', bg:'linear-gradient(135deg,#0F172A,#1E293B 55%,#475569)', sh:'rgba(15,23,42,.4)'}
+];
+function _hcGrad(k){ return HC_GRADS.find(g=>g.k===k) || HC_GRADS[0]; }
+function _hcL(idTxt, enTxt){ return lang==='id' ? idTxt : enTxt; }
+
+// Efek sebuah historyItem terhadap total sekelompok wallet — meniru
+// _applyHistoryEffect(): income → +dest, transfer/tarik → -src & +dest,
+// lainnya (expense) → -src. Transfer antar wallet di grup yg sama = 0.
+function _hcDeltaFor(h, set){
+  const swid = ('srcWalletId' in h)  ? h.srcWalletId  : _resolveWalletIdFromLabel(h.src);
+  const dwid = ('destWalletId' in h) ? h.destWalletId : _resolveWalletIdFromLabel(h.dest);
+  const a = Math.abs(h.amt||0);
+  let d = 0;
+  if(h.type==='income'){ if(set.has(dwid)) d += a; }
+  else if(h.type==='transfer' || h.type==='tarik'){ if(set.has(swid)) d -= a; if(set.has(dwid)) d += a; }
+  else { if(set.has(swid)) d -= a; }
+  return d;
+}
+function _hcWallets(card){
+  const set = new Set(card.walletIds||[]);
+  return wallets.filter(w=>set.has(w.id));
+}
+function _hcGroupTotal(card){
+  return _hcWallets(card).reduce((s,w)=>s+(w.balance||0),0);
+}
+function _hcGain(card){
+  const set = new Set(card.walletIds||[]);
+  const now = new Date();
+  const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const mEnd   = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  const net = historyItems
+    .filter(h => h.ts && new Date(h.ts) >= mStart && new Date(h.ts) < mEnd)
+    .reduce((sum,h)=>sum+_hcDeltaFor(h,set),0);
+  const total = _hcGroupTotal(card);
+  return computeGainBadgeState(total, total-net, net);
+}
+
+var _hcIdx = 0, _hcTimer = null, _hcIdle = null, _hcSig = '';
+var _hcSwipeX = null, _hcSwipeY = null, _hcJustSwiped = false;
+
+function _hcSlideEls(){ return Array.from(document.querySelectorAll('#hc-stack .hc-slide')); }
+
+function renderHomeCards(force){
+  const stack = document.getElementById('hc-stack');
+  const dots  = document.getElementById('hc-dots');
+  if(!stack || !dots) return;
+  const showAdd = homeCards.length < HC_MAX_CUSTOM;
+  const sig = [lang, isModeRp()?'rp':'usd', !!appSettings.privacyMode, showAdd,
+    homeCards.map(c=>{
+      const ws=_hcWallets(c);
+      return [c.id,c.name,c.color,fmt(_hcGroupTotal(c)),_hcGain(c).text,ws.map(w=>w.bank).join(',')].join('|');
+    }).join('~')].join('#');
+  if(!force && sig===_hcSig){ hcSync(); return; }
+  _hcSig = sig;
+
+  stack.querySelectorAll('.hc-dyn').forEach(el=>el.remove());
+  homeCards.forEach(c=>{
+    const g = _hcGrad(c.color);
+    const ws = _hcWallets(c);
+    const gain = _hcGain(c);
+    const sub = ws.length
+      ? ws.length+_hcL(' kartu: ',' cards: ')+ws.map(w=>w.bank).join(', ')
+      : _hcL('Kartu sudah dihapus','Cards removed');
+    const el = document.createElement('div');
+    el.className = 'hc-slide hc-dyn';
+    el.innerHTML =
+      '<div class="bal-card hc-custom" style="margin:0;height:100%;box-sizing:border-box;--hc-bg:'+g.bg+';--hc-sh:'+g.sh+';">'+
+        '<div class="bal-sheen"></div>'+
+        '<button class="hc-rm" onclick="event.stopPropagation();removeHomeCard('+c.id+')" aria-label="Hapus card">×</button>'+
+        '<div class="bal-lbl">'+escapeHtml(String(c.name).toUpperCase())+'</div>'+
+        '<div class="bal-amt hc-priv'+(appSettings.privacyMode?' privacy-blur':'')+'" onclick="revealBalanceOnce(this)">'+fmt(_hcGroupTotal(c))+'</div>'+
+        '<div class="hc-sub">'+escapeHtml(sub)+'</div>'+
+        '<div class="bal-foot">'+
+          '<div style="display:flex;align-items:center;gap:7px;">'+
+            '<span class="gain-b" style="background:'+gain.bg+';color:'+gain.color+';">'+gain.text+'</span>'+
+            '<span style="font-size:11px;opacity:.7">'+T('h-gain')+'</span>'+
+          '</div>'+
+          '<button class="topup-btn" onclick="openBalanceHistoryModal('+c.id+')">'+
+            '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>'+
+            '<span>'+T('h-topup')+'</span>'+
+          '</button>'+
+        '</div>'+
+      '</div>';
+    stack.appendChild(el);
+  });
+  if(showAdd){
+    const el = document.createElement('div');
+    el.className = 'hc-slide hc-dyn';
+    el.innerHTML =
+      '<div class="hc-add" onclick="hcAddClick()">'+
+        '<div class="hc-add-btn"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>'+
+        '<div style="font-size:12px;font-weight:600;">'+_hcL('Tambah card','Add card')+'</div>'+
+      '</div>';
+    stack.appendChild(el);
+  }
+  const n = _hcSlideEls().length;
+  if(_hcIdx >= n) _hcIdx = 0;
+  _hcApply();
+  hcSync();
+}
+
+function _hcApply(){
+  const els = _hcSlideEls();
+  els.forEach((el,i)=>el.classList.toggle('on', i===_hcIdx));
+  const dots = document.getElementById('hc-dots');
+  if(dots){
+    dots.innerHTML = els.map((_,i)=>'<span class="hc-dot'+(i===_hcIdx?' on':'')+'" onclick="_hcManualGoTo('+i+')"></span>').join('');
+  }
+}
+function _hcGoTo(i){
+  const n = _hcSlideEls().length; if(!n) return;
+  _hcIdx = ((i % n) + n) % n;
+  _hcApply();
+}
+function hcSync(){
+  const panel = document.getElementById('tab-home');
+  const visible = !!(panel && panel.offsetParent !== null);
+  const n = _hcSlideEls().length;
+  if(!visible || n < 2){ _hcFullStop(); return; }
+  if(!_hcTimer && !_hcIdle) _hcStart();
+}
+function _hcStart(){
+  _hcStop();
+  _hcTimer = setInterval(()=>{
+    const p = document.getElementById('tab-home');
+    if(!p || p.offsetParent === null){ _hcFullStop(); return; }
+    _hcGoTo(_hcIdx+1);
+  }, HC_ROTATE_MS);
+}
+function _hcStop(){ if(_hcTimer){ clearInterval(_hcTimer); _hcTimer = null; } }
+function _hcFullStop(){
+  _hcStop();
+  if(_hcIdle){ clearTimeout(_hcIdle); _hcIdle = null; }
+}
+// Interaksi user (sentuh/geser/tap dot) → jeda rotasi, lanjut lagi setelah HC_RESUME_MS
+function _hcOnInteract(){
+  _hcStop();
+  if(_hcIdle) clearTimeout(_hcIdle);
+  _hcIdle = setTimeout(()=>{ _hcIdle = null; hcSync(); }, HC_RESUME_MS);
+}
+function _hcManualGoTo(i){ _hcGoTo(i); _hcOnInteract(); }
+function _hcSwipeStart(e){
+  _hcSwipeX = e.clientX; _hcSwipeY = e.clientY;
+  _hcOnInteract();
+}
+function _hcSwipeCancel(){ _hcSwipeX = null; _hcSwipeY = null; }
+function _hcSwipeEnd(e){
+  if(_hcSwipeX === null) return;
+  const dx = e.clientX - _hcSwipeX, dy = e.clientY - _hcSwipeY;
+  _hcSwipeX = null; _hcSwipeY = null;
+  if(Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+  _hcJustSwiped = true; setTimeout(()=>{ _hcJustSwiped = false; }, 350);
+  _hcGoTo(dx < 0 ? _hcIdx+1 : _hcIdx-1);
+  _hcOnInteract();
+}
+function hcAddClick(){
+  if(_hcJustSwiped) return;
+  openHomeCardModal();
+}
+
+// ── Modal Tambah Card ──
+var _hcmSel = new Set();
+var _hcmColor = 'navy';
+function openHomeCardModal(){
+  if(homeCards.length >= HC_MAX_CUSTOM){ toast(_hcL('Maksimal '+HC_MAX_CUSTOM+' card tambahan','Maximum '+HC_MAX_CUSTOM+' extra cards')); return; }
+  _hcOnInteract();
+  _hcmSel = new Set();
+  _hcmColor = HC_GRADS[(homeCards.length+1) % HC_GRADS.length].k; // warna awal beda tiap card
+  document.getElementById('hcmName').value = '';
+  document.getElementById('hcm-title').textContent = _hcL('Tambah Card','Add Card');
+  document.getElementById('hcm-namelbl').textContent = _hcL('NAMA CARD','CARD NAME');
+  document.getElementById('hcm-wlbl').textContent = _hcL('KARTU YANG DIIKUTSERTAKAN','INCLUDED CARDS');
+  document.getElementById('hcm-clbl').textContent = _hcL('WARNA CARD','CARD COLOR');
+  document.getElementById('hcmName').placeholder = _hcL('Contoh: Tabungan, Harian, Investasi','e.g. Savings, Daily, Investing');
+  document.getElementById('hcmSave').textContent = _hcL('Simpan Card','Save Card');
+  renderHcmWallets(); renderHcmSwatches(); updateHcmSummary();
+  document.getElementById('homeCardModal').classList.add('on');
+}
+function closeHomeCardModal(){ document.getElementById('homeCardModal').classList.remove('on'); }
+function renderHcmWallets(){
+  const box = document.getElementById('hcmWallets');
+  if(!wallets.length){
+    box.innerHTML = '<div style="text-align:center;padding:18px 8px;color:var(--t3);font-size:12px;line-height:1.6;">'+_hcL('Belum ada kartu/wallet. Tambahkan dulu di Tabungan → Kartu & Anggaran.','No cards/wallets yet. Add one first in Savings → Wallets & Cards.')+'</div>';
+    return;
+  }
+  box.innerHTML = wallets.map(w=>{
+    const on = _hcmSel.has(w.id);
+    const acc = (typeof walletAccentColor==='function' && walletAccentColor(w)) || 'var(--blue2)';
+    return '<div class="hc-wrow'+(on?' on':'')+'" onclick="toggleHcmWallet('+w.id+')">'+
+      '<div style="width:30px;height:30px;border-radius:9px;flex-shrink:0;background:'+acc+';"></div>'+
+      '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escapeHtml(w.bank)+'</div>'+
+      '<div style="font-size:10px;color:var(--t3);">'+(w.num?'•••• '+escapeHtml(String(w.num)):'')+'</div></div>'+
+      '<div style="font-family:var(--f);font-size:12px;font-weight:700;color:var(--navy);">'+fmt(w.balance||0)+'</div>'+
+      '<div class="hc-wchk">'+(on?'✓':'')+'</div></div>';
+  }).join('');
+}
+function toggleHcmWallet(id){
+  if(_hcmSel.has(id)) _hcmSel.delete(id); else _hcmSel.add(id);
+  renderHcmWallets(); updateHcmSummary();
+}
+function renderHcmSwatches(){
+  document.getElementById('hcmSwatches').innerHTML = HC_GRADS.map(g=>
+    '<div class="hc-swatch'+(g.k===_hcmColor?' on':'')+'" title="'+g.n+'" style="background:'+g.bg+';" onclick="pickHcmColor(\''+g.k+'\')"></div>'
+  ).join('');
+}
+function pickHcmColor(k){ _hcmColor = k; renderHcmSwatches(); }
+function updateHcmSummary(){
+  const sel = wallets.filter(w=>_hcmSel.has(w.id));
+  document.getElementById('hcmCount').textContent = sel.length+_hcL(' kartu dipilih',' cards selected');
+  document.getElementById('hcmTotal').textContent = fmt(sel.reduce((s,w)=>s+(w.balance||0),0));
+  const ok = document.getElementById('hcmName').value.trim().length>0 && sel.length>0;
+  const btn = document.getElementById('hcmSave');
+  btn.style.opacity = ok ? '1' : '.45';
+}
+function saveHomeCard(){
+  const name = document.getElementById('hcmName').value.trim();
+  if(!name){ toast(_hcL('Isi nama card dulu','Enter a card name first')); return; }
+  if(!_hcmSel.size){ toast(_hcL('Pilih minimal satu kartu','Select at least one card')); return; }
+  if(homeCards.length >= HC_MAX_CUSTOM){ toast(_hcL('Maksimal '+HC_MAX_CUSTOM+' card tambahan','Maximum '+HC_MAX_CUSTOM+' extra cards')); return; }
+  homeCards.push({id:homeCardIdCtr++, name, walletIds:Array.from(_hcmSel), color:_hcmColor});
+  closeHomeCardModal();
+  _hcIdx = homeCards.length; // langsung tampilkan card yg baru dibuat (index 0 = Total Saldo)
+  renderHomeCards(true);
+  _hcOnInteract();
+  fbAutoSave();
+  toast(_hcL('✅ Card "'+name+'" ditambahkan','✅ Card "'+name+'" added'));
+}
+function removeHomeCard(id){
+  const c = homeCards.find(x=>x.id===id); if(!c) return;
+  if(!confirm(_hcL('Hapus card "'+c.name+'"? Saldo kartu aslinya tidak berubah.','Delete card "'+c.name+'"? The actual card balances are not affected.'))) return;
+  homeCards = homeCards.filter(x=>x.id!==id);
+  _hcIdx = 0;
+  renderHomeCards(true);
+  fbAutoSave();
+  toast(_hcL('Card dihapus','Card deleted'));
+}
+
 // Helper delete via event delegation (tidak perlu editGoalModal open dulu)
 function _deleteGoalById(id){
   const g = goals.find(x=>x.id===id); if(!g) return;
@@ -5854,7 +6172,9 @@ function closeMonthTxListModal(){ document.getElementById('monthTxListModal').cl
 // perpindahan uang antar akun/bentuk milik sendiri, bukan perubahan
 // kekayaan riil (konsisten dgn isTarikTx() dipakai di seluruh app).
 // ══════════════════════════════════════════════════════════════
-function computeMonthlyBalanceHistory(maxMonths){
+function computeMonthlyBalanceHistory(maxMonths, hcId){
+  const hcCard = hcId!=null ? homeCards.find(c=>c.id===hcId) : null;
+  const hcSet  = hcCard ? new Set(hcCard.walletIds) : null;
   const now = new Date();
   const curY = now.getFullYear(), curM = now.getMonth();
 
@@ -5878,13 +6198,17 @@ function computeMonthlyBalanceHistory(maxMonths){
     const mStart = new Date(y, m, 1);
     const mEnd   = new Date(y, m+1, 1);
     const mItems = historyItems.filter(h => h.ts && new Date(h.ts) >= mStart && new Date(h.ts) < mEnd);
+    if(hcSet){
+      months.push({ year: y, month: m, net: mItems.reduce((sum,h)=>sum+_hcDeltaFor(h,hcSet),0) });
+      continue;
+    }
     const inc = mItems.filter(h => h.pos).reduce((s,h) => s + Math.abs(h.amt||0), 0);
     const exp = mItems.filter(h => !h.pos && !isTarikTx(h)).reduce((s,h) => s + Math.abs(h.amt||0), 0);
     months.push({ year: y, month: m, net: inc - exp });
   }
 
   // Mundur dari saldo sekarang (real-time) untuk dapat saldo akhir tiap bulan
-  let endBal = balance;
+  let endBal = hcSet ? _hcGroupTotal(hcCard) : balance;
   const result = [];
   for(let i=0;i<months.length;i++){
     result.push({ year: months[i].year, month: months[i].month, endBalance: endBal });
@@ -5893,11 +6217,14 @@ function computeMonthlyBalanceHistory(maxMonths){
   return result; // urut dari bulan terbaru ke terlama
 }
 
-function openBalanceHistoryModal(){
+function openBalanceHistoryModal(hcId){
   const MONTH_NAMES_ID_FULL = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   const MONTH_NAMES_ID_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   const now = new Date();
-  const hist = computeMonthlyBalanceHistory(12); // terbaru → terlama
+  const hist = computeMonthlyBalanceHistory(12, hcId); // terbaru → terlama
+  const _hcC = hcId!=null ? homeCards.find(c=>c.id===hcId) : null;
+  const _ttl = document.getElementById('bhm-title');
+  if(_ttl) _ttl.textContent = _hcC ? ('📊 '+_hcC.name) : '📊 Riwayat Saldo Bulanan';
 
   const subEl = document.getElementById('bhm-sub');
   if(subEl) subEl.textContent = hist.length > 1
@@ -6890,6 +7217,7 @@ function updateAllAmounts(){
     const el=document.getElementById(cid);if(el)el.textContent=fmt(v);
   });
   updateSavingsTotal();
+  renderHomeCards();
 }
 
 // ============================================================
@@ -7036,6 +7364,7 @@ function switchTab(tab){
   if(tab==='analytics'){ refreshAnalytics(); }
   if(tab!=='savings'){ _ascFullStop(); }
   if(tab!=='analytics'){ _ttpbFullStop(); }
+  if(tab==='home'){ setTimeout(hcSync,60); } else { _hcFullStop(); }
   moveNavIndicator(tab);
 }
 
@@ -9521,6 +9850,7 @@ function refreshAllUI(){
   renderGoals();
   updateSavingsTotal();
   renderWallets();
+  renderHomeCards();
   // Update label navbar bulan Riwayat (penting saat filter berubah dari RTDB sync)
   updateHistNavbarLabel();
   renderHistory();
@@ -9605,7 +9935,7 @@ async function doRegister(){
     user = { email:em, name, avatar:'default', photo:null, uid: fu.uid };
     await fsSaveProfile(user);
     // Inisialisasi state kosong di Realtime DB
-    balance=0; goals=[]; wallets=[]; historyItems=[]; notifications=[];
+    balance=0; goals=[]; homeCards=[]; wallets=[]; historyItems=[]; notifications=[];
     await fbSaveState();
 
     setBtn(T('r-btn'), false);
@@ -9635,6 +9965,10 @@ async function enterApp(initialState){
     if(Array.isArray(initialState.goals)){
       goals = initialState.goals;
       if(goals.length > 0) goalIdCtr = Math.max(...goals.map(g=>g.id||0)) + 1;
+    }
+    if(Array.isArray(initialState.homeCards)){
+      homeCards = initialState.homeCards;
+      if(homeCards.length > 0) homeCardIdCtr = Math.max(...homeCards.map(c=>c.id||0)) + 1;
     }
     if(Array.isArray(initialState.historyItems)){
       historyItems = initialState.historyItems;
@@ -9710,7 +10044,7 @@ async function enterApp(initialState){
 
   } else {
     // State baru (user baru) — semua sudah di-inisialisasi ke nilai default kosong
-    historyItems=[]; goals=[]; wallets=[]; notifications=[]; balance=0;
+    historyItems=[]; goals=[]; homeCards=[]; wallets=[]; notifications=[]; balance=0;
     tagihan=[]; tagihanRiwayatBulanan=[]; budgets=[]; mainBudgetWalletIds=[]; customCategories=[]; debts=[];
     appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
     applyPrivacyMode();
@@ -9845,7 +10179,7 @@ async function doLogout(){
   // ikut pola yang sama: variabel lokal direset, data cloud-nya tetap ada,
   // jadi begitu user login lagi (di device manapun), riwayat notifikasinya
   // kembali termuat lewat _loadNotifFromRTDB(), tidak hilang lagi.
-  notifications=[]; historyItems=[]; goals=[]; wallets=[];
+  notifications=[]; historyItems=[]; goals=[]; homeCards=[]; wallets=[];
   balance=0; savedPin=''; lockPinBuf=''; quickLoginEnabled=false;
   appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
   applyPrivacyMode();
@@ -9886,7 +10220,7 @@ async function socialLogin(){
     };
     if(isNewUser || !prof){
       await fsSaveProfile(user);
-      balance=0; goals=[]; wallets=[]; historyItems=[]; notifications=[];
+      balance=0; goals=[]; homeCards=[]; wallets=[]; historyItems=[]; notifications=[];
       await fbSaveState();
     }
     const state = await fbLoadState();

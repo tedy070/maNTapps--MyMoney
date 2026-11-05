@@ -1177,6 +1177,7 @@ body{background:var(--bg);transition:background .35s;}
 .hc-dot.on{width:16px;background:var(--blue2);}
 .bal-card.hc-custom{background:var(--hc-bg);box-shadow:0 12px 32px var(--hc-sh);}
 .hc-rm{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;}
+.hc-rm svg{width:13px;height:13px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .hc-sub{font-size:12px;opacity:.7;margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 .hc-add{height:100%;min-height:150px;box-sizing:border-box;border:2px dashed var(--t3);border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:var(--t3);}
 .hc-add-btn{width:48px;height:48px;border-radius:50%;background:var(--blue2);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(42,111,214,.35);}
@@ -3226,6 +3227,7 @@ body{background:var(--bg);transition:background .35s;}
       <div class="hc-swatches" id="hcmSwatches"></div>
     </div>
     <button class="btn btn-p" id="hcmSave" onclick="saveHomeCard()">Simpan Card</button>
+    <button class="btn btn-danger" id="hcmDelete" style="display:none;" onclick="removeHomeCard(_hcmEditId)">Hapus Card</button>
   </div>
 </div>
 
@@ -4884,7 +4886,7 @@ function renderHomeCards(force){
     el.innerHTML =
       '<div class="bal-card hc-custom" style="margin:0;height:100%;box-sizing:border-box;--hc-bg:'+g.bg+';--hc-sh:'+g.sh+';">'+
         '<div class="bal-sheen"></div>'+
-        '<button class="hc-rm" onclick="event.stopPropagation();removeHomeCard('+c.id+')" aria-label="Hapus card">×</button>'+
+        '<button class="hc-rm" onclick="event.stopPropagation();openHomeCardModal('+c.id+')" aria-label="'+_hcL('Edit card','Edit card')+'"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'+
         '<div class="bal-lbl">'+escapeHtml(String(c.name).toUpperCase())+'</div>'+
         '<div class="bal-amt hc-priv'+(appSettings.privacyMode?' privacy-blur':'')+'" onclick="revealBalanceOnce(this)">'+fmt(_hcGroupTotal(c))+'</div>'+
         '<div class="hc-sub">'+escapeHtml(sub)+'</div>'+
@@ -4979,18 +4981,32 @@ function hcAddClick(){
 // ── Modal Tambah Card ──
 var _hcmSel = new Set();
 var _hcmColor = 'navy';
-function openHomeCardModal(){
-  if(homeCards.length >= HC_MAX_CUSTOM){ toast(_hcL('Maksimal '+HC_MAX_CUSTOM+' card tambahan','Maximum '+HC_MAX_CUSTOM+' extra cards')); return; }
+var _hcmEditId = null; // null = mode tambah, angka = id card yang sedang di-edit
+function openHomeCardModal(editId){
+  // Dipanggil dari onclick tombol "Tambah card" tanpa argumen (atau dengan event) → mode tambah.
+  const editing = (typeof editId === 'number') ? homeCards.find(x=>x.id===editId) : null;
+  if(!editing && homeCards.length >= HC_MAX_CUSTOM){ toast(_hcL('Maksimal '+HC_MAX_CUSTOM+' card tambahan','Maximum '+HC_MAX_CUSTOM+' extra cards')); return; }
   _hcOnInteract();
-  _hcmSel = new Set();
-  _hcmColor = HC_GRADS[(homeCards.length+1) % HC_GRADS.length].k; // warna awal beda tiap card
-  document.getElementById('hcmName').value = '';
-  document.getElementById('hcm-title').textContent = _hcL('Tambah Card','Add Card');
+  _hcmEditId = editing ? editing.id : null;
+  if(editing){
+    // Hanya sertakan wallet yang masih ada (wallet yang sudah dihapus otomatis dilepas dari pilihan).
+    _hcmSel = new Set((editing.walletIds||[]).filter(id=>wallets.some(w=>w.id===id)));
+    _hcmColor = editing.color;
+    document.getElementById('hcmName').value = editing.name;
+  } else {
+    _hcmSel = new Set();
+    _hcmColor = HC_GRADS[(homeCards.length+1) % HC_GRADS.length].k; // warna awal beda tiap card
+    document.getElementById('hcmName').value = '';
+  }
+  document.getElementById('hcm-title').textContent = editing ? _hcL('Edit Card','Edit Card') : _hcL('Tambah Card','Add Card');
   document.getElementById('hcm-namelbl').textContent = _hcL('NAMA CARD','CARD NAME');
   document.getElementById('hcm-wlbl').textContent = _hcL('KARTU YANG DIIKUTSERTAKAN','INCLUDED CARDS');
   document.getElementById('hcm-clbl').textContent = _hcL('WARNA CARD','CARD COLOR');
   document.getElementById('hcmName').placeholder = _hcL('Contoh: Tabungan, Harian, Investasi','e.g. Savings, Daily, Investing');
-  document.getElementById('hcmSave').textContent = _hcL('Simpan Card','Save Card');
+  document.getElementById('hcmSave').textContent = editing ? _hcL('Simpan Perubahan','Save Changes') : _hcL('Simpan Card','Save Card');
+  const _delBtn = document.getElementById('hcmDelete');
+  _delBtn.textContent = _hcL('Hapus Card','Delete Card');
+  _delBtn.style.display = editing ? 'block' : 'none';
   renderHcmWallets(); renderHcmSwatches(); updateHcmSummary();
   document.getElementById('homeCardModal').classList.add('on');
 }
@@ -5034,6 +5050,21 @@ function saveHomeCard(){
   const name = document.getElementById('hcmName').value.trim();
   if(!name){ toast(_hcL('Isi nama card dulu','Enter a card name first')); return; }
   if(!_hcmSel.size){ toast(_hcL('Pilih minimal satu kartu','Select at least one card')); return; }
+  if(_hcmEditId !== null){
+    // Mode edit: perbarui card yang ada (id tetap sama).
+    const idx = homeCards.findIndex(x=>x.id===_hcmEditId);
+    if(idx < 0){ closeHomeCardModal(); return; }
+    homeCards[idx].name = name;
+    homeCards[idx].walletIds = Array.from(_hcmSel);
+    homeCards[idx].color = _hcmColor;
+    closeHomeCardModal();
+    _hcIdx = idx + 1; // tetap tampilkan card yg baru diedit (index 0 = Total Saldo)
+    renderHomeCards(true);
+    _hcOnInteract();
+    fbAutoSave();
+    toast(_hcL('✅ Card "'+name+'" diperbarui','✅ Card "'+name+'" updated'));
+    return;
+  }
   if(homeCards.length >= HC_MAX_CUSTOM){ toast(_hcL('Maksimal '+HC_MAX_CUSTOM+' card tambahan','Maximum '+HC_MAX_CUSTOM+' extra cards')); return; }
   homeCards.push({id:homeCardIdCtr++, name, walletIds:Array.from(_hcmSel), color:_hcmColor});
   closeHomeCardModal();
@@ -5047,6 +5078,8 @@ function removeHomeCard(id){
   const c = homeCards.find(x=>x.id===id); if(!c) return;
   if(!confirm(_hcL('Hapus card "'+c.name+'"? Saldo kartu aslinya tidak berubah.','Delete card "'+c.name+'"? The actual card balances are not affected.'))) return;
   homeCards = homeCards.filter(x=>x.id!==id);
+  _hcmEditId = null;
+  closeHomeCardModal();
   _hcIdx = 0;
   renderHomeCards(true);
   fbAutoSave();

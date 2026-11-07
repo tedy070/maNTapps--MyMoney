@@ -194,6 +194,8 @@ async function fbSaveState(_retryCount){
     mainBudgetWalletIds: (typeof mainBudgetWalletIds !== 'undefined') ? mainBudgetWalletIds : [],
     customCategories: (typeof customCategories !== 'undefined') ? customCategories : [],
     debts: (typeof debts !== 'undefined') ? debts : [],
+    scheduledTx: (typeof scheduledTx !== 'undefined') ? scheduledTx : [],
+    scheduledLog: (typeof scheduledLog !== 'undefined') ? scheduledLog : [],
     savedPin,
     lang,
     darkMode: document.body.classList.contains('dk'),
@@ -687,6 +689,10 @@ function _applyStateFromDB(data){
     goals = data.goals;
     if(goals.length>0) goalIdCtr = Math.max(...goals.map(g=>g.id||0))+1;
   }
+  scheduledTx  = Array.isArray(data.scheduledTx)  ? data.scheduledTx.filter(Boolean)  : [];
+  scheduledLog = Array.isArray(data.scheduledLog) ? data.scheduledLog.filter(Boolean) : [];
+  schedIdCtr    = scheduledTx.length  ? Math.max(...scheduledTx.map(x=>x.id||0))+1  : 1;
+  schedLogIdCtr = scheduledLog.length ? Math.max(...scheduledLog.map(x=>x.id||0))+1 : 1;
   if(Array.isArray(data.homeCards)){
     homeCards = data.homeCards;
     if(homeCards.length>0) homeCardIdCtr = Math.max(...homeCards.map(c=>c.id||0))+1;
@@ -1833,6 +1839,50 @@ body{background:var(--bg);transition:background .35s;}
 .tx-type-btn.on{background:var(--surface);color:var(--navy);box-shadow:var(--sh2);}
 .tx-type-btn.on.income-type{color:var(--green);}
 .tx-type-btn.on.transfer-type{color:var(--blue2);}
+/* ── Transaksi Terjadwal ── */
+.sch-mode{display:flex;gap:4px;background:var(--surface2);border-radius:14px;padding:4px;margin-bottom:14px;}
+.sch-mode button{flex:1;height:42px;border:none;border-radius:11px;background:transparent;color:var(--t3);font-family:var(--f2);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;}
+.sch-mode button.on{background:var(--surface);color:var(--navy);box-shadow:var(--sh2);}
+.sch-mode svg,.sch-ddbtn svg,.sch-mi .ic svg,.sch-ico svg,.sch-next svg,.sch-del svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.sch-row{display:flex;gap:10px;margin-bottom:14px;}
+.sch-dd{position:relative;flex:1;min-width:0;}
+.sch-ddbtn{width:100%;height:46px;border-radius:13px;border:2px solid var(--border);background:var(--surface);color:var(--navy);font-family:var(--f2);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;}
+.sch-ddbtn.on{border-color:var(--blue2);background:rgba(42,111,214,.1);color:var(--blue2);}
+.sch-menu{position:absolute;top:calc(100% + 6px);min-width:230px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:6px;box-shadow:0 12px 32px rgba(13,33,82,.25);z-index:30;}
+.sch-dd:first-child .sch-menu{left:0;}
+.sch-dd:last-child .sch-menu{right:0;}
+.sch-mi{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;cursor:pointer;border:none;background:transparent;width:100%;text-align:left;font-family:var(--f2);color:var(--navy);}
+.sch-mi.on{background:rgba(42,111,214,.1);}
+.sch-mi .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--cb);color:var(--c);flex-shrink:0;}
+.sch-mi b{display:block;font-size:13.5px;}
+.sch-mi small{display:block;font-size:11px;color:var(--t3);margin-top:1px;}
+.sch-t-expense{--c:var(--red);--cb:rgba(239,68,68,.12);}
+.sch-t-income{--c:var(--green);--cb:rgba(34,197,94,.14);}
+.sch-t-transfer{--c:var(--blue2);--cb:rgba(42,111,214,.12);}
+.sch-t-neutral{--c:var(--t3);--cb:var(--surface2);}
+#schedListView{min-height:230px;}
+.sch-card{background:var(--surface2);border-radius:16px;padding:14px;margin-bottom:10px;}
+.sch-top{display:flex;align-items:center;gap:12px;}
+.sch-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--cb);color:var(--c);flex-shrink:0;}
+.sch-ico svg{width:18px;height:18px;}
+.sch-main{flex:1;min-width:0;}
+.sch-name{font-size:14px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sch-meta{font-size:12px;color:var(--t3);margin-top:2px;}
+.sch-amt{font-size:14px;font-weight:800;color:var(--c);white-space:nowrap;text-align:right;}
+.sch-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);}
+.sch-next{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t3);}
+.sch-acts{display:flex;align-items:center;gap:6px;}
+.sch-del{width:32px;height:32px;border:none;background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;}
+.sch-tg{width:44px;height:26px;border:none;border-radius:13px;background:var(--border);padding:3px;display:flex;justify-content:flex-start;cursor:pointer;}
+.sch-tg.on{background:var(--blue2);justify-content:flex-end;}
+.sch-tg span{width:20px;height:20px;border-radius:50%;background:#fff;}
+.sch-fail{margin-top:8px;font-size:11.5px;color:var(--red);}
+.sch-badge{display:inline-block;font-size:11px;font-weight:700;border-radius:8px;padding:2px 8px;margin-top:6px;}
+.sch-badge.ok{color:var(--green);background:rgba(34,197,94,.14);}
+.sch-badge.bad{color:var(--red);background:rgba(239,68,68,.12);}
+.sch-empty{text-align:center;color:var(--t3);font-size:13px;line-height:1.5;padding:40px 12px;}
+.sch-select{width:100%;border:none;outline:none;background:transparent;font-family:var(--f);font-size:15px;font-weight:600;color:var(--navy);}
+.sch-hint{font-size:12px;color:var(--t3);margin:-6px 0 14px;line-height:1.45;}
 
 /* MONEY SOURCE CHIP */
 .src-chip{padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:transparent;font-family:var(--f2);font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;margin:3px;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:all .2s;}
@@ -2947,8 +2997,22 @@ body{background:var(--bg);transition:background .35s;}
     <div class="mhandle"></div>
     <div class="mhdr"><div class="mttl" id="m-title">Add Transaction</div><button class="mcls" onclick="closeAddModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
 
+    <!-- MODE: NORMAL | TERJADWAL -->
+    <div class="sch-mode" id="schModeSwitch">
+      <button class="on" id="schm-normal" onclick="setTxMode('normal')"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span id="schm-normal-t">Normal</span></button>
+      <button id="schm-sched" onclick="setTxMode('sched')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14"/></svg><span id="schm-sched-t">Terjadwal</span></button>
+    </div>
+    <!-- PANEL TERJADWAL -->
+    <div id="schedPanel" style="display:none;">
+      <div class="sch-row">
+        <div class="sch-dd"><button class="sch-ddbtn on" id="schViewBtn" onclick="toggleSchedMenu('view')"></button><div class="sch-menu" id="schViewMenu" style="display:none;"></div></div>
+        <div class="sch-dd"><button class="sch-ddbtn" id="schNewBtn" onclick="toggleSchedMenu('new')"></button><div class="sch-menu" id="schNewMenu" style="display:none;"></div></div>
+      </div>
+      <div id="schedListView"></div>
+    </div>
+    <div id="txFormWrap">
     <!-- TRANSACTION TYPE TOGGLE -->
-    <div style="display:flex;gap:0;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:18px;">
+    <div id="txTypeToggle" style="display:flex;gap:0;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:18px;">
       <button class="tx-type-btn on" id="txtype-expense" onclick="setTxType('expense')">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/></svg>
         <span id="m-expense">Expense</span>
@@ -3005,6 +3069,15 @@ body{background:var(--bg);transition:background .35s;}
     <div class="albl" id="m-note">NOTE (OPTIONAL)</div>
     <textarea class="noteinput" id="noteInput" rows="2" placeholder="What was this for?"></textarea>
 
+    <!-- PENGULANGAN (hanya mode Terjadwal) -->
+    <div id="schedRepeatWrap" style="display:none;">
+      <div class="albl" id="schFreqLbl">PENGULANGAN</div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:14px;padding:12px 16px;margin-bottom:14px;">
+        <select id="schFreq" class="sch-select"></select>
+      </div>
+      <div class="sch-hint" id="schHint"></div>
+    </div>
+
     <!-- TANGGAL TRANSAKSI -->
     <div class="albl" id="m-date" style="margin-top:8px;">TANGGAL TRANSAKSI</div>
     <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:14px;padding:12px 16px;margin-bottom:16px;border:2px solid transparent;transition:border-color .2s;" id="dateWrap">
@@ -3024,6 +3097,7 @@ body{background:var(--bg);transition:background .35s;}
       <div style="font-size:12px;color:var(--t3);margin-top:4px;" id="tsp-source">Saldo utama</div>
     </div>
 
+    </div><!-- end txFormWrap -->
     </div><!-- end msheet-body -->
     <div class="msheet-foot">
       <button class="btn btn-p" onclick="completeTx()" id="m-complete">Complete Transaction</button>
@@ -8020,11 +8094,13 @@ function openAddModal(){
   }
   buildCatGrid();
   buildSourceGrid();
+  setTxMode('normal');
   setTimeout(()=>document.getElementById('amountRaw').focus(), 200);
 }
 
 function closeAddModal(){
   document.getElementById('addModal').classList.remove('on');
+  _schedCloseMenus(); setTxMode('normal');
   rawAmountNum=0;selCat='';selCatIco='';selCatColor='';selSource=null;selDest='main';
   document.getElementById('txSummaryPreview').style.display='none';
 }
@@ -8033,7 +8109,353 @@ function openCatPicker(){document.getElementById('catPicker').classList.add('on'
 function selectCat(el,c){document.querySelectorAll('.cat-c').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');selCat=c.id;selCatIco=catIconInnerHtml(c);selCatColor=c.bg||c.color;document.getElementById('catConfSub').textContent='SELECTED: 1 CATEGORY';}
 function confirmCat(){if(!selCat)return;const t=document.getElementById('catSelTxt');const cObj=allPickableCats().find(x=>x.id===selCat);t.textContent=cObj?catLabel(cObj):catDisplayName(selCat);t.classList.add('sel');document.getElementById('catPicker').classList.remove('on');}
 
+// ══════════════════════════════════════════════════════════════
+// TRANSAKSI TERJADWAL
+// scheduledTx  = [{id,type,amt,cat,catColor,name,srcKey,destKey,freq,
+//                  startDate,anchorDay,anchorMonth,nextDue,active,failedOn,lastRun}]
+// scheduledLog = [{id,schedId,name,type,amt,date,ts,ok,note}]  (maks 60, terbaru di depan)
+// Dijalankan oleh runDueSchedules() saat app dibuka / kembali aktif / tiap 60 detik.
+// Gagal (saldo kurang dll) → dicatat SEKALI per tanggal jatuh tempo di Riwayat,
+// jadwal TIDAK maju & dicoba lagi otomatis pada pengecekan berikutnya.
+// ══════════════════════════════════════════════════════════════
+let scheduledTx = [], scheduledLog = [];
+let schedIdCtr = 1, schedLogIdCtr = 1, _schedReady = false, _schedTimer = null;
+let _txMode = 'normal';      // 'normal' | 'sched'
+let _schedView = 'list';     // 'list' | 'hist' | 'create'
+const _schedOrig = {};
+const SCHED_MAX = 30, SCHED_LOG_MAX = 60;
+const SCH_IC = {
+  up:'<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/>',
+  down:'<line x1="12" y1="5" x2="12" y2="19"/><polyline points="19,12 12,19 5,12"/>',
+  tr:'<polyline points="17,1 21,5 17,9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7,23 3,19 7,15"/><path d="M21 13v2a4 4 0 01-4 4H3"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15.5,14"/>',
+  hist:'<path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8"/><polyline points="3,3 3,8 8,8"/><polyline points="12,7 12,12 15,14"/>',
+  chev:'<polyline points="6,9 12,15 18,9"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  trash:'<polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>'
+};
+const _schSvg = p => '<svg viewBox="0 0 24 24" aria-hidden="true">'+p+'</svg>';
+const _schTypeIc = t => t==='income' ? SCH_IC.down : (t==='transfer' ? SCH_IC.tr : SCH_IC.up);
+function _sL(id,en){ return lang==='id' ? id : en; }
+
+// ── Helper tanggal (format kunci 'YYYY-MM-DD', zona waktu lokal) ──
+function _dkey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _dparse(k){ const p=String(k).split('-'); return new Date(+p[0], (+p[1])-1, +p[2]); }
+function _todayKey(){ return _dkey(new Date()); }
+function _dim(y,m){ return new Date(y,m+1,0).getDate(); }
+function _schedFmtDate(k,withYear=true){
+  const o = withYear ? {day:'numeric',month:'short',year:'numeric'} : {day:'numeric',month:'short'};
+  return _dparse(k).toLocaleDateString(lang==='id'?'id-ID':'en-US', o);
+}
+// Tanggal jatuh tempo berikutnya setelah `fromKey` (bulanan/tahunan: pakai anchor, dipotong ke hari terakhir bulan)
+function _schedNext(s, fromKey){
+  const d = _dparse(fromKey);
+  if(s.freq==='daily'){ d.setDate(d.getDate()+1); return _dkey(d); }
+  if(s.freq==='weekly'){ d.setDate(d.getDate()+7); return _dkey(d); }
+  if(s.freq==='yearly'){
+    const y = d.getFullYear()+1, m = (s.anchorMonth!=null ? s.anchorMonth : d.getMonth());
+    return _dkey(new Date(y, m, Math.min(s.anchorDay||d.getDate(), _dim(y,m))));
+  }
+  let y = d.getFullYear(), m = d.getMonth()+1;
+  if(m>11){ m=0; y++; }
+  return _dkey(new Date(y, m, Math.min(s.anchorDay||d.getDate(), _dim(y,m))));
+}
+
+// ── Kartu: key 'w_<id>' → wallet; undefined = kartu sudah dihapus; null = Saldo Utama ──
+function _schedWalletOf(key){
+  if(key && String(key).startsWith('w_')){
+    const w = wallets.find(x=>x.id===parseInt(String(key).slice(2)));
+    return w || undefined;
+  }
+  return null;
+}
+function _schedKeyLabel(key){
+  if(key && String(key).startsWith('w_')){
+    const w = _schedWalletOf(key);
+    return w ? `${w.bank} ••••${w.num}` : _sL('Kartu dihapus','Deleted card');
+  }
+  if(key==='salary') return _sL('Gaji','Salary');
+  if(key==='other')  return _sL('Lainnya','Other');
+  return _sL('Saldo Utama','Main Balance');
+}
+
+// ══ EKSEKUSI ══
+function _schedExecOne(s, dueKey){
+  const rp = s.amt;
+  const srcW = _schedWalletOf(s.srcKey), dstW = _schedWalletOf(s.destKey);
+  if(s.type!=='income' && srcW===undefined) return {ok:false, reason:_sL('Kartu sumber tidak ditemukan','Source card not found')};
+  if(s.type!=='expense' && dstW===undefined) return {ok:false, reason:_sL('Kartu tujuan tidak ditemukan','Destination card not found')};
+  const swid = srcW ? srcW.id : null, dwid = dstW ? dstW.id : null;
+  if(s.type==='transfer' && swid===dwid) return {ok:false, reason:_sL('Sumber dan tujuan sama','Source and destination are the same')};
+  if(s.type==='expense' || s.type==='transfer'){
+    const avail = srcW ? srcW.balance : balance;
+    if(avail < rp){
+      const lbl = _schedKeyLabel(s.srcKey);
+      return {ok:false, reason:_sL(`Saldo ${lbl} tidak cukup`,`Insufficient balance on ${lbl}`)};
+    }
+  }
+  _applyHistoryEffect(s.type, swid, dwid, rp);
+  const nowD = new Date(), occ = _dparse(dueKey);
+  let when = new Date(occ.getFullYear(), occ.getMonth(), occ.getDate(), 8, 0, 0);
+  if(when > nowD) when = nowD;
+  const loc = lang==='id' ? 'id-ID' : 'en-US';
+  const dateStr = when.toLocaleDateString(loc,{day:'2-digit',month:'short',year:'numeric'});
+  const timeStr = when.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  let catIco = '';
+  try{ const c = allPickableCats().find(x=>x.id===s.cat); if(c) catIco = catIconInnerHtml(c); }catch(e){}
+  const item = {
+    id: historyIdCtr++, name: s.name, time: `${dateStr}, ${timeStr}`,
+    amt: s.type==='income' ? rp : -rp, pos: s.type==='income',
+    cat: s.cat, catColor: s.catColor || '', catIco,
+    src: s.type==='income' ? _schedKeyLabel(s.srcKey||'other') : _schedKeyLabel(s.srcKey),
+    dest: _schedKeyLabel(s.destKey), type: s.type, ts: when.getTime(),
+    srcWalletId: swid, destWalletId: dwid, fromSched: true
+  };
+  historyItems.unshift(item);
+  return {ok:true, when};
+}
+function _schedLog(s, dueKey, ok, reason){
+  scheduledLog.unshift({id:schedLogIdCtr++, schedId:s.id, name:s.name, type:s.type, amt:s.amt, date:dueKey, ts:Date.now(), ok:!!ok, note:reason||''});
+  if(scheduledLog.length > SCHED_LOG_MAX) scheduledLog.length = SCHED_LOG_MAX;
+}
+function _schedNotify(s, ok, reason){
+  if(!appSettings.notifTx) return;
+  if(ok) addNotif(s.type==='income'?'tx':'neg', '⏰ '+_sL('Transaksi terjadwal berhasil','Scheduled transaction done'), `${s.name} · ${fmt(s.amt)}`);
+  else   addNotif('neg', '⏰ '+_sL('Transaksi terjadwal gagal','Scheduled transaction failed'), `${s.name}: ${reason}`);
+}
+function runDueSchedules(){
+  if(!_schedReady || !user || !Array.isArray(scheduledTx) || !scheduledTx.length) return;
+  const today = _todayKey();
+  let changed = false, executed = 0;
+  const budgetChecks = [];
+  scheduledTx.forEach(s=>{
+    if(!s.active || !s.nextDue) return;
+    let guard = 0;
+    while(s.nextDue <= today && guard < 31){
+      guard++;
+      const due = s.nextDue;
+      const r = _schedExecOne(s, due);
+      if(r.ok){
+        s.nextDue = _schedNext(s, due); s.failedOn = ''; s.lastRun = due;
+        _schedLog(s, due, true, ''); _schedNotify(s, true, '');
+        executed++; changed = true;
+        if(s.type==='expense') budgetChecks.push([s.cat, `${r.when.getFullYear()}-${String(r.when.getMonth()+1).padStart(2,'0')}`]);
+      } else {
+        if(s.failedOn !== due){
+          s.failedOn = due; _schedLog(s, due, false, r.reason); _schedNotify(s, false, r.reason); changed = true;
+        }
+        break; // jangan maju — dicoba lagi pada pengecekan berikutnya
+      }
+    }
+  });
+  if(!changed) return;
+  if(executed){
+    recalcTotalBalance(); updateAllAmounts(); renderWallets();
+    renderHistory(); renderRecentTxList(); refreshAnalytics();
+    budgetChecks.forEach(([c,p])=>{ try{ checkBudgetAlerts(c,p); }catch(e){} });
+    const angPanel = document.getElementById('sv-anggaran-panel');
+    if(angPanel && angPanel.style.display !== 'none'){ renderAnggaranList(); }
+    toast('⏰ '+_sL(`${executed} transaksi terjadwal dijalankan`,`${executed} scheduled transaction(s) executed`));
+  }
+  if(_txMode==='sched' && _schedView!=='create' && document.getElementById('addModal').classList.contains('on')) _schedRenderBody();
+  fbAutoSave();
+}
+function _schedStartTimer(){
+  if(_schedTimer) return;
+  _schedTimer = setInterval(runDueSchedules, 60000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) runDueSchedules(); });
+}
+function _schedStopTimer(){ if(_schedTimer){ clearInterval(_schedTimer); _schedTimer = null; } }
+
+// ══ UI: mode Normal | Terjadwal ══
+function _schedCapture(){
+  if(_schedOrig.done) return;
+  _schedOrig.dateLbl = document.getElementById('m-date')?.textContent || '';
+  _schedOrig.done = true;
+}
+function setTxMode(mode){
+  _schedCapture();
+  _txMode = mode;
+  if(mode==='sched') _schedView = 'list';
+  _schedApplyView();
+}
+function _schedApplyView(){
+  const sched = _txMode==='sched', create = sched && _schedView==='create';
+  const $ = id => document.getElementById(id);
+  $('schm-normal').classList.toggle('on', !sched);
+  $('schm-sched').classList.toggle('on', sched);
+  $('schm-normal-t').textContent = _sL('Normal','Normal');
+  $('schm-sched-t').textContent  = _sL('Terjadwal','Scheduled');
+  $('schedPanel').style.display = sched ? 'block' : 'none';
+  $('txFormWrap').style.display = (!sched || create) ? 'block' : 'none';
+  $('txTypeToggle').style.display = create ? 'none' : 'flex';
+  $('schedRepeatWrap').style.display = create ? 'block' : 'none';
+  const foot = document.querySelector('#addModal .msheet-foot');
+  if(foot) foot.style.display = (!sched || create) ? '' : 'none';
+  const typeName = {expense:_sL('Pengeluaran','Expense'), income:_sL('Pemasukan','Income'), transfer:'Transfer'}[txType] || '';
+  $('m-title').textContent = create ? _sL('Jadwal '+typeName,'Scheduled '+typeName) : (sched ? _sL('Transaksi Terjadwal','Scheduled Transactions') : T('m-title'));
+  $('m-complete').textContent = create ? _sL('Simpan Jadwal','Save Schedule') : T('m-complete');
+  $('m-date').textContent = create ? _sL('TANGGAL MULAI','START DATE') : _schedOrig.dateLbl;
+  const _di = $('txDateInput'); if(_di){ if(create) _di.min = _todayKey(); else _di.removeAttribute('min'); }
+  if(create){
+    $('schFreqLbl').textContent = _sL('PENGULANGAN','REPEAT');
+    const sel = $('schFreq'), cur = sel.value || 'monthly';
+    sel.innerHTML = [['daily',_sL('Setiap hari','Every day')],['weekly',_sL('Setiap minggu','Every week')],['monthly',_sL('Setiap bulan','Every month')],['yearly',_sL('Setiap tahun','Every year')]]
+      .map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+    sel.value = cur;
+    $('schHint').textContent = _sL('Dijalankan otomatis pada tanggal jatuh tempo, saat aplikasi dibuka. Jika saldo kartu tidak cukup, dicatat Gagal di Riwayat dan dicoba lagi otomatis.',
+                                   'Runs automatically on the due date, when the app is open. If the card balance is insufficient it is logged as Failed in History and retried automatically.');
+  }
+  _schedRenderMenus();
+  if(sched && !create) _schedRenderBody();
+}
+function _schedRenderMenus(){
+  const $ = id => document.getElementById(id);
+  const create = _txMode==='sched' && _schedView==='create';
+  const vb = $('schViewBtn'), nb = $('schNewBtn');
+  vb.classList.toggle('on', !create); nb.classList.toggle('on', create);
+  const vlbl = _schedView==='hist' ? _sL('Riwayat','History') : _sL('Jadwal Saya','My Schedules');
+  vb.innerHTML = _schSvg(_schedView==='hist'?SCH_IC.hist:SCH_IC.clock) + '<span>'+vlbl+'</span>' + _schSvg(SCH_IC.chev);
+  nb.innerHTML = _schSvg(SCH_IC.plus) + '<span>'+_sL('Buat Jadwal','New Schedule')+'</span>' + _schSvg(SCH_IC.chev);
+  const mi = (fn, on, tcls, icon, title, sub) =>
+    `<button class="sch-mi ${tcls}${on?' on':''}" onclick="${fn}"><span class="ic">${_schSvg(icon)}</span><span><b>${title}</b><small>${sub}</small></span></button>`;
+  $('schViewMenu').innerHTML =
+    mi("setSchedView('list')", _schedView==='list', 'sch-t-transfer', SCH_IC.clock, _sL('Jadwal Saya','My Schedules'), _sL(`${scheduledTx.length} jadwal`,`${scheduledTx.length} schedule(s)`)) +
+    mi("setSchedView('hist')", _schedView==='hist', 'sch-t-neutral', SCH_IC.hist, _sL('Riwayat','History'), _sL('Jadwal yang sudah berjalan','Schedules that already ran'));
+  $('schNewMenu').innerHTML =
+    mi("startSchedCreate('expense')",  false, 'sch-t-expense',  SCH_IC.up,   _sL('Pengeluaran','Expense'), _sL('Tagihan, cicilan, langganan','Bills, installments, subscriptions')) +
+    mi("startSchedCreate('income')",   false, 'sch-t-income',   SCH_IC.down, _sL('Pemasukan','Income'),    _sL('Gaji, bunga, pendapatan rutin','Salary, interest, regular income')) +
+    mi("startSchedCreate('transfer')", false, 'sch-t-transfer', SCH_IC.tr,   'Transfer',                   _sL('Pindah dana antar kartu','Move funds between cards'));
+}
+function toggleSchedMenu(which){
+  const a = document.getElementById('schViewMenu'), b = document.getElementById('schNewMenu');
+  const t = which==='view' ? a : b, o = which==='view' ? b : a;
+  o.style.display = 'none';
+  t.style.display = t.style.display==='none' ? 'block' : 'none';
+}
+function _schedCloseMenus(){
+  ['schViewMenu','schNewMenu'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+}
+document.addEventListener('click', e=>{ if(!e.target.closest('.sch-dd')) _schedCloseMenus(); });
+function setSchedView(v){ _schedCloseMenus(); _schedView = v; _schedApplyView(); }
+
+function _schedResetForm(){
+  rawAmountNum = 0; selSource = null; selDest = 'main';
+  document.getElementById('amountRaw').value = '';
+  document.getElementById('amountPreview').textContent = '';
+  document.getElementById('txSummaryPreview').style.display = 'none';
+  document.getElementById('noteInput').value = '';
+  selCat = ''; selCatIco = ''; selCatColor = '';
+  const t = document.getElementById('catSelTxt'); t.textContent = lang==='id' ? 'Pilih kategori' : 'Choose a category'; t.classList.remove('sel');
+  const di = document.getElementById('txDateInput'); if(di){ di.value = _todayKey(); di.min = _todayKey(); }
+}
+function startSchedCreate(type){
+  _schedCloseMenus();
+  _schedResetForm();
+  _schedView = 'create';
+  setTxType(type);
+  document.getElementById('schFreq').value = 'monthly';
+  _schedApplyView();
+}
+
+// ══ Simpan jadwal baru ══
+function saveSchedule(){
+  const bad = m => { toast('⚠️ '+m); };
+  if(!rawAmountNum || rawAmountNum<=0) return bad(_sL('Masukkan jumlah yang valid!','Please enter a valid amount!'));
+  if(!selCat) return bad(_sL('Pilih kategori dahulu!','Please select a category!'));
+  if(selCat==='tarik') return bad(_sL('Tarik Tunai tidak bisa dijadwalkan. Gunakan Transfer ke wallet Cash.','Cash withdrawal can\'t be scheduled. Use a Transfer to your Cash wallet.'));
+  if(!selSource && document.querySelectorAll('#sourceGrid .src-chip').length) return bad(_sL('Pilih kartu terlebih dahulu!','Please select a card first!'));
+  const dateVal = document.getElementById('txDateInput')?.value;
+  if(!dateVal) return bad(_sL('Pilih tanggal mulai!','Pick a start date!'));
+  if(dateVal < _todayKey()) return bad(_sL('Tanggal mulai tidak boleh di masa lalu','Start date can\'t be in the past'));
+  if(txType==='transfer'){
+    const a = getSourceWallet(), b = getDestWallet();
+    if((a?a.id:null) === (b?b.id:null)) return bad(_sL('Kartu sumber dan tujuan tidak boleh sama','Source and destination must differ'));
+  }
+  if(scheduledTx.length >= SCHED_MAX) return bad(_sL(`Maksimal ${SCHED_MAX} jadwal`,`Maximum ${SCHED_MAX} schedules`));
+  const rp = isModeRp() ? rawAmountNum : Math.round(rawAmountNum * exRate);
+  const d = _dparse(dateVal);
+  const name = (document.getElementById('noteInput').value.trim() || catDisplayName(selCat)).slice(0,200);
+  const s = {
+    id: schedIdCtr++, type: txType, amt: rp, cat: selCat, catColor: selCatColor || '', name,
+    srcKey: selSource || '', destKey: txType==='expense' ? '' : (selDest || 'main'),
+    freq: document.getElementById('schFreq').value || 'monthly',
+    startDate: dateVal, anchorDay: d.getDate(), anchorMonth: d.getMonth(),
+    nextDue: dateVal, active: true, failedOn: ''
+  };
+  scheduledTx.push(s);
+  _schedResetForm();
+  _schedView = 'list';
+  _schedApplyView();
+  toast('✅ '+_sL(`Jadwal "${name}" dibuat`,`Schedule "${name}" created`));
+  fbAutoSave();
+  runDueSchedules(); // kalau tanggal mulai = hari ini, langsung dijalankan
+}
+
+// ══ Aksi di kartu jadwal ══
+function toggleSched(id){
+  const s = scheduledTx.find(x=>x.id===id); if(!s) return;
+  s.active = !s.active;
+  if(s.active){
+    // Lewati tanggal yang terlewat selama dijeda (jangan backfill)
+    let g = 0; const today = _todayKey();
+    while(s.nextDue < today && g++ < 400) s.nextDue = _schedNext(s, s.nextDue);
+    s.failedOn = '';
+  }
+  _schedRenderBody(); _schedRenderMenus(); fbAutoSave();
+  if(s.active) runDueSchedules();
+}
+function deleteSched(id){
+  const s = scheduledTx.find(x=>x.id===id); if(!s) return;
+  if(!confirm(_sL(`Hapus jadwal "${s.name}"? Transaksi yang sudah berjalan tetap ada di riwayat.`,`Delete schedule "${s.name}"? Transactions that already ran stay in history.`))) return;
+  scheduledTx = scheduledTx.filter(x=>x.id!==id);
+  _schedRenderBody(); _schedRenderMenus(); fbAutoSave();
+  toast('🗑️ '+_sL('Jadwal dihapus','Schedule deleted'));
+}
+
+// ══ Render daftar ══
+function _schedFreqText(s){
+  const loc = lang==='id' ? 'id-ID' : 'en-US', d = _dparse(s.nextDue || s.startDate);
+  if(s.freq==='daily')  return _sL('Setiap hari','Every day');
+  if(s.freq==='weekly') return _sL('Setiap ','Every ') + d.toLocaleDateString(loc,{weekday:'long'});
+  if(s.freq==='yearly') return _sL('Setiap tahun ','Every year ') + _schedFmtDate(s.nextDue||s.startDate,false);
+  return _sL('Setiap tgl ','Monthly on day ') + (s.anchorDay || d.getDate());
+}
+function _schedRenderBody(){
+  const el = document.getElementById('schedListView'); if(!el) return;
+  if(_schedView==='hist'){
+    if(!scheduledLog.length){ el.innerHTML = `<div class="sch-empty">${_sL('Belum ada jadwal yang berjalan.','No schedule has run yet.')}</div>`; return; }
+    el.innerHTML = scheduledLog.map(e=>{
+      const when = _schedFmtDate(e.date) + (e.ts ? ' · ' + new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '');
+      const sign = e.type==='income' ? '+' : (e.type==='expense' ? '-' : '');
+      return `<div class="sch-card sch-t-${e.type}"><div class="sch-top"><div class="sch-ico">${_schSvg(_schTypeIc(e.type))}</div>
+        <div class="sch-main"><div class="sch-name">${escapeHtml(e.name)}</div><div class="sch-meta">${when}</div>${e.ok?'':`<div class="sch-fail">${escapeHtml(e.note||'')}</div>`}</div>
+        <div><div class="sch-amt">${sign}${fmt(e.amt)}</div><div style="text-align:right"><span class="sch-badge ${e.ok?'ok':'bad'}">${e.ok?_sL('Berhasil','Success'):_sL('Gagal','Failed')}</span></div></div></div></div>`;
+    }).join('');
+    return;
+  }
+  if(!scheduledTx.length){
+    el.innerHTML = `<div class="sch-empty">${_sL('Belum ada jadwal.<br>Ketuk <b>Buat Jadwal</b> untuk membuat transaksi otomatis.','No schedules yet.<br>Tap <b>New Schedule</b> to create an automatic transaction.')}</div>`;
+    return;
+  }
+  el.innerHTML = scheduledTx.map(s=>{
+    const src = _schedKeyLabel(s.srcKey), dst = _schedKeyLabel(s.destKey);
+    const where = s.type==='transfer' ? `${src} → ${dst}` : (s.type==='income' ? _sL('ke ','to ')+dst : src);
+    const sign = s.type==='income' ? '+' : (s.type==='expense' ? '-' : '');
+    const next = s.active ? _sL('Berikutnya: ','Next: ')+_schedFmtDate(s.nextDue) : _sL('Dijeda','Paused');
+    const fail = (s.active && s.failedOn) ? `<div class="sch-fail">${_sL('Gagal pada '+_schedFmtDate(s.failedOn)+' — dicoba lagi otomatis','Failed on '+_schedFmtDate(s.failedOn)+' — will retry automatically')}</div>` : '';
+    return `<div class="sch-card sch-t-${s.type}"><div class="sch-top"><div class="sch-ico">${_schSvg(_schTypeIc(s.type))}</div>
+      <div class="sch-main"><div class="sch-name">${escapeHtml(s.name)}</div><div class="sch-meta">${escapeHtml(_schedFreqText(s))} · ${escapeHtml(where)}</div></div>
+      <div class="sch-amt">${sign}${fmt(s.amt)}</div></div>${fail}
+      <div class="sch-foot"><div class="sch-next">${_schSvg(SCH_IC.cal)}${next}</div>
+      <div class="sch-acts"><button class="sch-del" aria-label="${_sL('Hapus jadwal','Delete schedule')}" onclick="deleteSched(${s.id})">${_schSvg(SCH_IC.trash)}</button>
+      <button class="sch-tg${s.active?' on':''}" aria-label="${_sL('Aktif / jeda','Active / pause')}" onclick="toggleSched(${s.id})"><span></span></button></div></div></div>`;
+  }).join('');
+}
+
 function completeTx(){
+  if(_txMode==='sched'){ saveSchedule(); return; }
   if(!rawAmountNum || rawAmountNum <= 0){
     toast('⚠️ '+(lang==='id'?'Masukkan jumlah yang valid!':'Please enter a valid amount!')); return;
   }
@@ -9968,7 +10390,7 @@ async function doRegister(){
     user = { email:em, name, avatar:'default', photo:null, uid: fu.uid };
     await fsSaveProfile(user);
     // Inisialisasi state kosong di Realtime DB
-    balance=0; goals=[]; homeCards=[]; wallets=[]; historyItems=[]; notifications=[];
+    balance=0; goals=[]; homeCards=[]; scheduledTx=[]; scheduledLog=[]; wallets=[]; historyItems=[]; notifications=[];
     await fbSaveState();
 
     setBtn(T('r-btn'), false);
@@ -10077,7 +10499,7 @@ async function enterApp(initialState){
 
   } else {
     // State baru (user baru) — semua sudah di-inisialisasi ke nilai default kosong
-    historyItems=[]; goals=[]; homeCards=[]; wallets=[]; notifications=[]; balance=0;
+    historyItems=[]; goals=[]; homeCards=[]; scheduledTx=[]; scheduledLog=[]; wallets=[]; notifications=[]; balance=0;
     tagihan=[]; tagihanRiwayatBulanan=[]; budgets=[]; mainBudgetWalletIds=[]; customCategories=[]; debts=[];
     appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
     applyPrivacyMode();
@@ -10153,6 +10575,11 @@ async function enterApp(initialState){
   // ⑥ Mulai realtime sync lintas device
   fbStartRealtimeSync();
 
+  // ⑥b Transaksi terjadwal: jalankan yang sudah jatuh tempo, lalu cek berkala
+  _schedReady = true;
+  _schedStartTimer();
+  setTimeout(runDueSchedules, 600);
+
   // ⑦ Push notifications
   initPushNotifications();
 
@@ -10191,6 +10618,7 @@ async function enterApp(initialState){
 async function doLogout(){
   // ① Hentikan realtime sync
   fbStopRealtimeSync();
+  _schedReady = false; _schedStopTimer();
 
   // ② Sign out dari Firebase Auth
   try { await fbAuth.signOut(); } catch(e){}
@@ -10212,7 +10640,7 @@ async function doLogout(){
   // ikut pola yang sama: variabel lokal direset, data cloud-nya tetap ada,
   // jadi begitu user login lagi (di device manapun), riwayat notifikasinya
   // kembali termuat lewat _loadNotifFromRTDB(), tidak hilang lagi.
-  notifications=[]; historyItems=[]; goals=[]; homeCards=[]; wallets=[];
+  notifications=[]; historyItems=[]; goals=[]; homeCards=[]; scheduledTx=[]; scheduledLog=[]; wallets=[];
   balance=0; savedPin=''; lockPinBuf=''; quickLoginEnabled=false;
   appSettings = {biometric:true,twoFA:false,privacyMode:false,notifTx:true,notifBudget:true,notifGoal:true,notifGold:true,notifTips:true,notifPromo:false,quietHours:true};
   applyPrivacyMode();
@@ -10253,7 +10681,7 @@ async function socialLogin(){
     };
     if(isNewUser || !prof){
       await fsSaveProfile(user);
-      balance=0; goals=[]; homeCards=[]; wallets=[]; historyItems=[]; notifications=[];
+      balance=0; goals=[]; homeCards=[]; scheduledTx=[]; scheduledLog=[]; wallets=[]; historyItems=[]; notifications=[];
       await fbSaveState();
     }
     const state = await fbLoadState();

@@ -1883,6 +1883,7 @@ body{background:var(--bg);transition:background .35s;}
 .sch-empty{text-align:center;color:var(--t3);font-size:13px;line-height:1.5;padding:40px 12px;}
 .sch-select{width:100%;border:none;outline:none;background:transparent;font-family:var(--f);font-size:15px;font-weight:600;color:var(--navy);}
 .sch-hint{font-size:12px;color:var(--t3);margin:-6px 0 14px;line-height:1.45;}
+#addModal .msheet{transition:min-height .2s ease;}
 
 /* MONEY SOURCE CHIP */
 .src-chip{padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:transparent;font-family:var(--f2);font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;margin:3px;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:all .2s;}
@@ -8123,6 +8124,7 @@ let schedIdCtr = 1, schedLogIdCtr = 1, _schedReady = false, _schedTimer = null;
 let _txMode = 'normal';      // 'normal' | 'sched'
 let _schedView = 'list';     // 'list' | 'hist' | 'create'
 const _schedOrig = {};
+let _schedLockH = 0;   // tinggi sheet halaman Normal → dipakai sebagai tinggi minimum halaman Terjadwal
 const SCHED_MAX = 30, SCHED_LOG_MAX = 60;
 const SCH_IC = {
   up:'<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5,12 12,5 19,12"/>',
@@ -8276,6 +8278,11 @@ function _schedCapture(){
 }
 function setTxMode(mode){
   _schedCapture();
+  // Kunci tinggi: saat pindah Normal → Terjadwal, ingat tinggi halaman Normal yang sedang tampil
+  if(mode==='sched' && _txMode==='normal'){
+    const sh = document.querySelector('#addModal .msheet');
+    _schedLockH = sh ? sh.offsetHeight : 0;
+  }
   _txMode = mode;
   if(mode==='sched') _schedView = 'list';
   _schedApplyView();
@@ -8293,6 +8300,9 @@ function _schedApplyView(){
   $('schedRepeatWrap').style.display = create ? 'block' : 'none';
   const foot = document.querySelector('#addModal .msheet-foot');
   if(foot) foot.style.display = (!sched || create) ? '' : 'none';
+  // Halaman Terjadwal (daftar kosong/Riwayat) tidak boleh lebih pendek dari halaman Normal
+  const _sheet = document.querySelector('#addModal .msheet');
+  if(_sheet) _sheet.style.minHeight = (sched && _schedLockH) ? _schedLockH+'px' : '';
   const typeName = {expense:_sL('Pengeluaran','Expense'), income:_sL('Pemasukan','Income'), transfer:'Transfer'}[txType] || '';
   $('m-title').textContent = create ? _sL('Jadwal '+typeName,'Scheduled '+typeName) : (sched ? _sL('Transaksi Terjadwal','Scheduled Transactions') : T('m-title'));
   $('m-complete').textContent = create ? _sL('Simpan Jadwal','Save Schedule') : T('m-complete');

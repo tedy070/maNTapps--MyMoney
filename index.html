@@ -1839,6 +1839,58 @@ body{background:var(--bg);transition:background .35s;}
 .tx-type-btn.on{background:var(--surface);color:var(--navy);box-shadow:var(--sh2);}
 .tx-type-btn.on.income-type{color:var(--green);}
 .tx-type-btn.on.transfer-type{color:var(--blue2);}
+/* ── Petunjuk Penggunaan ── */
+.gd-hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-radius:20px;padding:18px;margin:12px 0 14px;}
+.gd-hero h2{margin:0 0 6px;font-family:var(--f);font-size:18px;font-weight:800;}
+.gd-hero p{margin:0 0 14px;font-size:13px;line-height:1.5;opacity:.92;}
+.gd-hero button{width:100%;border:none;border-radius:12px;padding:12px;background:#fff;color:var(--blue2);font-family:var(--f2);font-size:14px;font-weight:800;cursor:pointer;}
+.gd-search{position:relative;margin:0 0 14px;}
+.gd-search input{width:100%;box-sizing:border-box;padding:12px 14px 12px 40px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--t1);font-size:14px;outline:none;}
+.gd-search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:none;stroke:var(--t3);stroke-width:2;}
+.gd-quick{background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;margin-bottom:14px;}
+.gd-quick-t{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:8px;}
+.gd-qrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border);}
+.gd-qrow:first-of-type{border-top:none;}
+.gd-qnum{width:22px;height:22px;border-radius:50%;background:var(--blue2);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.gd-qtxt{flex:1;font-size:13px;color:var(--navy);font-weight:600;}
+.gd-qbtn{border:1.5px solid var(--blue2);background:transparent;color:var(--blue2);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f2);}
+.gd-chap{background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden;}
+.gd-head{width:100%;display:flex;align-items:center;gap:12px;padding:13px 14px;border:none;background:transparent;cursor:pointer;text-align:left;font-family:var(--f2);color:var(--navy);}
+.gd-ic{font-size:22px;line-height:1;flex-shrink:0;}
+.gd-ht{flex:1;min-width:0;}
+.gd-ht b{display:block;font-size:14px;}
+.gd-ht small{display:block;font-size:12px;color:var(--t3);margin-top:2px;line-height:1.35;}
+.gd-chev{width:18px;height:18px;fill:none;stroke:var(--t3);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;flex-shrink:0;}
+.gd-chap.open .gd-chev{transform:rotate(180deg);}
+.gd-body{padding:0 14px 14px;}
+.gd-steps{margin:0 0 10px;padding-left:20px;font-size:13px;line-height:1.55;color:var(--navy);}
+.gd-steps li{margin-bottom:6px;}
+.gd-tip{background:rgba(42,111,214,.1);border-radius:10px;padding:9px 11px;font-size:12.5px;line-height:1.5;color:var(--navy);margin-bottom:10px;}
+.gd-go{display:flex;flex-wrap:wrap;gap:8px;}
+.gd-go button{border:none;border-radius:10px;padding:8px 12px;background:var(--blue2);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f2);}
+.gd-empty{text-align:center;color:var(--t3);font-size:13px;padding:32px 12px;}
+.gd-head:focus-visible,.gd-go button:focus-visible,.gd-qbtn:focus-visible,.gd-hero button:focus-visible{outline:3px solid var(--blue2);outline-offset:2px;}
+/* ── Tur interaktif ── */
+#tourLayer{position:fixed;inset:0;z-index:20000;display:none;}
+#tourLayer.on{display:block;}
+#tourShade{position:absolute;inset:0;background:rgba(8,16,40,.72);}
+#tourSpot{position:absolute;border-radius:18px;box-shadow:0 0 0 9999px rgba(8,16,40,.72);border:2px solid rgba(255,255,255,.92);pointer-events:none;transition:left .25s ease,top .25s ease,width .25s ease,height .25s ease;}
+#tourCard{position:absolute;background:var(--surface);color:var(--navy);border-radius:20px;padding:16px 18px 14px;box-shadow:0 18px 50px rgba(0,0,0,.4);font-family:var(--f2);box-sizing:border-box;}
+.tour-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.tour-ico{font-size:24px;line-height:1;}
+.tour-count{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.5px;}
+#tourCard h3{margin:2px 0 6px;font-family:var(--f);font-size:17px;font-weight:800;color:var(--navy);}
+#tourCard p{margin:0 0 12px;font-size:13px;line-height:1.55;color:var(--navy);}
+.tour-bar{height:4px;border-radius:2px;background:var(--border);margin-bottom:12px;overflow:hidden;}
+.tour-bar i{display:block;height:100%;background:var(--blue2);border-radius:2px;transition:width .25s ease;}
+.tour-btns{display:flex;align-items:center;gap:8px;}
+.tour-sp{flex:1;}
+.tour-btns button{font-family:var(--f2);font-size:13px;font-weight:700;border:none;border-radius:12px;padding:10px 14px;cursor:pointer;}
+.tour-skip{background:transparent;color:var(--t3);padding-left:0 !important;}
+.tour-prev{background:var(--surface2);color:var(--navy);}
+.tour-next{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;}
+.tour-btns button:focus-visible{outline:3px solid var(--blue2);outline-offset:2px;}
+@media (prefers-reduced-motion:reduce){#tourSpot,.tour-bar i,.gd-chev{transition:none;}}
 /* ── Transaksi Terjadwal ── */
 .sch-mode{display:flex;gap:4px;background:var(--surface2);border-radius:14px;padding:4px;margin-bottom:14px;}
 .sch-mode button{flex:1;height:42px;border:none;border-radius:11px;background:transparent;color:var(--t3);font-family:var(--f2);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;}
@@ -2861,6 +2913,7 @@ body{background:var(--bg);transition:background .35s;}
       </div>
       <div class="st-lbl" id="st-suplbl">SUPPORT & EXIT</div>
       <div class="st-grp">
+        <div class="st-item" onclick="openGuideOverlay()"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div><div class="st-info"><div class="st-nm">Petunjuk Penggunaan</div><div class="st-sub">Panduan lengkap & tur interaktif</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" onclick="openHelpCenterOverlay()"><div class="st-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="st-info"><div class="st-nm" id="st-help">Help Center</div><div class="st-sub">FAQ, Live Chat & Kontak Support</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item" id="st-admin-console-row" style="display:none;" onclick="openAdminConsoleOverlay()"><div class="st-ico" style="background:#0D2152;"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/></svg></div><div class="st-info"><div class="st-nm">Admin Console</div><div class="st-sub">Balas Live Chat semua user</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="st-item danger" onclick="doLogout()"><div class="st-ico"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="st-info"><div class="st-nm" id="st-logout">Log Out</div><div class="st-sub" id="st-logoutsub">Securely sign out</div></div></div>
@@ -2901,7 +2954,17 @@ body{background:var(--bg);transition:background .35s;}
   </div>
 
   <!-- ═══════════ HELP CENTER ═══════════ -->
-  <div class="ovr" id="helpCenterOvr">
+  <div class="ovr" id="guideOvr">
+<div class="ovr-hdr"><button class="ovr-back" onclick="closeGuideOverlay()" aria-label="Kembali"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl" id="guideTitle">Petunjuk Penggunaan</div></div>
+<div style="padding:0 16px 28px;">
+  <div class="gd-hero"><h2 id="guideHeroT">Selamat datang di maNTapps</h2><p id="guideHeroS"></p><button type="button" id="guideTourBtn" onclick="startTourFromGuide()">Mulai Tur Interaktif</button></div>
+  <div class="gd-search"><input id="guideSearch" type="text" oninput="guideSearchInput(this.value)" autocomplete="off"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div id="guideQuick"></div>
+  <div id="guideChapters"></div>
+</div>
+</div>
+
+<div class="ovr" id="helpCenterOvr">
     <div class="ovr-hdr"><button class="ovr-back" onclick="closeHelpCenterOverlay()"><svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg></button><div class="ovr-ttl">Help Center</div></div>
     <div style="padding:0 16px 24px;">
       <div style="position:relative;margin:12px 0 18px;">
@@ -2909,7 +2972,8 @@ body{background:var(--bg);transition:background .35s;}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;">
+      <button type="button" onclick="closeHelpCenterOverlay();openGuideOverlay()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:13px;margin-bottom:12px;cursor:pointer;font-family:var(--f2);font-size:13px;font-weight:700;color:var(--navy);"><span style="font-size:18px;">📖</span>Buka Petunjuk Penggunaan</button>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;">
         <div onclick="openLiveChatOverlay()" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;">
           <div style="font-size:20px;margin-bottom:6px;">💬</div>
           <div style="font-size:11px;font-weight:600;color:var(--t1);">Live Chat</div>
@@ -8464,6 +8528,538 @@ function _schedRenderBody(){
   }).join('');
 }
 
+// ═══════════════════════════════════════════════════════════════
+// PETUNJUK PENGGUNAAN — data bab Panduan Lengkap (ID / EN)
+// Tiap bab: ic (emoji), t (judul), s (ringkasan), st (langkah), tip (tips), go (tombol "Buka")
+// ═══════════════════════════════════════════════════════════════
+const GUIDE_CHAPTERS = [
+ { ic:'🚀', t:['Memulai dalam 5 menit','Getting started in 5 minutes'],
+   s:['Urutan paling mudah untuk mulai mencatat keuangan.','The easiest order to start tracking your money.'],
+   st:{id:['Tambahkan kartu/dompet pertamamu di tab Tabungan → Kartu (bank, e-wallet, tunai, dll.) lengkap dengan saldo awal.',
+           'Catat transaksi pertama dengan tombol + di tengah bar bawah.',
+           'Buat anggaran bulanan per kategori di tab Tabungan → Anggaran.',
+           'Buat tujuan tabungan di tab Tabungan → Tujuan.',
+           'Amankan akun: aktifkan Kunci PIN di Pengaturan → Keamanan.'],
+       en:['Add your first card/wallet in the Savings tab → Cards (bank, e-wallet, cash, etc.) with an opening balance.',
+           'Record your first transaction with the + button in the middle of the bottom bar.',
+           'Create a monthly budget per category in Savings → Budgets.',
+           'Create a savings goal in Savings → Goals.',
+           'Secure your account: turn on the PIN lock in Settings → Security.']},
+   tip:['Total Saldo di Beranda adalah jumlah saldo semua kartu, jadi isi saldo awal kartu dengan benar.','The Home total balance is the sum of all your cards, so enter each card\'s opening balance correctly.'],
+   go:[['Buka tab Kartu','Open Cards tab','wallets']] },
+
+ { ic:'🏠', t:['Beranda & Total Saldo','Home & Total Balance'],
+   s:['Ringkasan saldo, kartu gabungan, dan transaksi terbaru.','Balance overview, combined cards, and latest transactions.'],
+   st:{id:['Kartu biru paling kiri menampilkan Total Saldo seluruh kartu dan persentase kenaikan bulanan.',
+           'Geser kartu ke samping untuk melihat kartu gabungan buatanmu. Ketuk kartu terakhir bertanda + untuk membuat kartu gabungan baru (maksimal 3).',
+           'Di kartu gabungan, ketuk ikon pensil untuk mengganti nama, pilihan kartu, atau warna; hapus kartu lewat tombol Hapus di form edit.',
+           'Tombol "Riwayat Saldo" membuka riwayat perubahan saldo.',
+           'Ketuk lonceng di kanan atas untuk melihat notifikasi. Banner kurs menampilkan kurs 1 USD ke Rupiah.',
+           'Bagian Transaksi Terbaru menampilkan transaksi terakhir; ketuk satu untuk melihat detail, mengedit, atau menghapus.'],
+       en:['The leftmost blue card shows the Total Balance of all cards and the monthly gain.',
+           'Swipe sideways to see your combined cards. Tap the last card with + to create a new combined card (up to 3).',
+           'On a combined card, tap the pencil icon to rename it, change its cards or color; delete it with the Delete button in the edit form.',
+           'The "Balance History" button opens your balance history.',
+           'Tap the bell at the top right for notifications. The rate banner shows the live USD to Rupiah rate.',
+           'Recent Transactions lists your latest entries; tap one to view details, edit, or delete it.']},
+   tip:['Kartu gabungan hanya mengelompokkan tampilan saldo; tidak mengubah saldo kartu aslinya.','Combined cards only group the display; they never change the real card balances.'],
+   go:[['Ke Beranda','Go to Home','tab:home'],['Riwayat Saldo','Balance History','balhist']] },
+
+ { ic:'➕', t:['Mencatat transaksi','Recording transactions'],
+   s:['Pengeluaran, pemasukan, dan transfer antar kartu.','Expenses, income, and transfers between cards.'],
+   st:{id:['Ketuk tombol + di bar bawah.',
+           'Pilih tipe: Pengeluaran, Pemasukan, atau Transfer.',
+           'Isi jumlah. Mata uang mengikuti bahasa aplikasi: Bahasa Indonesia memakai Rupiah, English memakai USD (dikonversi dengan kurs di banner).',
+           'Pilih kartu sumber (untuk pemasukan: sumber dana, mis. Gaji) dan, untuk Transfer, kartu tujuan.',
+           'Pilih kategori. Kategori "Tarik Tunai" dan "Pindah Bank" punya panel tersendiri di tab Analitik.',
+           'Tambahkan catatan dan ubah tanggal bila perlu, cek ringkasan, lalu ketuk Selesaikan Transaksi.',
+           'Untuk mengubah atau membatalkan, ketuk transaksi di daftar lalu pilih edit atau hapus — saldo kartu otomatis disesuaikan kembali.'],
+       en:['Tap the + button in the bottom bar.',
+           'Choose a type: Expense, Income, or Transfer.',
+           'Enter the amount. The currency follows the app language: Indonesian uses Rupiah, English uses USD (converted with the banner rate).',
+           'Pick the source card (for income: the source, e.g. Salary) and, for Transfers, the destination card.',
+           'Pick a category. "Cash Withdrawal" and "Bank Transfer" have their own panels in the Analytics tab.',
+           'Add a note and change the date if needed, check the summary, then tap Complete Transaction.',
+           'To change or undo, tap the transaction in the list and choose edit or delete — card balances are adjusted back automatically.']},
+   tip:['Saldo kartu sumber harus cukup untuk pengeluaran dan transfer.','The source card must have enough balance for expenses and transfers.'],
+   go:[['Catat sekarang','Add one now','add']] },
+
+ { ic:'⏰', t:['Transaksi terjadwal','Scheduled transactions'],
+   s:['Otomatisasi gaji, cicilan, langganan, atau tabungan rutin.','Automate salary, installments, subscriptions, or regular saving.'],
+   st:{id:['Ketuk + lalu pilih mode Terjadwal di bagian atas (sebelah Normal).',
+           'Dropdown kiri berisi Jadwal Saya (daftar jadwal) dan Riwayat (jadwal yang sudah berjalan, berhasil atau gagal).',
+           'Dropdown kanan "Buat Jadwal" → pilih tipe Pengeluaran, Pemasukan, atau Transfer.',
+           'Isi form seperti transaksi biasa, lalu pilih Pengulangan (harian, mingguan, bulanan, tahunan) dan Tanggal Mulai (tidak boleh di masa lalu).',
+           'Jadwal berjalan otomatis saat aplikasi dibuka pada atau setelah tanggal jatuh tempo; hasilnya masuk ke riwayat transaksi dan notifikasi.',
+           'Jika saldo kartu tidak cukup, jadwal dicatat Gagal di Riwayat dan dicoba lagi otomatis pada pengecekan berikutnya.',
+           'Gunakan saklar di kartu jadwal untuk menjeda/mengaktifkan, dan ikon tempat sampah untuk menghapus (transaksi yang sudah berjalan tetap ada).'],
+       en:['Tap + and choose the Scheduled mode at the top (next to Normal).',
+           'The left dropdown has My Schedules (your list) and History (schedules that already ran, succeeded or failed).',
+           'The right "New Schedule" dropdown → choose Expense, Income, or Transfer.',
+           'Fill in the form like a normal transaction, then choose Repeat (daily, weekly, monthly, yearly) and a Start Date (not in the past).',
+           'Schedules run automatically when the app is opened on or after the due date; results appear in transaction history and notifications.',
+           'If a card balance is insufficient, the run is logged as Failed in History and retried automatically on the next check.',
+           'Use the switch on a schedule card to pause/resume, and the trash icon to delete (transactions already created stay).']},
+   tip:['Tarik Tunai tidak bisa dijadwalkan (gunakan Transfer ke kartu Cash). Maksimal 30 jadwal.','Cash Withdrawal can\'t be scheduled (use a Transfer to a Cash card). Maximum 30 schedules.'],
+   go:[['Buat jadwal','Create schedule','add']] },
+
+ { ic:'💳', t:['Kartu & dompet','Cards & wallets'],
+   s:['Kelola rekening bank, e-wallet, investasi, dan uang tunai.','Manage bank accounts, e-wallets, investments, and cash.'],
+   st:{id:['Buka tab Tabungan → Kartu & Anggaran → Kartu.',
+           'Ketuk Tambah Kartu: isi nama bank/penyedia, 4 digit terakhir, saldo awal, tipe (Debit, Investasi, E-Wallet, Savings, Cash), dan warna.',
+           'Geser untuk melihat kartu lain. Ketuk ⋮ pada kartu untuk Edit, Top Up, atau Hapus.',
+           'Menghapus kartu tidak menghapus riwayat transaksinya, tetapi saldo kartu itu tidak lagi dihitung ke Total Saldo.'],
+       en:['Open Savings tab → Cards & Budgets → Cards.',
+           'Tap Add Card: enter the bank/provider name, last 4 digits, opening balance, type (Debit, Investment, E-Wallet, Savings, Cash), and color.',
+           'Swipe to see other cards. Tap ⋮ on a card for Edit, Top Up, or Delete.',
+           'Deleting a card keeps its transaction history, but its balance no longer counts toward the Total Balance.']},
+   tip:['Gunakan tipe Cash untuk dompet uang tunai, dan Top Up untuk menambah saldo kartu dengan cepat.','Use the Cash type for a physical-cash wallet, and Top Up to add to a card balance quickly.'],
+   go:[['Buka Kartu','Open Cards','wallets']] },
+
+ { ic:'🎯', t:['Tujuan tabungan','Savings goals'],
+   s:['Tetapkan target, tenggat, dan pantau progresnya.','Set a target and deadline, and track progress.'],
+   st:{id:['Buka tab Tabungan → Goals & Bills → Tujuan.',
+           'Ketuk Tujuan Baru: isi nama, target nominal, dana awal, tenggat, dan warna.',
+           'Pada kartu tujuan, ketuk Tambah Dana, isi jumlah yang ditambahkan, dan progres tujuan langsung bertambah.',
+           'Edit Tujuan mengubah nama/target/tenggat; Hapus menghapus tujuan.',
+           'Ringkasan TOTAL KEMAJUAN di atas menunjukkan total terkumpul dari semua tujuan aktif; ikon riwayat menampilkan catatan penambahan dana.'],
+       en:['Open Savings tab → Goals & Bills → Goals.',
+           'Tap New Goal: enter a name, target amount, starting amount, deadline, and color.',
+           'On a goal card, tap Add Funds, enter the amount to add, and the goal progress updates right away.',
+           'Edit Goal changes the name/target/deadline; Delete removes the goal.',
+           'The TOTAL PROGRESS summary at the top shows the total saved across active goals; the history icon shows the funding log.']},
+   tip:['Notifikasi Tujuan Tabungan bisa dinyalakan atau dimatikan di Pengaturan → Notifications.','Savings Goal notifications can be turned on or off in Settings → Notifications.'],
+   go:[['Buka Tujuan','Open Goals','goals']] },
+
+ { ic:'📅', t:['Tagihan rutin','Recurring bills'],
+   s:['Jangan lewatkan jatuh tempo listrik, internet, cicilan, dll.','Never miss a due date for electricity, internet, installments, etc.'],
+   st:{id:['Buka tab Tabungan → Goals & Bills → Tagihan.',
+           'Ketuk Tambah Tagihan: isi nama, kategori, nominal, tanggal jatuh tempo, frekuensi (sekali atau bulanan), serta pengingat (hari dan jam).',
+           'Kartu di atas menampilkan TOTAL TAGIHAN MENDATANG dan jumlah tagihan yang perlu perhatian. Atur batas bulanan lewat tombol edit anggaran tagihan.',
+           'Ketuk tagihan untuk mengedit. Tombol Bayar Tagihan membuka daftar tagihan aktif: ketuk Bayar pada satu tagihan, atau Bayar Semua, untuk menandainya lunas.',
+           'Tagihan bulanan otomatis berpindah ke bulan berikutnya setelah dibayar; pembayaran lampau tersimpan di riwayat bulanan.'],
+       en:['Open Savings tab → Goals & Bills → Bills.',
+           'Tap Add Bill: enter the name, category, amount, due date, frequency (once or monthly), and reminders (days and time).',
+           'The top card shows TOTAL UPCOMING BILLS and how many need attention. Set a monthly limit with the bill budget edit button.',
+           'Tap a bill to edit it. The Pay Bills button opens the list of active bills: tap Pay on one bill, or Pay All, to mark them as paid.',
+           'Monthly bills roll over to the next month once paid; past payments are kept in the monthly history.']},
+   tip:['Aktifkan izin notifikasi browser agar pengingat tagihan muncul walau aplikasi sedang tidak dibuka.','Allow browser notifications so bill reminders can appear even when the app isn\'t in front.'],
+   go:[['Buka Tagihan','Open Bills','tagihan']] },
+
+ { ic:'🧮', t:['Anggaran','Budgets'],
+   s:['Batasi pengeluaran per kategori dan pantau sisa jatahnya.','Limit spending per category and watch what\'s left.'],
+   st:{id:['Buka tab Tabungan → Kartu & Anggaran → Anggaran.',
+           'Ketuk tambah anggaran: pilih kategori, nominal, bulan, dan jenis jatah — Harian (dibagi per hari) atau Berkala (bulanan).',
+           'Gunakan panah bulan untuk melihat anggaran bulan lain; Terpakai dan Sisa dihitung dari transaksi di bulan itu.',
+           'Kartu "Sisa Anggaran vs Wallet Utama" membandingkan sisa anggaran dengan saldo kartu acuan yang kamu pilih lewat Pilih Wallet Utama.',
+           'Kamu mendapat peringatan saat pemakaian mencapai 80% dan 100% dari anggaran (jika notifikasi Batas Pengeluaran aktif).',
+           'Jatah Belanja Hari Ini tampil di tab Analitik dan Beranda untuk anggaran bertipe Harian.'],
+       en:['Open Savings tab → Cards & Budgets → Budgets.',
+           'Tap add budget: choose a category, amount, month, and allowance type — Daily (split per day) or Periodic (monthly).',
+           'Use the month arrows to view other months; Used and Remaining are computed from that month\'s transactions.',
+           'The "Remaining Budget vs Main Wallet" card compares what\'s left with the reference card you pick via Choose Main Wallet.',
+           'You get alerts when usage reaches 80% and 100% of a budget (if Spending Limit alerts are on).',
+           'Today\'s Spending Allowance shows in the Analytics tab and Home for Daily budgets.']},
+   tip:['Mulai dari 3–5 kategori terbesar (makan, transport, belanja) agar anggaran mudah dijaga.','Start with your 3–5 biggest categories (food, transport, shopping) so the budget stays manageable.'],
+   go:[['Buka Anggaran','Open Budgets','budget']] },
+
+ { ic:'📊', t:['Analitik','Analytics'],
+   s:['Pahami ke mana uangmu pergi.','Understand where your money goes.'],
+   st:{id:['Ringkasan bulanan menampilkan pemasukan, pengeluaran, dan perbandingan dengan bulan lalu. Ganti bulan lewat Pilih Bulan.',
+           'Skor kesehatan keuangan dinilai dari Rasio Tabungan, Rasio Utang, dan Disiplin Anggaran.',
+           'Insight Otomatis memberi catatan pola pengeluaran, mis. kategori yang naik drastis atau utang yang belum lunas.',
+           'Grafik Pengeluaran per Kategori dan daftar Kategori Teratas menunjukkan pos terbesar bulan ini.',
+           'Pengeluaran Harian, serta Rincian Mingguan, Bulanan, dan Tahunan, membantu melihat tren dari waktu ke waktu.',
+           'Panel terpisah mencatat total Tarik Tunai dan Pindah Bank per bulan sepanjang tahun.'],
+       en:['The monthly overview shows income, expenses, and comparison with last month. Change month via Choose Month.',
+           'The financial health score is based on Savings Ratio, Debt Ratio, and Budget Discipline.',
+           'Auto Insights point out spending patterns, e.g. a category that jumped or an unpaid debt.',
+           'The Spending by Category chart and Top Categories list show this month\'s biggest items.',
+           'Daily Spending plus Weekly, Monthly, and Yearly breakdowns help you see trends over time.',
+           'Separate panels track total Cash Withdrawals and Bank Transfers per month across the year.']},
+   tip:['Semakin rajin kamu mencatat, semakin akurat skor dan insight yang muncul.','The more consistently you record, the more accurate the score and insights become.'],
+   go:[['Buka Analitik','Open Analytics','tab:analytics']] },
+
+ { ic:'🤝', t:['Utang & Piutang','Debts & receivables'],
+   s:['Catat siapa berutang ke siapa.','Keep track of who owes whom.'],
+   st:{id:['Buka Pengaturan → Utang & Piutang.',
+           'Pilih tab Utang (kamu berutang) atau Piutang (orang lain berutang padamu), lalu tambah catatan.',
+           'Isi nama, nominal, tanggal jatuh tempo (opsional), dan catatan.',
+           'Tandai Lunas saat sudah dibayar. Utang yang belum lunas ikut dihitung di Rasio Utang dan Insight Analitik.'],
+       en:['Open Settings → Debts & Receivables.',
+           'Choose the Debts tab (you owe) or Receivables tab (others owe you), then add an entry.',
+           'Enter a name, amount, optional due date, and a note.',
+           'Mark it Paid once settled. Unpaid debts count in the Debt Ratio and Analytics Insights.']},
+   tip:['Catatan ini terpisah dari saldo kartu — menandai lunas tidak otomatis memindahkan uang.','These entries are separate from card balances — marking one paid does not move money automatically.'],
+   go:[['Buka Utang & Piutang','Open Debts','debts']] },
+
+ { ic:'🏷️', t:['Kategori kustom','Custom categories'],
+   s:['Buat kategori sendiri selain bawaan.','Create your own categories beyond the defaults.'],
+   st:{id:['Buka Pengaturan → Kategori Kustom → tambah.',
+           'Isi nama (atas), subjudul (bawah, opsional), pilih ikon emoji dan warna.',
+           'Kategori baru muncul di pilihan kategori transaksi, anggaran, dan tagihan.',
+           'Hapus kategori dari daftar yang sama; transaksi lama tetap tersimpan.'],
+       en:['Open Settings → Custom Categories → add.',
+           'Enter a name (top), optional subtitle (bottom), then pick an emoji icon and a color.',
+           'The new category appears in transaction, budget, and bill category pickers.',
+           'Delete a category from the same list; existing transactions are kept.']},
+   tip:['Contoh: "Ngopi", "Hobi", "Zakat".','Examples: "Coffee", "Hobbies", "Charity".'],
+   go:[['Buka Kategori Kustom','Open Custom Categories','cats']] },
+
+ { ic:'🔔', t:['Notifikasi & suara','Notifications & sound'],
+   s:['Atur pengingat dan peringatan yang kamu butuhkan.','Choose which reminders and alerts you need.'],
+   st:{id:['Ketuk lonceng di Beranda untuk membuka pusat notifikasi; notifikasi baru ditandai titik merah dan bisa ditandai sudah dibaca.',
+           'Buka Pengaturan → Notifications untuk menyalakan/mematikan: Peringatan Transaksi, Batas Pengeluaran, Tujuan Tabungan, Harga Emas, Tips & Wawasan, Promosi, dan Jam Tenang (22.00–07.00 tanpa suara).',
+           'Pilih Suara Notifikasi (bawaan perangkat atau beberapa nada) dan ketuk untuk mencoba.',
+           'Izinkan notifikasi browser lewat banner di halaman yang sama agar pengingat tagihan bisa muncul di luar aplikasi.'],
+       en:['Tap the bell on Home to open the notification center; new items show a red dot and can be marked as read.',
+           'Open Settings → Notifications to toggle: Transaction Alerts, Spending Limit, Savings Goals, Gold Price, Tips & Insights, Promotions, and Quiet Hours (22:00–07:00, no sound).',
+           'Choose a Notification Sound (device default or a few tones) and tap to preview.',
+           'Allow browser notifications via the banner on the same page so bill reminders can appear outside the app.']},
+   tip:['Jam Tenang hanya membisukan suara; notifikasi tetap tercatat.','Quiet Hours only silences sound; notifications are still recorded.'],
+   go:[['Buka Pengaturan Notifikasi','Open Notification Settings','notifset'],['Pusat Notifikasi','Notification Center','notif']] },
+
+ { ic:'🔒', t:['Keamanan akun','Account security'],
+   s:['PIN, Masuk Cepat, perangkat, dan mode privasi.','PIN, Quick Login, devices, and privacy mode.'],
+   st:{id:['Pengaturan → Keamanan → Kunci PIN: buat PIN 4 digit. Aplikasi terkunci saat kamu meninggalkannya lalu kembali.',
+           'Salah memasukkan PIN beberapa kali akan mengunci sementara. Jika lupa PIN, pilih Lupa PIN dan verifikasi dengan password akunmu.',
+           'Masuk Cepat: dari halaman awal, ketuk foto profilmu lalu masukkan PIN untuk langsung masuk (perlu PIN aktif dan sesi login masih berlaku di perangkat itu).',
+           'Mode Privasi menyamarkan saldo; ketuk saldo untuk mengintip sebentar (3 detik).',
+           'Kelola Perangkat menampilkan perangkat yang memakai Masuk Cepat dan bisa dicabut aksesnya. Aktivitas Login mencatat riwayat masuk terakhir.',
+           'Ganti Password tersedia di menu Keamanan. Biometrik dan 2FA tersedia sebagai pengaturan keamanan tambahan.'],
+       en:['Settings → Security → PIN Lock: create a 4-digit PIN. The app locks when you leave and come back.',
+           'Several wrong PIN attempts lock it temporarily. If you forget it, choose Forgot PIN and verify with your account password.',
+           'Quick Login: on the welcome page, tap your profile photo and enter the PIN to sign in right away (needs an active PIN and a still-valid session on that device).',
+           'Privacy Mode blurs balances; tap a balance to peek for 3 seconds.',
+           'Manage Devices lists devices using Quick Login and lets you revoke access. Login Activity records recent sign-ins.',
+           'Change Password is in the Security menu. Biometrics and 2FA are available as extra security settings.']},
+   tip:['Jangan bagikan PIN dan password. Cabut perangkat yang sudah tidak kamu pakai.','Never share your PIN or password. Revoke devices you no longer use.'],
+   go:[['Buka Keamanan','Open Security','sec']] },
+
+ { ic:'💾', t:['Backup & pulihkan','Backup & restore'],
+   s:['Lindungi datamu dan pulihkan bila perlu.','Protect your data and restore when needed.'],
+   st:{id:['Backup otomatis dibuat sekali sehari saat kamu menyimpan perubahan, dan disimpan 7 hari terakhir.',
+           'Buka Pengaturan → Backup & Pulihkan Data untuk melihat daftar backup, membuat backup manual, atau mengunduh file backup (bisa dilindungi kata sandi).',
+           'Bagikan file backup lewat WhatsApp bila diperlukan.',
+           'Pulihkan dari salah satu tanggal atau dari file yang kamu unggah. Sebelum memulihkan, aplikasi membuat salinan pengaman otomatis.'],
+       en:['An automatic backup is made once a day when you save changes, and the last 7 days are kept.',
+           'Open Settings → Backup & Restore to see the list, create a manual backup, or download a backup file (can be password-protected).',
+           'Share the backup file via WhatsApp if needed.',
+           'Restore from any date or from an uploaded file. A safety copy is made automatically before restoring.']},
+   tip:['Unduh backup berkala dan simpan di tempat aman.','Download a backup now and then and keep it somewhere safe.'],
+   go:[['Buka Backup','Open Backup','backup']] },
+
+ { ic:'🎨', t:['Tampilan, tema & bahasa','Appearance, theme & language'],
+   s:['Sesuaikan tampilan aplikasi dengan seleramu.','Make the app look the way you like.'],
+   st:{id:['Pengaturan → Mode Gelap: nyalakan tampilan gelap.',
+           'Warna Tema mengganti warna aksen aplikasi; warna otomatis menyesuaikan agar tetap terbaca di mode terang maupun gelap.',
+           'Liquid Glass mengatur efek kaca transparan (nyala/mati dan tingkat transparansi) serta opsi menyusutkan bar bawah saat menggulir.',
+           'Bahasa memungkinkan beralih antara Bahasa Indonesia dan English.',
+           'Edit Profil mengubah foto/avatar, nama, dan email.'],
+       en:['Settings → Dark Mode: switch to the dark look.',
+           'Theme Color changes the app accent color; colors adapt automatically to stay readable in light and dark mode.',
+           'Liquid Glass controls the translucent glass effect (on/off and transparency level) plus an option to collapse the bottom bar when scrolling.',
+           'Language switches between Bahasa Indonesia and English.',
+           'Edit Profile changes your photo/avatar, name, and email.']},
+   tip:['Pengaturan tampilan tersimpan di akunmu dan ikut di perangkat lain.','Appearance settings are saved to your account and follow you to other devices.'],
+   go:[['Warna Tema','Theme Color','theme'],['Liquid Glass','Liquid Glass','lg'],['Bahasa','Language','lang']] },
+
+ { ic:'🧰', t:['Kalkulator & bantuan','Calculator & help'],
+   s:['Alat bantu hitung dan jalur bantuan.','Handy calculator and support options.'],
+   st:{id:['Pengaturan → Calculator: kalkulator keuangan untuk menghitung cepat tanpa meninggalkan aplikasi.',
+           'Pengaturan → Help Center: cari jawaban di FAQ, atau hubungi tim lewat Live Chat, WhatsApp, atau Email.',
+           'Petunjuk Penggunaan (halaman ini) bisa dibuka kapan saja; Tur Interaktif memandu langsung di layar.',
+           'Log Out ada di bagian bawah Pengaturan untuk keluar dari akun di perangkat ini.'],
+       en:['Settings → Calculator: a financial calculator for quick math without leaving the app.',
+           'Settings → Help Center: search the FAQ, or contact the team via Live Chat, WhatsApp, or Email.',
+           'The Usage Guide (this page) is always available; the Interactive Tour guides you right on screen.',
+           'Log Out is at the bottom of Settings to sign out on this device.']},
+   tip:['Gunakan kolom pencarian di Help Center untuk jawaban cepat, mis. "PIN" atau "budget".','Use the search box in Help Center for quick answers, e.g. "PIN" or "budget".'],
+   go:[['Buka Help Center','Open Help Center','help'],['Kalkulator','Calculator','calc']] },
+
+ { ic:'🩺', t:['Pemecahan masalah','Troubleshooting'],
+   s:['Solusi untuk masalah yang sering muncul.','Fixes for common issues.'],
+   st:{id:['Data/transaksi tidak muncul: cek filter bulan (Pilih Bulan) di Analitik, Anggaran, dan Riwayat.',
+           'Saldo tidak sesuai: periksa saldo awal tiap kartu, dan pastikan transfer antar kartu tercatat sebagai Transfer, bukan Pengeluaran.',
+           '"Gagal menyimpan": periksa koneksi internet. Data disimpan ke akunmu saat online; coba lagi setelah koneksi pulih.',
+           'Notifikasi tidak berbunyi: cek izin notifikasi browser, Jam Tenang, dan pilihan Suara Notifikasi.',
+           'Jadwal tidak berjalan: pastikan jadwal aktif (saklar menyala) dan buka aplikasi pada atau setelah tanggal jatuh tempo; cek tab Riwayat untuk alasan gagal.',
+           'Lupa PIN: ketuk Lupa PIN di layar kunci dan masukkan password akunmu.'],
+       en:['Data/transactions missing: check the month filter (Choose Month) in Analytics, Budgets, and History.',
+           'Balance looks off: review each card\'s opening balance, and make sure transfers between cards are recorded as Transfer, not Expense.',
+           '"Failed to save": check your internet connection. Data syncs to your account when online; try again once reconnected.',
+           'No notification sound: check browser notification permission, Quiet Hours, and the Notification Sound choice.',
+           'Schedule didn\'t run: make sure it\'s active (switch on) and open the app on or after the due date; see the History tab for failure reasons.',
+           'Forgot PIN: tap Forgot PIN on the lock screen and enter your account password.']},
+   tip:['Masih bermasalah? Hubungi tim lewat Help Center → Live Chat.','Still stuck? Contact the team via Help Center → Live Chat.'],
+   go:[['Help Center','Help Center','help']] }
+];
+
+const GUIDE_QUICK = [
+  { t:['Tambah kartu pertama','Add your first card'],     a:'wallets' },
+  { t:['Catat transaksi pertama','Record your first transaction'], a:'add' },
+  { t:['Buat anggaran bulanan','Create a monthly budget'], a:'budget' },
+  { t:['Buat tujuan tabungan','Create a savings goal'],   a:'goals' },
+  { t:['Aktifkan Kunci PIN','Turn on the PIN lock'],      a:'sec' }
+];
+// ═══════════════════════════════════════════════════════════════
+// PETUNJUK PENGGUNAAN — halaman Panduan Lengkap + Tur Interaktif
+// ═══════════════════════════════════════════════════════════════
+const _gL = (arr) => arr[lang==='id' ? 0 : 1];
+let _guideOpen = {}, _guideQuery = '';
+
+function openGuideOverlay(){
+  _guideQuery = ''; _guideOpen = {};
+  const inp = document.getElementById('guideSearch'); if(inp) inp.value = '';
+  document.getElementById('guideOvr').classList.add('on');
+  renderGuide();
+  document.getElementById('guideOvr').scrollTop = 0;
+}
+function closeGuideOverlay(){ document.getElementById('guideOvr').classList.remove('on'); }
+function guideSearchInput(v){ _guideQuery = (v||'').trim().toLowerCase(); renderGuide(); }
+function toggleGuideChap(i){ _guideOpen[i] = !_guideOpen[i]; renderGuide(); }
+function startTourFromGuide(){ closeGuideOverlay(); setTimeout(startAppTour, 250); }
+
+function renderGuide(){
+  const id = lang==='id';
+  const set = (el, txt) => { const e=document.getElementById(el); if(e) e.textContent = txt; };
+  set('guideTitle', id ? 'Petunjuk Penggunaan' : 'Usage Guide');
+  set('guideHeroT', id ? 'Selamat datang di maNTapps' : 'Welcome to maNTapps');
+  set('guideHeroS', id ? 'Panduan lengkap semua fitur. Mau diajak keliling langsung di layar? Mulai tur interaktif.' : 'A complete guide to every feature. Prefer a walk-through right on screen? Start the interactive tour.');
+  set('guideTourBtn', id ? 'Mulai Tur Interaktif' : 'Start Interactive Tour');
+  const inp = document.getElementById('guideSearch');
+  if(inp) inp.placeholder = id ? 'Cari petunjuk… (mis. jadwal, PIN, anggaran)' : 'Search the guide… (e.g. schedule, PIN, budget)';
+  const q = _guideQuery;
+  const L = lang==='id' ? 'id' : 'en';
+  // Mulai Cepat
+  const qk = document.getElementById('guideQuick');
+  qk.innerHTML = q ? '' :
+    '<div class="gd-quick"><div class="gd-quick-t">'+(id?'⚡ Mulai Cepat — 5 langkah':'⚡ Quick Start — 5 steps')+'</div>'+
+    GUIDE_QUICK.map((x,i)=>'<div class="gd-qrow"><span class="gd-qnum">'+(i+1)+'</span><span class="gd-qtxt">'+escapeHtml(_gL(x.t))+'</span>'+
+      '<button type="button" class="gd-qbtn" onclick="guideGo(\''+x.a+'\')">'+(id?'Buka':'Open')+'</button></div>').join('')+'</div>';
+  // Bab
+  const norm = s => String(s).toLowerCase();
+  let shown = 0;
+  const html = GUIDE_CHAPTERS.map((c,i)=>{
+    const steps = c.st[L], title = c.t[id?0:1], sum = c.s[id?0:1], tip = c.tip[id?0:1];
+    if(q){
+      const hay = norm(title+' '+sum+' '+steps.join(' ')+' '+tip);
+      if(!hay.includes(q)) return '';
+    }
+    shown++;
+    const open = q ? true : !!_guideOpen[i];
+    const body = open ?
+      '<div class="gd-body" id="gdb-'+i+'"><ol class="gd-steps">'+steps.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')+'</ol>'+
+      '<div class="gd-tip"><b>'+(id?'Tips':'Tip')+':</b> '+escapeHtml(tip)+'</div>'+
+      '<div class="gd-go">'+c.go.map(g=>'<button type="button" onclick="guideGo(\''+g[2]+'\')">'+escapeHtml(g[id?0:1])+' →</button>').join('')+'</div></div>' : '';
+    return '<div class="gd-chap'+(open?' open':'')+'">'+
+      '<button type="button" class="gd-head" aria-expanded="'+open+'" '+(open?'aria-controls="gdb-'+i+'" ':'')+'onclick="toggleGuideChap('+i+')">'+
+        '<span class="gd-ic" aria-hidden="true">'+c.ic+'</span>'+
+        '<span class="gd-ht"><b>'+escapeHtml(title)+'</b><small>'+escapeHtml(sum)+'</small></span>'+
+        '<svg class="gd-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6,9 12,15 18,9"/></svg></button>'+body+'</div>';
+  }).join('');
+  const list = document.getElementById('guideChapters');
+  list.innerHTML = html || '<div class="gd-empty">'+(id?'Tidak ada petunjuk yang cocok. Coba kata kunci lain.':'No matching guide found. Try another keyword.')+'</div>';
+}
+
+// Tombol "Buka" di panduan → menuju fitur terkait
+function guideGo(key){
+  closeGuideOverlay();
+  setTimeout(()=>{
+    try{
+      switch(key){
+        case 'add': switchTab('home'); openAddModal(); break;
+        case 'wallets': switchTab('savings'); switchSvTab('wallets'); switchWalletSubTab('kartu'); break;
+        case 'budget':  switchTab('savings'); switchSvTab('wallets'); switchWalletSubTab('anggaran'); break;
+        case 'goals':   switchTab('savings'); switchSvTab('goals'); switchGoalsSubTab('tujuan'); break;
+        case 'tagihan': switchTab('savings'); switchSvTab('goals'); switchGoalsSubTab('tagihan'); break;
+        case 'tab:home': case 'tab:analytics': case 'tab:savings': case 'tab:settings': switchTab(key.slice(4)); break;
+        case 'balhist': switchTab('home'); openBalanceHistoryModal(); break;
+        case 'debts': openDebtsOverlay(); break;
+        case 'cats': openCustomCatOverlay(); break;
+        case 'notif': openNotifCenter(); break;
+        case 'notifset': openNotifSettingsOverlay(); break;
+        case 'sec': openSecOverlay(); break;
+        case 'backup': openBackupOvr(); break;
+        case 'theme': openThemeColorOverlay(); break;
+        case 'lg': openLiquidGlassOverlay(); break;
+        case 'lang': openLangOverlay(); break;
+        case 'calc': openCalcOverlay(); break;
+        case 'help': openHelpCenterOverlay(); break;
+      }
+    }catch(e){ console.warn('guideGo', key, e); }
+  }, 250);
+}
+
+// ═══════════════════ TUR INTERAKTIF ═══════════════════
+const _tourFindRow = re => () => [...document.querySelectorAll('.st-item')].find(e=>re.test(e.textContent));
+const TOUR_STEPS = [
+  { tab:'home', sel:null, ico:'👋',
+    id:['Selamat datang di maNTapps!','Tur singkat ini mengenalkan fitur utama aplikasi (±2 menit). Kamu bisa melewatinya kapan saja, dan membukanya lagi lewat Pengaturan → Petunjuk Penggunaan.'],
+    en:['Welcome to maNTapps!','This short tour introduces the main features (about 2 minutes). You can skip it anytime and replay it from Settings → Usage Guide.'] },
+  { tab:'home', sel:'#hc-stack', ico:'💳',
+    id:['Total Saldo','Gabungan saldo semua kartu/dompetmu. Geser ke samping untuk melihat kartu gabungan buatanmu, atau buat yang baru (maksimal 3) dari kartu pilihanmu. Ketuk ikon pensil di kartu untuk mengubah atau menghapusnya.'],
+    en:['Total Balance','The combined balance of all your cards/wallets. Swipe sideways to see your combined cards or create a new one (up to 3) from the cards you choose. Tap the pencil icon on a card to edit or delete it.'] },
+  { tab:'home', sel:()=>{ const b=document.getElementById('notifBadge'); return b ? (b.closest('button,.ic-btn,.hnotif')||b.parentElement) : null; }, ico:'🔔',
+    id:['Notifikasi','Pengingat tagihan, peringatan anggaran, kabar tujuan tabungan, dan hasil transaksi terjadwal masuk ke sini. Titik merah berarti ada yang belum dibaca.'],
+    en:['Notifications','Bill reminders, budget alerts, savings-goal updates, and scheduled-transaction results arrive here. A red dot means something is unread.'] },
+  { tab:'home', sel:'#txList', ico:'🧾',
+    id:['Transaksi Terbaru','Daftar transaksi terakhirmu. Ketuk salah satu untuk melihat detail, mengedit, atau menghapus — saldo kartu ikut disesuaikan otomatis.'],
+    en:['Recent Transactions','Your latest transactions. Tap one to view details, edit, or delete it — card balances adjust automatically.'] },
+  { tab:'home', sel:'.nadd', ico:'➕',
+    id:['Catat Transaksi','Ketuk tombol + untuk mencatat transaksi. Kita lihat isinya sebentar.'],
+    en:['Add a Transaction','Tap the + button to record a transaction. Let\'s peek inside.'] },
+  { tab:'home', modal:true, wait:450, sel:'#schModeSwitch', enter:()=>setTxMode('normal'), ico:'🔀',
+    id:['Normal atau Terjadwal','Mode Normal untuk transaksi sekali jalan. Mode Terjadwal untuk transaksi otomatis berulang, seperti gaji, cicilan, atau langganan.'],
+    en:['Normal or Scheduled','Normal mode is for one-off entries. Scheduled mode is for automatic recurring transactions such as salary, installments, or subscriptions.'] },
+  { tab:'home', modal:true, sel:'#txTypeToggle', enter:()=>setTxMode('normal'), ico:'↕️',
+    id:['Tipe Transaksi','Pilih Pengeluaran, Pemasukan, atau Transfer antar kartu. Lalu isi jumlah, kartu sumber, kategori, catatan, dan tanggal.'],
+    en:['Transaction Type','Choose Expense, Income, or a Transfer between cards. Then fill in the amount, source card, category, note, and date.'] },
+  { tab:'home', modal:true, sel:'#schedPanel .sch-row', enter:()=>setTxMode('sched'), wait:300, ico:'⏰',
+    id:['Jadwal Saya & Buat Jadwal','Dropdown kiri berisi Jadwal Saya dan Riwayat jadwal yang sudah berjalan. Dropdown kanan "Buat Jadwal" untuk membuat jadwal Pengeluaran, Pemasukan, atau Transfer.'],
+    en:['My Schedules & New Schedule','The left dropdown holds My Schedules and the History of schedules that already ran. The right "New Schedule" dropdown creates an Expense, Income, or Transfer schedule.'] },
+  { tab:'analytics', sel:'#nav-analytics', ico:'📊',
+    id:['Analitik','Lihat ringkasan bulanan, skor kesehatan keuangan, insight otomatis, grafik pengeluaran per kategori, serta rincian harian, mingguan, bulanan, dan tahunan.'],
+    en:['Analytics','See the monthly overview, financial health score, automatic insights, spending by category, and daily, weekly, monthly, and yearly breakdowns.'] },
+  { tab:'savings', sel:()=>{ const t=document.getElementById('svt-goals'); return t ? t.parentElement : null; }, enter:()=>switchSvTab('goals'), ico:'🎯',
+    id:['Tujuan & Tagihan','Di tab Tabungan, Goals & Bills berisi Tujuan tabungan (dengan target dan tenggat) serta Tagihan rutin lengkap dengan pengingat.'],
+    en:['Goals & Bills','In the Savings tab, Goals & Bills holds your savings Goals (with targets and deadlines) and recurring Bills with reminders.'] },
+  { tab:'savings', sel:'#svt-wallets', enter:()=>switchSvTab('wallets'), ico:'🏦',
+    id:['Kartu & Anggaran','Kelola kartu/dompet (bank, e-wallet, investasi, tunai) dan atur anggaran bulanan per kategori dengan peringatan saat mendekati batas.'],
+    en:['Cards & Budgets','Manage cards/wallets (bank, e-wallet, investment, cash) and set monthly budgets per category with alerts as you near the limit.'] },
+  { tab:'savings', sel:'#svt-history', enter:()=>switchSvTab('history'), ico:'🕘',
+    id:['Riwayat','Semua transaksi per bulan. Pilih bulan di bagian atas, lalu ketuk transaksi untuk mengedit atau menghapusnya.'],
+    en:['History','All transactions by month. Pick a month at the top, then tap a transaction to edit or delete it.'] },
+  { tab:'settings', sel:'#nav-settings', ico:'⚙️',
+    id:['Pengaturan','Atur profil, notifikasi, kalkulator, kategori kustom, utang & piutang, backup, tema, bahasa, dan bantuan.'],
+    en:['Settings','Manage your profile, notifications, calculator, custom categories, debts & receivables, backup, theme, language, and help.'] },
+  { tab:'settings', sel:_tourFindRow(/Keamanan/), ico:'🔒',
+    id:['Keamanan','Aktifkan Kunci PIN, Masuk Cepat, Mode Privasi, kelola perangkat, dan lihat aktivitas login untuk menjaga akunmu.'],
+    en:['Security','Turn on the PIN lock, Quick Login, Privacy Mode, manage devices, and review login activity to protect your account.'] },
+  { tab:'settings', sel:_tourFindRow(/Petunjuk Penggunaan|Usage Guide/), ico:'📖',
+    id:['Petunjuk Penggunaan','Butuh detail lebih lengkap? Buka Petunjuk Penggunaan kapan saja: ada 17 bab, kolom pencarian, dan tombol pintas ke tiap fitur.'],
+    en:['Usage Guide','Need more detail? Open the Usage Guide anytime: 17 chapters, a search box, and shortcut buttons to each feature.'] },
+  { tab:'home', sel:null, ico:'🎉',
+    id:['Siap digunakan!','Mulai dengan menambah kartu pertamamu lalu catat transaksi. Selamat mengatur keuangan!'],
+    en:['You\'re all set!','Start by adding your first card, then record a transaction. Enjoy managing your money!'] }
+];
+let _tourIdx = 0, _tourOn = false, _tourToken = 0, _tourBusy = false;
+const _tourKey = () => 'mm_guide_seen_' + (typeof fbUID==='function' ? (fbUID()||'anon') : 'anon');
+const _tourSleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function _tourEnsureDom(){
+  if(document.getElementById('tourLayer')) return;
+  const el = document.createElement('div');
+  el.id = 'tourLayer';
+  el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-labelledby','tourTitle');
+  el.innerHTML =
+    '<div id="tourShade"></div><div id="tourSpot"></div>'+
+    '<div id="tourCard">'+
+      '<div class="tour-top"><span class="tour-ico" id="tourIco" aria-hidden="true"></span><span class="tour-count" id="tourCount"></span></div>'+
+      '<h3 id="tourTitle"></h3><p id="tourBody"></p>'+
+      '<div class="tour-bar" aria-hidden="true"><i id="tourBarFill"></i></div>'+
+      '<div class="tour-btns">'+
+        '<button type="button" class="tour-skip" id="tourSkip" onclick="endAppTour()"></button><span class="tour-sp"></span>'+
+        '<button type="button" class="tour-prev" id="tourPrev" onclick="tourGo(-1)"></button>'+
+        '<button type="button" class="tour-next" id="tourNext" onclick="tourGo(1)"></button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(el);
+  window.addEventListener('resize', ()=>{ if(_tourOn) _tourRender(); });
+  document.addEventListener('keydown', e=>{
+    if(!_tourOn) return;
+    if(e.key==='Escape') endAppTour();
+    else if(e.key==='ArrowRight') tourGo(1);
+    else if(e.key==='ArrowLeft') tourGo(-1);
+  });
+}
+function startAppTour(){
+  if(typeof user==='undefined' || !user) return;
+  const lock = document.getElementById('pinLockScreen');
+  if(lock && lock.style.display==='flex') return;       // jangan tampil di atas layar kunci PIN
+  _tourEnsureDom();
+  try{ closeAllMenus && closeAllMenus(); }catch(e){}
+  // Tutup layar/overlay lain yang mungkin sedang terbuka agar tidak menutupi sorotan tur
+  document.querySelectorAll('.ovr').forEach(o=>{ o.classList.remove('on'); o.style.display=''; });
+  document.querySelectorAll('.moverlay.on,[id$="Modal"].on,[id$="Ovr"].on,[id$="Picker"].on,[id$="-picker"].on').forEach(o=>o.classList.remove('on'));
+  try{ closeNotifCenter(); }catch(e){}
+  ['estat-overlay','customcat-overlay','debts-overlay','devices-overlay','dl-confirm-overlay'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+  ['hidePwChangeOverlay','closeBayarModal','closeBackupOvr'].forEach(f=>{ try{ if(typeof window[f]==='function') window[f](); }catch(e){} });
+  _tourIdx = 0; _tourOn = true;
+  document.getElementById('tourLayer').classList.add('on');
+  _tourRender();
+}
+function tourGo(d){
+  if(_tourBusy) return;   // abaikan klik saat transisi langkah sedang berjalan
+  const n = _tourIdx + d;
+  if(n < 0) return;
+  if(n >= TOUR_STEPS.length){ endAppTour(); return; }
+  _tourIdx = n; _tourRender();
+}
+function endAppTour(){
+  const layer = document.getElementById('tourLayer');
+  if(layer) layer.classList.remove('on');
+  if(!_tourOn) return;
+  _tourOn = false; _tourToken++;
+  try{ localStorage.setItem(_tourKey(), '1'); }catch(e){}
+  try{ const m=document.getElementById('addModal'); if(m && m.classList.contains('on')) closeAddModal(); }catch(e){}
+  try{ switchTab('home'); }catch(e){}
+}
+async function _tourRender(){
+  const token = ++_tourToken;
+  _tourBusy = true;
+  try{ await _tourRenderStep(token); } finally { if(token===_tourToken) _tourBusy = false; }
+}
+async function _tourRenderStep(token){
+  const s = TOUR_STEPS[_tourIdx], L = lang==='id' ? 'id' : 'en', last = _tourIdx === TOUR_STEPS.length-1;
+  const modal = document.getElementById('addModal');
+  const modalOpen = modal && modal.classList.contains('on');
+  if(s.modal && !modalOpen){ openAddModal(); await _tourSleep(s.wait||450); if(token!==_tourToken) return; }
+  else if(!s.modal && modalOpen){ closeAddModal(); await _tourSleep(350); if(token!==_tourToken) return; }
+  if(!s.modal && s.tab && _currentActiveTabId() !== s.tab){ switchTab(s.tab); await _tourSleep(280); if(token!==_tourToken) return; }
+  if(s.enter){ try{ s.enter(); }catch(e){} await _tourSleep(s.modal ? (s.wait||200) : 160); if(token!==_tourToken) return; }
+  const $ = id => document.getElementById(id);
+  $('tourIco').textContent = s.ico;
+  $('tourCount').textContent = (_tourIdx+1)+' / '+TOUR_STEPS.length;
+  $('tourTitle').textContent = s[L][0];
+  $('tourBody').textContent  = s[L][1];
+  $('tourBarFill').style.width = (((_tourIdx+1)/TOUR_STEPS.length)*100)+'%';
+  $('tourSkip').textContent = L==='id' ? 'Lewati' : 'Skip';
+  $('tourSkip').style.visibility = last ? 'hidden' : 'visible';
+  $('tourPrev').textContent = L==='id' ? 'Kembali' : 'Back';
+  $('tourPrev').style.display = _tourIdx===0 ? 'none' : '';
+  $('tourNext').textContent = last ? (L==='id' ? 'Selesai' : 'Done') : (L==='id' ? 'Lanjut' : 'Next');
+  const card = $('tourCard'), spot = $('tourSpot'), shade = $('tourShade');
+  const target = typeof s.sel === 'function' ? s.sel() : (s.sel ? document.querySelector(s.sel) : null);
+  if(target){ try{ target.scrollIntoView({block:'center',inline:'nearest'}); }catch(e){} await _tourSleep(70); if(token!==_tourToken) return; }
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const cw = Math.min(340, vw - 32);
+  card.style.width = cw+'px';
+  const ch = card.offsetHeight;
+  let r = target ? target.getBoundingClientRect() : null;
+  if(r && (r.width < 4 || r.height < 4)) r = null;
+  if(r){
+    const pad = 6;
+    shade.style.display = 'none'; spot.style.display = 'block';
+    spot.style.left = (r.left-pad)+'px'; spot.style.top = (r.top-pad)+'px';
+    spot.style.width = (r.width+pad*2)+'px'; spot.style.height = (r.height+pad*2)+'px';
+    const below = r.bottom + pad + 14 + ch <= vh - 8;
+    const top = below ? r.bottom + pad + 14 : Math.max(8, r.top - pad - 14 - ch);
+    let left = r.left + r.width/2 - cw/2;
+    left = Math.max(16, Math.min(left, vw - cw - 16));
+    card.style.top = top+'px'; card.style.left = left+'px';
+  } else {
+    spot.style.display = 'none'; shade.style.display = 'block';
+    card.style.top = Math.max(16,(vh-ch)/2)+'px'; card.style.left = ((vw-cw)/2)+'px';
+  }
+  $('tourNext').focus({preventScroll:true});
+}
+// Tur otomatis hanya untuk akun baru, dan hanya sekali per perangkat
+function _maybeAutoStartGuide(){
+  try{ if(localStorage.getItem(_tourKey())) return; }catch(e){}
+  startAppTour();
+}
+
 function completeTx(){
   if(_txMode==='sched'){ saveSchedule(); return; }
   if(!rawAmountNum || rawAmountNum <= 0){
@@ -10606,6 +11202,7 @@ async function enterApp(initialState){
 
   // ⑦ Greeting
   const isNew = !initialState || !(initialState.historyItems?.length);
+  if(isNew) setTimeout(_maybeAutoStartGuide, 2200);
   setTimeout(()=>{
     const name = user?.name || '';
     if(isNew){

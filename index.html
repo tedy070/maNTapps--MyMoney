@@ -4763,6 +4763,11 @@ function goalIconSvg(name,color){
 }
 function renderGoals(){
   const c=document.getElementById('goalsContainer');if(!c)return;
+  // Ingat menu titik-3 yang sedang terbuka supaya tidak menutup sendiri saat
+  // kartu dirender ulang (sinkron realtime, dana masuk otomatis, dsb).
+  let _openMenuGid=null;
+  { const om=[...c.querySelectorAll('.ctx-menu')].find(m=>m.style.display==='block');
+    const oc=om&&om.closest('[data-gid]'); if(oc) _openMenuGid=oc.dataset.gid; }
   // Hapus semua card lama; pertahankan event listener delegation yang sudah terpasang
   c.innerHTML='';
   if(goals.length===0){
@@ -4817,6 +4822,11 @@ function renderGoals(){
       </button>`}`;
     c.appendChild(div);
   });
+  if(_openMenuGid!=null){
+    const rc=c.querySelector(`[data-gid="${_openMenuGid}"]`);
+    const rm=rc&&rc.querySelector('.ctx-menu');
+    if(rm) rm.style.display='block';
+  }
 
   // ── Event delegation ──
   if(c._goalDelegate) c.removeEventListener('click', c._goalDelegate);
@@ -4850,6 +4860,7 @@ function renderGoals(){
       // Tutup semua ctx-menu lain
       document.querySelectorAll('.ctx-menu').forEach(m=>{ if(m!==menu) m.style.display='none'; });
       menu.style.display = isOpen ? 'none' : 'block';
+      c._menuOpenedAt = isOpen ? 0 : Date.now();
       return;
     }
 
@@ -4860,8 +4871,12 @@ function renderGoals(){
       return;
     }
 
-    // Tap di area kartu lainnya → buka riwayat tambah dana
+    // Tap di area kartu lainnya → buka riwayat tambah dana.
+    // Kalau ada menu titik-3 terbuka (atau baru saja dibuka), tap ini cuma
+    // menutup menu — jangan langsung membuka riwayat.
+    const _menuOpen=[...document.querySelectorAll('#goalsContainer .ctx-menu')].some(m=>m.style.display==='block');
     document.querySelectorAll('.ctx-menu').forEach(m=>m.style.display='none');
+    if(_menuOpen || (Date.now()-(c._menuOpenedAt||0))<400){ c._menuOpenedAt=0; return; }
     openGoalHistory(gid);
   };
   c.addEventListener('click', c._goalDelegate);

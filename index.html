@@ -5395,6 +5395,7 @@ function closeAllMenus(e){
   if(e && e.target){
     if(e.target.closest('.ctx-menu')) return;
     if(e.target.closest('.goal-more')) return;
+    if(e.target.closest('.wc-more')) return;
   }
   document.querySelectorAll('.ctx-menu').forEach(m=>{if(m.id!=='walletCtxPortal')m.style.display='none';});
   _hideWalletCtx();
@@ -5594,7 +5595,11 @@ function toggleWalletMenu(e, id){
   _activeCtxWid = wid;
   p.dataset.wid = wid; // simpan wid di dataset — dibaca saat klik menu item
   p.style.display = 'block';
-  const r = e.currentTarget.getBoundingClientRect();
+  _positionWalletCtx(p, e.currentTarget);
+}
+// Posisikan portal menu di dekat tombol ⋮ (dipakai saat buka & setelah render ulang)
+function _positionWalletCtx(p, btn){
+  const r = btn.getBoundingClientRect();
   const pw = p.offsetWidth||170, ph = p.offsetHeight||180;
   let left = r.right - pw, top = r.bottom + 6;
   if(left < 8) left = 8;
@@ -5903,11 +5908,17 @@ function exitWalletReorderMode(){
 
 function renderWallets(){
   _ensureWalletCtxPortal();
-  _hideWalletCtx();
+  // Kalau menu ⋮ sedang terbuka, JANGAN ditutup oleh render ulang (sinkron
+  // realtime, top up, dana masuk otomatis, dsb). Menu dipertahankan lalu
+  // diposisikan ulang ke tombol ⋮ kartu yang sama setelah render selesai.
+  const _wpp=document.getElementById('walletCtxPortal');
+  const _keepWid=(_wpp && _wpp.style.display==='block') ? _activeCtxWid : null;
+  if(_keepWid==null) _hideWalletCtx();
   if(!Array.isArray(wallets)) wallets=[];
   const c=document.getElementById('walletsContainer');if(!c)return;c.innerHTML='';
   if(wallets.length===0){
     c.innerHTML = emptyIllustrationHTML('wallets');
+    _hideWalletCtx();
     renderWalletSummary();
     return;
   }
@@ -6002,7 +6013,12 @@ function renderWallets(){
   });
   const ab=document.createElement('button');ab.className='add-wallet-btn';ab.onclick=openWalletModal;
   ab.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Add Card</span>';
-  c.appendChild(ab);renderWalletSummary();
+  c.appendChild(ab);
+  if(_keepWid!=null){
+    const kb=c.querySelector(`.wallet-card[data-wallet-id="${_keepWid}"] .wc-more`);
+    if(kb && kb.offsetParent!==null) _positionWalletCtx(_wpp, kb); else _hideWalletCtx();
+  }
+  renderWalletSummary();
 }
 function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);w.balance+=rp;_syncGoalFromWallet(w.id,rp);addNotif('wallet',T('notif-topup'),`${fmt(rp)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,rp,true,{type:'income',dest:`${w.bank} ••••${w.num}`,destWalletId:w.id});toast(`✅ ${fmt(rp)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
 function renderWalletSummary(){

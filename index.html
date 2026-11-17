@@ -234,6 +234,7 @@ async function fbSaveState(_retryCount){
     // dan dibungkus try/catch sendiri supaya gagal-nya backup TIDAK PERNAH
     // membuat save utama di atas ini ikut dianggap gagal.
     backupStateIfNeeded(state, uid).catch(err => console.warn('Auto-backup gagal (non-fatal):', err));
+    try{ if(isQuickLoginEnabledForCurrentUser()) _peekRefreshSnap(); }catch(e){}
   } catch(e){
     console.warn('RTDB save error:', e);
     const attempt = _retryCount || 0;
@@ -679,6 +680,7 @@ function fbStopRealtimeSync(){
 
 // Terapkan data dari DB ke variabel app
 function _applyStateFromDB(data){
+  setTimeout(()=>{ try{ if(isQuickLoginEnabledForCurrentUser()) _peekRefreshSnap(); }catch(e){} }, 0);
   if(data.balance     !== undefined) balance       = data.balance;
   if(Array.isArray(data.wallets)){
     wallets = data.wallets;
@@ -1839,6 +1841,43 @@ body{background:var(--bg);transition:background .35s;}
 .tx-type-btn.on{background:var(--surface);color:var(--navy);box-shadow:var(--sh2);}
 .tx-type-btn.on.income-type{color:var(--green);}
 .tx-type-btn.on.transfer-type{color:var(--blue2);}
+/* ── Intip Saldo (Masuk Cepat) ── */
+#quickLogin{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+#quickLogin img{-webkit-user-drag:none;user-drag:none;}
+#peekHint{position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:5;display:none;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;border:none;background:rgba(255,255,255,.78);color:var(--navy);font-family:var(--f2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;animation:pkNudge 2.4s ease-in-out infinite;}
+#peekHint svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+@keyframes pkNudge{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,4px);}}
+@media (prefers-reduced-motion:reduce){#peekHint{animation:none;}}
+#peekPanel{position:fixed;top:0;left:50%;width:min(100%,440px);box-sizing:border-box;z-index:60;display:none;background:var(--surface);color:var(--navy);border-radius:0 0 28px 28px;padding:calc(var(--safe-top,0px) + 22px) 20px 22px;box-shadow:0 14px 40px rgba(13,33,82,.35);transform:translate(-50%,-110%);font-family:var(--f2);}
+.pk-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.pk-head b{font-size:15px;}
+.pk-chip{font-size:12px;font-weight:700;color:var(--blue2);background:rgba(42,111,214,.12);border-radius:10px;padding:6px 10px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pk-lbl{font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--t3);}
+.pk-bal{font-family:var(--f);font-size:32px;font-weight:800;margin-top:2px;letter-spacing:.5px;}
+.pk-prog{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:14px;}
+.pk-prog i{display:block;height:100%;width:0;background:var(--blue2);}
+#pkTxHead{font-size:13px;font-weight:800;margin:18px 0 2px;}
+.pk-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border);}
+.pk-row-t{flex:1;min-width:0;}
+.pk-row-t b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pk-row-t small{display:block;font-size:12px;color:var(--t3);margin-top:2px;}
+.pk-amt{font-size:14px;font-weight:800;white-space:nowrap;}
+.pk-amt.pos{color:var(--green);} .pk-amt.neg{color:var(--red);} .pk-amt.neu{color:var(--navy);}
+.pk-foot{margin-top:16px;text-align:center;font-size:13px;font-weight:700;color:var(--t3);}
+.pk-opt{width:100%;display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;margin-bottom:8px;text-align:left;background:var(--surface2);border:1.5px solid transparent;color:var(--navy);font-family:var(--f2);cursor:pointer;}
+.pk-opt.on{background:rgba(42,111,214,.12);border-color:var(--blue2);}
+.pk-opt-t{flex:1;min-width:0;}
+.pk-opt-t b{display:block;font-size:14px;}
+.pk-opt-t small{display:block;font-size:12px;color:var(--t3);margin-top:1px;}
+.pk-opt-r{font-weight:800;color:var(--blue2);}
+.pk-seg{display:flex;gap:6px;}
+.pk-seg button{border:1.5px solid var(--border);background:var(--surface2);color:var(--navy);border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f2);}
+.pk-seg button.on{background:var(--blue2);border-color:var(--blue2);color:#fff;}
+.pk-sub{background:var(--surface2);border-radius:14px;margin:0 12px 10px;}
+.pk-sub .sec-row{border-bottom-color:var(--border);}
+.pk-sub .sec-row:last-child{border-bottom:none;}
+.pk-note{font-size:12px;line-height:1.5;color:var(--t3);padding:2px 16px 12px;}
+#pinLockCancel{display:none;margin-top:6px;background:none;border:none;color:var(--t3);font-size:13px;font-weight:600;cursor:pointer;padding:8px;}
 /* ── Petunjuk Penggunaan ── */
 .gd-hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-radius:20px;padding:18px;margin:12px 0 14px;}
 .gd-hero h2{margin:0 0 6px;font-family:var(--f);font-size:18px;font-weight:800;}
@@ -2115,6 +2154,14 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- QUICK LOGIN (Masuk Cepat) -->
 <div class="scr auth-scr" id="quickLogin">
+  <button type="button" id="peekHint" onclick="peekHintActivate(event)"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="4" x2="12" y2="18"/><polyline points="6,13 12,19 18,13"/></svg><span id="peekHintTxt">Geser ke bawah untuk intip saldo</span></button>
+  <div id="peekPanel" role="region" aria-live="polite" aria-hidden="true">
+    <div class="pk-head"><b id="pkTitle">Intip Saldo</b><span class="pk-chip" id="pkChip"></span></div>
+    <div class="pk-lbl" id="pkLbl">SALDO</div><div class="pk-bal" id="pkBal"></div>
+    <div class="pk-prog" id="pkProg"><i id="pkProgFill"></i></div>
+    <div id="pkTxHead">Transaksi Terbaru</div><div id="pkTx"></div>
+    <div class="pk-foot" id="pkFoot"></div>
+  </div>
   <div class="auth-card" style="text-align:center;">
     <div class="auth-logo">maNTapps</div>
     <h2 class="auth-title" id="ql-title">Selamat Datang Kembali</h2>
@@ -3346,6 +3393,17 @@ body{background:var(--bg);transition:background .35s;}
 
 <!-- HOME CARD MODAL — form "Tambah Card" (nama + kartu yg diikutsertakan + warna)
      utk card gabungan di Beranda (di samping Total Saldo). -->
+<div class="moverlay" id="peekCardModal">
+  <div class="msheet" style="padding:20px 20px calc(var(--safe-bot) + 28px);">
+    <div class="mhandle"></div>
+    <div class="mhdr">
+      <div class="mttl">Card yang diintip</div>
+      <button class="mcls" onclick="closePeekCardModal()" aria-label="Tutup"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="font-size:13px;color:var(--t3);margin:-6px 0 12px;">Pilih satu card untuk halaman Masuk Cepat.</div>
+    <div id="peekCardList" style="overflow-y:auto;max-height:58vh;"></div>
+  </div>
+</div>
 <div class="moverlay" id="homeCardModal">
   <div class="msheet" style="padding:20px 20px calc(var(--safe-bot) + 28px);">
     <div class="mhandle"></div>
@@ -3533,6 +3591,15 @@ body{background:var(--bg);transition:background .35s;}
       <div class="sec-grp">
         <div class="sec-row" onclick="showPinChange()"><div class="sec-row-ico" style="background:#EBF3FE;"><svg viewBox="0 0 24 24" stroke="#1A56C4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Kunci PIN</div><div class="sec-row-sub" id="pinStatusLbl">Ketuk untuk atur PIN</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="sec-row"><div class="sec-row-ico" style="background:#EAF3FF;"><svg viewBox="0 0 24 24" stroke="#2A6FD6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Masuk Cepat</div><div class="sec-row-sub" id="quickLoginStatusLbl">Ketuk untuk aktifkan Masuk Cepat</div></div><button class="tog" id="quickLoginToggle" onclick="toggleQuickLogin()"></button></div>
+      <div id="peekSettings" style="display:none;">
+        <div class="sec-row"><div class="sec-row-ico" style="background:#E6F6EE;"><svg viewBox="0 0 24 24" stroke="#16A34A"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Intip Saldo</div><div class="sec-row-sub">Geser ke bawah &amp; tahan di halaman Masuk Cepat</div></div><button class="tog" id="peekToggle" onclick="togglePeek()" aria-label="Intip Saldo"></button></div>
+        <div class="pk-sub" id="peekSub" style="display:none;">
+          <div class="sec-row" onclick="openPeekCardModal()" style="cursor:pointer;"><div class="sec-row-info"><div class="sec-row-nm">Card yang ditampilkan</div><div class="sec-row-sub" id="peekCardLbl"></div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
+          <div class="sec-row"><div class="sec-row-info"><div class="sec-row-nm">Jumlah transaksi</div><div class="sec-row-sub">Transaksi terbaru yang tampil</div></div><div class="pk-seg"><button type="button" id="peekCnt3" onclick="setPeekCount(3)">3</button><button type="button" id="peekCnt5" onclick="setPeekCount(5)">5</button></div></div>
+          <div class="sec-row"><div class="sec-row-info"><div class="sec-row-nm">Wajib PIN untuk mengintip</div><div class="sec-row-sub">Setelah dilepas, saldo tampil sesudah PIN benar</div></div><button class="tog" id="peekPinToggle" onclick="togglePeekPin()" aria-label="Wajib PIN"></button></div>
+          <div class="pk-note">Saldo hanya terlihat selama kamu menahan dan menutup begitu dilepas. Ringkasan saldo &amp; transaksi disimpan di perangkat ini saja, dan dihapus saat Log Out, Masuk Cepat dimatikan, atau akses perangkat dicabut.</div>
+        </div>
+      </div>
         <div class="sec-row" onclick="showPasswordChange()"><div class="sec-row-ico" style="background:#F3EBFE;"><svg viewBox="0 0 24 24" stroke="#9333EA"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Ganti Password</div><div class="sec-row-sub">Perbarui password login Anda</div></div><span class="st-ch"><svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg></span></div>
         <div class="sec-row"><div class="sec-row-ico" style="background:#EBFEF3;"><svg viewBox="0 0 24 24" stroke="#0B7A63"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Biometrik</div><div class="sec-row-sub">Face ID / Sidik Jari</div></div><button class="tog on" id="tog-biometric" onclick="toggleAppSetting('biometric','tog-biometric','Biometrik diaktifkan','Biometrik dinonaktifkan')"></button></div>
         <div class="sec-row"><div class="sec-row-ico" style="background:#FEF3EB;"><svg viewBox="0 0 24 24" stroke="#F59E0B"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="sec-row-info"><div class="sec-row-nm">Autentikasi Dua Langkah (2FA)</div><div class="sec-row-sub">SMS & Aplikasi Autentikator</div></div><button class="tog" id="tog-2fa" onclick="toggleAppSetting('twoFA','tog-2fa','2FA diaktifkan','2FA dinonaktifkan')"></button></div>
@@ -4033,10 +4100,14 @@ const LS_QUICK_LOGIN_KEY = 'mm_quick_login';
 function saveQuickLoginProfile(){
   if(!user || !user.uid) return;
   try{
+    // Pengaturan Intip Saldo (jika ada) dipertahankan; ringkasannya dibuat ulang dari state terkini.
+    const prev = getQuickLoginProfile();
+    const peek = Object.assign({}, PEEK_DEFAULT, (prev && prev.uid === user.uid && prev.peek) || {});
     localStorage.setItem(LS_QUICK_LOGIN_KEY, JSON.stringify({
       uid: user.uid, name: user.name, email: user.email,
       avatar: user.avatar || 'default', photo: user.photo || null,
-      pin: savedPin || '' // salinan lokal HASH PIN (bukan PIN mentah) — dipakai utk gate SEBELUM enterApp()
+      pin: savedPin || '', // salinan lokal HASH PIN (bukan PIN mentah) — dipakai utk gate SEBELUM enterApp()
+      peek, peekSnap: peek.enabled ? _peekBuildSnap(peek) : null
     }));
   } catch(e){}
 }
@@ -8724,12 +8795,16 @@ const GUIDE_CHAPTERS = [
    st:{id:['Pengaturan → Keamanan → Kunci PIN: buat PIN 4 digit. Aplikasi terkunci saat kamu meninggalkannya lalu kembali.',
            'Salah memasukkan PIN beberapa kali akan mengunci sementara. Jika lupa PIN, pilih Lupa PIN dan verifikasi dengan password akunmu.',
            'Masuk Cepat: dari halaman awal, ketuk foto profilmu lalu masukkan PIN untuk langsung masuk (perlu PIN aktif dan sesi login masih berlaku di perangkat itu).',
+           'Intip Saldo (opsional, hanya ada bila Masuk Cepat aktif): nyalakan di Keamanan, pilih card dan jumlah transaksi. Di halaman Masuk Cepat, geser layar ke bawah lalu tahan untuk melihat saldo dan transaksi terbaru; lepas untuk menutup. Opsi "Wajib PIN" meminta PIN setelah dilepas.',
+           'Intip Saldo (opsional, hanya ada bila Masuk Cepat aktif): nyalakan di Keamanan, pilih card dan jumlah transaksi. Di halaman Masuk Cepat, geser ke bawah lalu tahan untuk melihat saldo dan transaksi terbaru; lepas untuk menutup. Aktifkan "Wajib PIN untuk mengintip" bila perangkat dipakai bersama.',
            'Mode Privasi menyamarkan saldo; ketuk saldo untuk mengintip sebentar (3 detik).',
            'Kelola Perangkat menampilkan perangkat yang memakai Masuk Cepat dan bisa dicabut aksesnya. Aktivitas Login mencatat riwayat masuk terakhir.',
            'Ganti Password tersedia di menu Keamanan. Biometrik dan 2FA tersedia sebagai pengaturan keamanan tambahan.'],
        en:['Settings → Security → PIN Lock: create a 4-digit PIN. The app locks when you leave and come back.',
            'Several wrong PIN attempts lock it temporarily. If you forget it, choose Forgot PIN and verify with your account password.',
            'Quick Login: on the welcome page, tap your profile photo and enter the PIN to sign in right away (needs an active PIN and a still-valid session on that device).',
+           'Balance Peek (optional, only available when Quick Login is on): turn it on in Security, then pick a card and the number of transactions. On the Quick Login page, swipe down and hold to see the balance and latest transactions; release to close. The "Require PIN" option asks for your PIN after you release.',
+           'Balance Peek (optional, only when Quick Login is on): turn it on in Security, choose the card and number of transactions. On the Quick Login page, swipe down and hold to see the balance and latest transactions; release to close. Turn on "Require PIN to peek" if the device is shared.',
            'Privacy Mode blurs balances; tap a balance to peek for 3 seconds.',
            'Manage Devices lists devices using Quick Login and lets you revoke access. Login Activity records recent sign-ins.',
            'Change Password is in the Security menu. Biometrics and 2FA are available as extra security settings.']},
@@ -9059,6 +9134,291 @@ function _maybeAutoStartGuide(){
   try{ if(localStorage.getItem(_tourKey())) return; }catch(e){}
   startAppTour();
 }
+
+// ═══════════════════════════════════════════════════════════════
+// INTIP SALDO di halaman Masuk Cepat
+// • Hanya ada bila Masuk Cepat aktif; nonaktif secara bawaan (opt-in).
+// • Dibuka dengan GESER KE BAWAH lalu TAHAN; dilepas = menutup.
+// • Data (saldo + transaksi terbaru) disalin ke localStorage perangkat ini,
+//   bagian dari profil Masuk Cepat (mm_quick_login): qlp.peek (pengaturan)
+//   dan qlp.peekSnap (ringkasan). Tidak dikirim ke server; ikut terhapus
+//   saat Masuk Cepat dimatikan, Log Out, atau akses perangkat dicabut.
+// • Opsi "Wajib PIN": setelah ditahan lalu dilepas, diminta PIN dulu.
+// ═══════════════════════════════════════════════════════════════
+const PEEK_DEFAULT = { enabled:false, cardKey:'total', count:3, needPin:false };
+const PEEK_ARM_PX = 120;       // jarak geser agar saldo terbuka
+const PEEK_PIN_OPEN_MS = 8000; // lama panel terbuka setelah PIN benar
+let _pk = { id:null, y0:0, drag:false, armed:false, open:false, pinFlow:false, timer:null };
+
+function _peekCfg(){
+  const q = getQuickLoginProfile();
+  return Object.assign({}, PEEK_DEFAULT, (q && q.peek) || {});
+}
+function _peekAvailable(){
+  const q = getQuickLoginProfile();
+  return !!(q && q.peek && q.peek.enabled && q.peekSnap);
+}
+// Tulis pengaturan (dan ringkasan terbaru) ke profil Masuk Cepat milik akun yang sedang login
+function _peekSaveCfg(cfg){
+  const q = getQuickLoginProfile();
+  if(!q || !user || q.uid !== user.uid) return;
+  q.peek = Object.assign({}, PEEK_DEFAULT, cfg);
+  q.peekSnap = q.peek.enabled ? _peekBuildSnap(q.peek) : null;
+  try{ localStorage.setItem(LS_QUICK_LOGIN_KEY, JSON.stringify(q)); }catch(e){}
+}
+function _peekRefreshSnap(){
+  const q = getQuickLoginProfile();
+  if(!q || !user || q.uid !== user.uid || !q.peek || !q.peek.enabled) return;
+  q.peekSnap = _peekBuildSnap(q.peek);
+  try{ localStorage.setItem(LS_QUICK_LOGIN_KEY, JSON.stringify(q)); }catch(e){}
+}
+// Ringkasan: label card, saldo, dan N transaksi terbaru yang berkaitan dengan card itu
+function _peekBuildSnap(cfg){
+  const n = (cfg.count === 5) ? 5 : 3;
+  let label = null, bal = 0, effect = null;
+  const key = String(cfg.cardKey || 'total');
+  if(key.startsWith('w_')){
+    const w = wallets.find(x=>x.id === parseInt(key.slice(2),10));
+    if(w){
+      label = `${w.bank} ••••${w.num}`; bal = w.balance || 0;
+      effect = h => {
+        const a = Math.abs(h.amt || 0);
+        if(h.type === 'income')   return h.destWalletId === w.id ? a : null;
+        if(h.type === 'transfer') return h.srcWalletId === w.id ? -a : (h.destWalletId === w.id ? a : null);
+        return h.srcWalletId === w.id ? -a : null;
+      };
+    }
+  } else if(key.startsWith('hc_')){
+    const c = homeCards.find(x=>x.id === parseInt(key.slice(3),10));
+    if(c){
+      const ids = new Set((c.walletIds || []).filter(i=>wallets.some(w=>w.id === i)));
+      label = c.name; bal = wallets.filter(w=>ids.has(w.id)).reduce((t,w)=>t+(w.balance||0),0);
+      effect = h => {
+        const a = Math.abs(h.amt || 0), s = ids.has(h.srcWalletId), d = ids.has(h.destWalletId);
+        if(h.type === 'income')   return d ? a : null;
+        if(h.type === 'transfer') return (s && d) ? 0 : (s ? -a : (d ? a : null));
+        return s ? -a : null;
+      };
+    }
+  }
+  if(label === null){            // 'total' (atau card yang sudah dihapus → kembali ke total)
+    label = lang==='id' ? 'Total Saldo' : 'Total Balance'; bal = balance || 0;
+    effect = h => {
+      const a = Math.abs(h.amt || 0);
+      return h.type === 'income' ? a : (h.type === 'transfer' ? 0 : -a);
+    };
+  }
+  const items = [...historyItems].sort((a,b)=>(b.ts||0)-(a.ts||0)).map(h=>({h, e:effect(h)}))
+    .filter(x=>x.e !== null).slice(0,n)
+    .map(x=>({ n:String(x.h.name||'').slice(0,60), s:x.h.ts||0, a:x.e, y:x.h.type||'expense' }));
+  return { label, bal, items, ts: Date.now() };
+}
+
+// ── Pengaturan (Keamanan) ──
+function _peekSyncSettingsUI(){
+  const wrap = document.getElementById('peekSettings'); if(!wrap) return;
+  const on = (typeof isQuickLoginEnabledForCurrentUser === 'function') && isQuickLoginEnabledForCurrentUser();
+  wrap.style.display = on ? 'block' : 'none';
+  if(!on) return;
+  const cfg = _peekCfg();
+  document.getElementById('peekToggle').classList.toggle('on', cfg.enabled);
+  document.getElementById('peekSub').style.display = cfg.enabled ? 'block' : 'none';
+  document.getElementById('peekPinToggle').classList.toggle('on', cfg.needPin);
+  document.getElementById('peekCnt3').classList.toggle('on', cfg.count !== 5);
+  document.getElementById('peekCnt5').classList.toggle('on', cfg.count === 5);
+  document.getElementById('peekCardLbl').textContent = _peekCardLabel(cfg.cardKey);
+}
+function _peekCardLabel(key){
+  key = String(key || 'total');
+  if(key.startsWith('w_')){ const w = wallets.find(x=>x.id === parseInt(key.slice(2),10)); if(w) return `${w.bank} ••••${w.num}`; }
+  if(key.startsWith('hc_')){ const c = homeCards.find(x=>x.id === parseInt(key.slice(3),10)); if(c) return c.name; }
+  return lang==='id' ? 'Total Saldo' : 'Total Balance';
+}
+function togglePeek(){
+  const cfg = _peekCfg(); cfg.enabled = !cfg.enabled;
+  _peekSaveCfg(cfg); _peekSyncSettingsUI();
+  toast(cfg.enabled ? (lang==='id' ? '✅ Intip Saldo diaktifkan' : '✅ Balance Peek enabled') : (lang==='id' ? '🚫 Intip Saldo dinonaktifkan' : '🚫 Balance Peek disabled'));
+}
+function togglePeekPin(){ const cfg = _peekCfg(); cfg.needPin = !cfg.needPin; _peekSaveCfg(cfg); _peekSyncSettingsUI(); }
+function setPeekCount(n){ const cfg = _peekCfg(); cfg.count = (n === 5) ? 5 : 3; _peekSaveCfg(cfg); _peekSyncSettingsUI(); }
+function openPeekCardModal(){
+  const cur = _peekCfg().cardKey || 'total';
+  const opts = [{k:'total', t: lang==='id' ? 'Total Saldo' : 'Total Balance', s: lang==='id' ? 'Gabungan semua card' : 'All cards combined'}]
+    .concat(wallets.map(w=>({k:'w_'+w.id, t:`${w.bank} ••••${w.num}`, s:w.type||''})))
+    .concat(homeCards.map(c=>({k:'hc_'+c.id, t:c.name, s: lang==='id' ? 'Card gabungan di Beranda' : 'Combined card on Home'})));
+  const list = document.getElementById('peekCardList');
+  list.innerHTML = opts.map(o=>{
+    const sel = o.k === cur;
+    return `<button type="button" class="pk-opt${sel?' on':''}" onclick="choosePeekCard('${o.k}')" aria-pressed="${sel}">
+      <span class="pk-opt-t"><b>${escapeHtml(o.t)}</b><small>${escapeHtml(o.s)}</small></span><span class="pk-opt-r">${sel?'✓':''}</span></button>`;
+  }).join('');
+  document.getElementById('peekCardModal').classList.add('on');
+}
+function closePeekCardModal(){ document.getElementById('peekCardModal').classList.remove('on'); }
+function choosePeekCard(key){
+  const cfg = _peekCfg(); cfg.cardKey = key; _peekSaveCfg(cfg);
+  closePeekCardModal(); _peekSyncSettingsUI();
+}
+
+// ── Layar Masuk Cepat: petunjuk + gestur geser-tahan ──
+function _peekInit(){
+  const hint = document.getElementById('peekHint');
+  if(!hint) return;
+  _peekClose(true);
+  const ok = _peekAvailable();
+  hint.style.display = ok ? 'flex' : 'none';
+  document.getElementById('peekHintTxt').textContent = lang==='id' ? 'Geser ke bawah untuk intip saldo' : 'Swipe down to peek at your balance';
+  const el = document.getElementById('quickLogin');
+  if(!el._peekBound){
+    el._peekBound = true;
+    el.addEventListener('pointerdown', _peekDown);
+    el.addEventListener('pointermove', _peekMove);
+    el.addEventListener('pointerup', _peekUp);
+    el.addEventListener('pointercancel', _peekUp);
+    document.addEventListener('visibilitychange', ()=>{ if(document.hidden) _peekClose(true); });
+    window.addEventListener('blur', ()=>_peekClose(true));
+  }
+}
+function _peekDown(e){
+  if(!_peekAvailable() || _pk.open) return;
+  if(e.target.closest('#peekPanel')) return;
+  _pk.id = e.pointerId; _pk.y0 = e.clientY; _pk.drag = false; _pk.armed = false;
+}
+function _peekMove(e){
+  if(_pk.id === null || e.pointerId !== _pk.id) return;
+  const dy = e.clientY - _pk.y0;
+  if(!_pk.drag){
+    if(dy < 10) return;                     // belum dianggap menggeser (tap di foto tetap berfungsi)
+    _pk.drag = true;
+    try{ document.getElementById('quickLogin').setPointerCapture(e.pointerId); }catch(_){}
+    _peekRender('pull');
+  }
+  const panel = document.getElementById('peekPanel');
+  const H = panel.offsetHeight;
+  if(!_pk.armed){
+    const shown = Math.min(dy * 0.85, H * 0.6);
+    panel.style.transition = 'none';
+    panel.style.transform = `translate(-50%, ${-H + shown}px)`;
+    document.getElementById('pkProgFill').style.width = Math.min(100, (dy / PEEK_ARM_PX) * 100) + '%';
+    if(dy >= PEEK_ARM_PX){
+      _pk.armed = true;
+      const cfg = _peekCfg();
+      _peekRender(cfg.needPin ? 'pin' : 'open');
+      panel.style.transition = 'transform .25s ease';
+      panel.style.transform = 'translate(-50%, 0)';
+      _pk.open = true;
+    }
+  }
+}
+function _peekUp(e){
+  if(_pk.id === null || (e && e.pointerId !== _pk.id)) return;
+  const wasArmed = _pk.armed, cfg = _peekCfg();
+  _pk.id = null;
+  try{ document.getElementById('quickLogin').releasePointerCapture(e.pointerId); }catch(_){}
+  if(!_pk.drag) return;
+  _pk.drag = false;
+  _peekClose();
+  if(wasArmed && cfg.needPin) setTimeout(_peekStartPinFlow, 280);
+}
+function _peekRender(mode){
+  const snap = (getQuickLoginProfile() || {}).peekSnap;
+  const $ = id => document.getElementById(id);
+  const id = lang === 'id';
+  $('pkTitle').textContent = id ? 'Intip Saldo' : 'Balance Peek';
+  $('pkChip').textContent = snap ? snap.label : '';
+  $('pkLbl').textContent = id ? 'SALDO' : 'BALANCE';
+  $('pkTxHead').textContent = id ? 'Transaksi Terbaru' : 'Recent Transactions';
+  const prog = $('pkProg'), tx = $('pkTx'), foot = $('pkFoot');
+  if(mode === 'open' && snap){
+    $('pkBal').textContent = fmt(snap.bal);
+    prog.style.display = 'none';
+    $('pkTxHead').style.display = snap.items.length ? 'block' : 'none';
+    tx.innerHTML = snap.items.map(it=>{
+      const cls = it.a > 0 ? 'pos' : (it.a < 0 ? 'neg' : 'neu');
+      const sign = it.a > 0 ? '+' : (it.a < 0 ? '-' : '');
+      return `<div class="pk-row"><div class="pk-row-t"><b>${escapeHtml(it.n)}</b><small>${escapeHtml(fmtItemTime({ts:it.s}))}</small></div><div class="pk-amt ${cls}">${sign}${escapeHtml(fmt(Math.abs(it.a)))}</div></div>`;
+    }).join('');
+    foot.textContent = _pk.pinFlow ? (id ? 'Ketuk di mana saja untuk menutup' : 'Tap anywhere to close') : (id ? '⌃  Lepas untuk menutup' : '⌃  Release to close');
+  } else {
+    $('pkBal').textContent = 'Rp ••••••••';
+    prog.style.display = 'block';
+    $('pkTxHead').style.display = 'none';
+    tx.textContent = '';
+    foot.textContent = mode === 'pin' ? (id ? 'Lepas lalu masukkan PIN untuk melihat' : 'Release, then enter your PIN to view')
+                                      : (id ? 'Terus geser ke bawah & tahan' : 'Keep pulling down & hold');
+    if(mode === 'pull') $('pkProgFill').style.width = '0%';
+    if(mode === 'pin') prog.style.display = 'none';
+  }
+  $('peekPanel').style.display = 'block';
+  $('peekPanel').setAttribute('aria-hidden', mode === 'open' ? 'false' : 'true');
+}
+// Tutup + hapus isi sensitif dari DOM
+function _peekClose(instant){
+  clearTimeout(_pk.timer);
+  const panel = document.getElementById('peekPanel'); if(!panel) return;
+  _pk.open = false; _pk.armed = false; _pk.pinFlow = false;
+  const H = panel.offsetHeight || 600;
+  panel.style.transition = instant ? 'none' : 'transform .22s ease';
+  panel.style.transform = `translate(-50%, ${-H - 20}px)`;
+  const clear = () => {
+    if(_pk.open) return;
+    const b = document.getElementById('pkBal'), t = document.getElementById('pkTx');
+    if(b) b.textContent = ''; if(t) t.textContent = '';
+    panel.style.display = 'none';
+  };
+  if(instant) clear(); else setTimeout(clear, 260);
+}
+// Opsi "Wajib PIN": setelah dilepas, minta PIN dulu lalu tampilkan sebentar
+function _peekStartPinFlow(){
+  const q = getQuickLoginProfile(); if(!q || !q.pin) return;
+  _pinLockMode = 'peek';
+  _pendingQuickLoginProfile = q;
+  savedPin = q.pin;
+  lockPinBuf = '';
+  const s = document.getElementById('pinLockScreen');
+  s.style.display = 'flex';
+  document.getElementById('pinLockError').textContent = '';
+  document.getElementById('pinLockUser').textContent = q.email || '';
+  document.getElementById('pinLockCancel').style.display = 'inline-block';
+  document.getElementById('pinLockForgotBtn').style.display = 'none';
+  updatePinLockIcon(q.photo);
+  updateLockPinDisplay();
+  _updatePinLockoutDisplay();
+}
+function _peekAfterPin(){
+  _peekResetPinScreen();
+  _pk.pinFlow = true;
+  _peekRender('open');
+  const panel = document.getElementById('peekPanel');
+  panel.style.transition = 'none';
+  panel.style.transform = `translate(-50%, ${-(panel.offsetHeight||600)}px)`;
+  void panel.offsetHeight;
+  panel.style.transition = 'transform .25s ease';
+  panel.style.transform = 'translate(-50%, 0)';
+  _pk.open = true;
+  _pk.timer = setTimeout(()=>_peekClose(), PEEK_PIN_OPEN_MS);
+}
+function _peekResetPinScreen(){
+  _pinLockMode = 'relock'; _pendingQuickLoginProfile = null; savedPin = '';
+  document.getElementById('pinLockCancel').style.display = 'none';
+  document.getElementById('pinLockForgotBtn').style.display = '';
+  hidePinLock();
+}
+function peekCancelPin(){ _peekResetPinScreen(); }
+// Akses papan ketik/pembaca layar: tombol petunjuk bila ditekan lewat keyboard
+function peekHintActivate(e){
+  if(e && e.detail > 0){            // klik/ketuk biasa → hanya mengingatkan caranya
+    toast(lang==='id' ? 'Geser ke bawah lalu tahan untuk mengintip' : 'Swipe down and hold to peek');
+    return;
+  }
+  const cfg = _peekCfg();            // aktivasi keyboard → buka sebentar (atau minta PIN)
+  if(cfg.needPin){ _peekStartPinFlow(); return; }
+  _pk.pinFlow = true; _peekRender('open');
+  const panel = document.getElementById('peekPanel');
+  panel.style.transition = 'transform .25s ease'; panel.style.transform = 'translate(-50%, 0)';
+  _pk.open = true; _pk.timer = setTimeout(()=>_peekClose(), 5000);
+}
+document.addEventListener('click', e=>{ if(_pk.open && _pk.pinFlow && !e.target.closest('#peekHint')) _peekClose(); });
 
 function completeTx(){
   if(_txMode==='sched'){ saveSchedule(); return; }
@@ -10750,7 +11110,8 @@ goTo('splash');
     <button class="pin-key" onclick="lockPinDel()">⌫</button>
   </div>
   <div id="pinLockError" style="color:var(--red);font-size:13px;font-weight:600;margin-top:18px;min-height:20px;text-align:center;"></div>
-  <button onclick="showPinLockForgot()" style="margin-top:14px;background:none;border:none;color:var(--blue2);font-size:13px;font-weight:600;cursor:pointer;padding:8px;">Forgot PIN? Use password</button>
+  <button id="pinLockForgotBtn" onclick="showPinLockForgot()" style="margin-top:14px;background:none;border:none;color:var(--blue2);font-size:13px;font-weight:600;cursor:pointer;padding:8px;">Forgot PIN? Use password</button>
+  <button id="pinLockCancel" onclick="peekCancelPin()">Batal</button>
 </div>
 
 
@@ -11177,6 +11538,7 @@ async function enterApp(initialState){
 
   // ⑤ Render semua UI
   refreshAllUI();
+  try{ if(isQuickLoginEnabledForCurrentUser()) _peekRefreshSnap(); }catch(e){}
 
   // ⑥ Mulai realtime sync lintas device
   fbStartRealtimeSync();
@@ -11393,7 +11755,7 @@ function lockPinKey(k){
       // Masuk Cepat (`_pendingQuickLoginProfile`) untuk mode itu — uid-nya
       // sama persis dengan uid asli akun, cuma sumbernya beda karena
       // dibaca dari cache localStorage, bukan dari sesi Auth yang aktif.
-      const uidForHash = (_pinLockMode === 'quicklogin' && _pendingQuickLoginProfile)
+      const uidForHash = ((_pinLockMode === 'quicklogin' || _pinLockMode === 'peek') && _pendingQuickLoginProfile)
         ? _pendingQuickLoginProfile.uid
         : (user && user.uid);
       let ok;
@@ -11404,7 +11766,9 @@ function lockPinKey(k){
         ok = (inputBuf === savedPin);
         if(ok){
           const newHash = await hashPin(inputBuf, uidForHash);
-          if(_pinLockMode === 'quicklogin'){
+          if(_pinLockMode === 'peek'){
+            // Intip Saldo: cukup mencocokkan PIN, tidak ada migrasi yang perlu disimpan.
+          } else if(_pinLockMode === 'quicklogin'){
             // Data asli belum ter-load — JANGAN autosave sekarang (lihat
             // catatan di deklarasi _pendingPinMigrationHash di atas).
             // Biarkan `savedPin` tetap versi lama untuk sementara (akan
@@ -11426,7 +11790,9 @@ function lockPinKey(k){
         document.getElementById('pinLockError').textContent='';
         lockPinBuf='';
         _resetPinAttempts();
-        if(_pinLockMode==='quicklogin'){
+        if(_pinLockMode==='peek'){
+          _peekAfterPin();
+        } else if(_pinLockMode==='quicklogin'){
           const qlp = _pendingQuickLoginProfile;
           hidePinLock();
           logLoginActivity('quicklogin-pin');
@@ -11523,6 +11889,7 @@ function _renderQuickLoginScreen(qlp){
       ? `<img src="${qlp.photo}" style="width:100%;height:100%;object-fit:cover;">`
       : (avSVGs[qlp.avatar] || avSVGs.default);
   }
+  _peekInit();
 }
 // Tombol biru "Masuk dengan akun lain" — buka halaman login biasa
 // (email/password), TANPA menghapus cache Masuk Cepat (biar tetap
@@ -11629,11 +11996,13 @@ function toggleQuickLogin(){
       : 'Active · tap your profile photo on the login page to sign in fast';
     toast(lang==='id' ? '✅ Masuk Cepat diaktifkan' : '✅ Quick Login enabled');
     registerThisDevice();
+    _peekSyncSettingsUI();
     fbAutoSave();
   } else {
     removeQuickLoginProfile();
     quickLoginEnabled = false;
     tog.classList.remove('on');
+    _peekSyncSettingsUI();
     if(lbl) lbl.textContent = lang==='id' ? 'Ketuk untuk aktifkan Masuk Cepat' : 'Tap to enable Quick Login';
     toast(lang==='id' ? '🚫 Masuk Cepat dinonaktifkan' : '🚫 Quick Login disabled');
     const _uidNow = fbUID();
@@ -11651,6 +12020,7 @@ function openSecOverlay(){
   document.getElementById('pinChangeView').style.display='none';
   document.getElementById('loginActivityView').style.display='none';
   syncSettingsToggles();
+  _peekSyncSettingsUI();
 }
 function closeSecOverlayThenOpenDevices(){
   document.getElementById('secOvr').classList.remove('on');
@@ -14003,6 +14373,9 @@ const FAQ_DATA = [
   ]},
   { cat:'Keamanan & Masuk Cepat', items:[
     {q:'Bagaimana cara ganti PIN?', a:'Buka Pengaturan → Keamanan → Ganti PIN, ikuti langkahnya (masukkan PIN baru 2x untuk konfirmasi).'},
+    {q:'Apa itu Intip Saldo dan bagaimana memakainya?', a:'Intip Saldo adalah fitur opsional di halaman Masuk Cepat. Nyalakan Masuk Cepat dulu, lalu aktifkan Intip Saldo di Pengaturan → Keamanan dan pilih card yang ditampilkan. Di halaman Masuk Cepat, geser layar ke bawah lalu tahan untuk melihat saldo dan transaksi terbaru; lepas untuk menutup. Aktifkan "Wajib PIN untuk mengintip" bila perangkat dipakai bersama.'},
+    {q:'Apakah data Intip Saldo tersimpan di server?', a:'Tidak. Ringkasan saldo dan transaksi hanya disalin ke penyimpanan perangkat ini, dan dihapus saat Log Out, Masuk Cepat dimatikan, atau akses perangkat dicabut.'},
+    {q:'Apa itu Intip Saldo dan bagaimana cara memakainya?', a:'Intip Saldo adalah fitur opsional yang hanya tersedia bila Masuk Cepat aktif. Nyalakan di Pengaturan → Keamanan → Intip Saldo dan pilih card yang ingin ditampilkan. Di halaman Masuk Cepat, geser ke bawah lalu tahan untuk melihat saldo dan transaksi terbaru; lepaskan untuk menutup. Ringkasan datanya hanya disimpan di perangkat ini dan dihapus saat Log Out atau Masuk Cepat dimatikan.'},
     {q:'Kenapa Masuk Cepat tidak muncul di device baru?', a:'Masuk Cepat bersifat per-device — kamu perlu login penuh dulu di device tsb lalu aktifkan Masuk Cepat di Pengaturan → Keamanan.'}
   ]},
   { cat:'Notifikasi', items:[

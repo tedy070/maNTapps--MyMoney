@@ -3254,6 +3254,9 @@ body{background:var(--bg);transition:background .35s;}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <input type="date" id="goalDeadline" style="flex:1;font-family:var(--f);font-size:15px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;">
     </div>
+    <div class="albl" id="gm-walletlbl">HUBUNGKAN KE KARTU (OPSIONAL)</div>
+    <div style="background:var(--surface2);border-radius:14px;padding:6px 12px;margin-bottom:6px;"><select id="goalWallet" style="width:100%;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;padding:8px 0;"></select></div>
+    <div id="gm-wallethint" style="font-size:11px;color:var(--t3);margin-bottom:20px;line-height:1.5;">Dana masuk ke kartu ini akan otomatis menambah tujuan. Satu kartu hanya untuk satu tujuan.</div>
     <div class="albl" style="margin-bottom:8px;">ICON COLOR</div>
     <div style="display:flex;gap:8px;margin-bottom:20px;" id="goalColorPicker">
       <div class="goal-color-opt" data-color="#1A56C4" onclick="selectGoalColor(this)" style="width:32px;height:32px;border-radius:50%;background:#1A56C4;cursor:pointer;border:3px solid #1A56C4;box-shadow:0 0 0 2px white;flex-shrink:0;"></div>
@@ -3320,8 +3323,12 @@ body{background:var(--bg);transition:background .35s;}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue2)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <input type="date" id="egDeadline" style="flex:1;font-family:var(--f);font-size:15px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;">
     </div>
+    <div class="albl" id="egm-walletlbl">HUBUNGKAN KE KARTU (OPSIONAL)</div>
+    <div style="background:var(--surface2);border-radius:14px;padding:6px 12px;margin-bottom:14px;"><select id="egWallet" onchange="_onEditGoalWalletChange()" style="width:100%;font-family:var(--f);font-size:14px;font-weight:600;color:var(--navy);border:none;outline:none;background:transparent;padding:8px 0;"></select></div>
+    <div id="egAddWrap">
     <div class="albl">ADD FUNDS NOW</div>
     <div class="awrap" style="margin-bottom:20px;"><span class="acurr" id="egCurr2">$</span><input class="ainput hv" type="text" inputmode="decimal" id="egAdd" placeholder="0" style="font-size:30px;" oninput="formatCurrencyInput(this)"></div>
+    </div>
     <button class="btn btn-p" onclick="updateGoal()" style="margin-bottom:8px;" id="egm-save">Save Changes</button>
     <button class="btn btn-danger" onclick="deleteGoal()">Delete Goal</button>
   </div>
@@ -4771,6 +4778,13 @@ function renderGoals(){
     const lblDelete = lang==='id' ? 'Hapus'       : 'Delete';
     const btnLabel  = lang==='id' ? (isTeal ? 'Tambah Cepat' : 'Tambah Dana') : (isTeal ? 'Quick Add' : 'Add Funds');
     const lblOf     = lang==='id' ? 'dari' : 'of';
+    const lw        = _goalLinkedWallet(g);
+    const linked    = !!lw;
+    const isFull    = g.target>0 && g.current>=g.target;
+    const linkTxt   = isFull
+      ? (lang==='id' ? 'Target tercapai · berhenti bertambah' : 'Goal reached · stops growing')
+      : (lang==='id' ? `Terhubung ke ${lw?lw.bank:''} ••••${lw?lw.num:''} · otomatis` : `Connected to ${lw?lw.bank:''} ••••${lw?lw.num:''} · automatic`);
+    const linkInfoHTML = linked ? `<div class="goal-link-info" style="display:flex;align-items:center;gap:7px;padding:10px 12px;border-radius:11px;background:var(--surface2);font-size:12px;font-weight:600;color:${isFull?'var(--green)':'var(--blue2)'};"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(linkTxt)}</span></div>` : '';
 
     const div = document.createElement('div');
     div.className = 'goal-card';
@@ -4784,7 +4798,7 @@ function renderGoals(){
           <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
           <div class="ctx-menu" style="display:none;">
             <div class="ctx-item" data-action="edit">${lblEdit}</div>
-            <div class="ctx-item" data-action="addfund">${lblAdd}</div>
+            ${linked?'':`<div class="ctx-item" data-action="addfund">${lblAdd}</div>`}
             <div class="ctx-item danger" data-action="delete">${lblDelete}</div>
           </div>
         </button>
@@ -4797,10 +4811,10 @@ function renderGoals(){
       </div>
       <div class="prog-w" style="margin-bottom:9px;"><div class="prog-f" style="width:${pct}%;${isTeal?'background:linear-gradient(90deg,#0B7A63,#0FA884);':''}"></div></div>
       ${goalStripHTML(g, pct)}${goalMonthlyHTML(g, pct)}
-      <button class="goal-btn ${isTeal?'tl':''}">
+      ${linkInfoHTML}${linked?'':`<button class="goal-btn ${isTeal?'tl':''}">
         <svg viewBox="0 0 24 24" stroke="${isTeal?'white':'var(--navy)'}"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
         ${btnLabel}
-      </button>`;
+      </button>`}`;
     c.appendChild(div);
   });
 
@@ -4865,10 +4879,62 @@ function _todayISO(){
   const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function _logGoalFund(g, added){
+function _logGoalFund(g, added, src){
   if(!(added>0)) return;
   if(!Array.isArray(g.fundLog)) g.fundLog=[];
-  g.fundLog.push({amt:added, ts:Date.now(), after:g.current, pct:g.target>0?Math.min(100,Math.round(g.current/g.target*100)):0});
+  const e={amt:added, ts:Date.now(), after:g.current, pct:g.target>0?Math.min(100,Math.round(g.current/g.target*100)):0};
+  if(src) e.src=src;
+  g.fundLog.push(e);
+}
+// ══════════════════════════════════════════════════════════════
+// TUJUAN ↔ KARTU: satu kartu hanya boleh terhubung ke satu tujuan.
+// g.linkedWalletId = id kartu | undefined. Dana masuk ke kartu
+// otomatis menambah tujuan yang terhubung (berhenti bila target penuh).
+// ══════════════════════════════════════════════════════════════
+function _goalLinkedWallet(g){
+  if(!g || g.linkedWalletId==null) return null;
+  return (wallets||[]).find(w=>w.id===g.linkedWalletId) || null;
+}
+function _goalWalletOptionsHTML(selectedId, goalId){
+  const isId = lang==='id';
+  const taken = new Set(goals.filter(x=>x.id!==goalId && x.linkedWalletId!=null).map(x=>x.linkedWalletId));
+  let h = `<option value="">${isId?'Tidak terhubung (tambah dana manual)':'Not connected (add funds manually)'}</option>`;
+  (wallets||[]).forEach(w=>{
+    if(taken.has(w.id)) return;
+    h += `<option value="${w.id}" ${w.id===selectedId?'selected':''}>${escapeHtml(w.bank)} ••••${escapeHtml(String(w.num))}</option>`;
+  });
+  return h;
+}
+function _fillGoalWalletSelect(selId, selectedId, goalId){
+  const el=document.getElementById(selId); if(!el) return;
+  el.innerHTML=_goalWalletOptionsHTML(selectedId, goalId);
+}
+function _readGoalWalletSelect(selId, goalId){
+  const el=document.getElementById(selId); if(!el||el.value==='') return undefined;
+  const wid=parseInt(el.value,10);
+  if(isNaN(wid)) return undefined;
+  if(goals.some(x=>x.id!==goalId && x.linkedWalletId===wid)) return undefined; // 1 kartu = 1 tujuan
+  return wid;
+}
+function _onEditGoalWalletChange(){
+  const el=document.getElementById('egWallet'), wrap=document.getElementById('egAddWrap');
+  if(wrap) wrap.style.display = (el && el.value!=='') ? 'none' : '';
+}
+function _syncGoalFromWallet(walletId, rp){
+  if(walletId==null || !(rp>0)) return;
+  const g=goals.find(x=>x.linkedWalletId===walletId); if(!g) return;
+  if(!(g.target>0) || g.current>=g.target) return; // target penuh → berhenti bertambah
+  const w=wallets.find(x=>x.id===walletId);
+  const before=g.current;
+  g.current=Math.min(g.target, g.current+rp);
+  const added=g.current-before; if(!(added>0)) return;
+  _logGoalFund(g, added, w?`${w.bank} ••••${w.num}`:'auto');
+  const pct=Math.round(g.current/g.target*100);
+  if(appSettings.notifGoal){
+    addNotif('goal', lang==='id'?'Dana Masuk Otomatis':'Auto Funds Added', `${fmt(added)} → "${g.name}" · ${pct}%${w?` · ${w.bank} ••••${w.num}`:''}`);
+    if(g.current>=g.target) addNotif('goal', lang==='id'?'Target Tercapai':'Goal Reached', `"${g.name}" ${lang==='id'?'sudah mencapai target':'reached its target'}`);
+  }
+  renderGoals(); updateSavingsTotal();
 }
 function _ensureGoalFundLogs(){
   let changed=false;
@@ -5324,6 +5390,7 @@ let _qaGoalId = null;
 function quickAdd(id){
   closeAllMenus();
   const g = goals.find(x => x.id === id); if(!g) return;
+  if(_goalLinkedWallet(g)){ toast(lang==='id'?'ℹ️ Tujuan ini terhubung ke kartu — dana bertambah otomatis':'ℹ️ This goal is connected to a card — funds add automatically'); return; }
   _qaGoalId = id;
   // Isi modal dengan data tujuan
   const isId = lang === 'id';
@@ -5399,7 +5466,7 @@ function confirmQuickAdd(){
   renderGoals(); updateSavingsTotal();
   fbAutoSave();
 }
-function openNewGoalModal(){document.getElementById('goalName').value='';document.getElementById('goalDesc').value='';document.getElementById('goalTarget').value='';document.getElementById('goalCurrent').value='';{const dl=document.getElementById('goalDeadline');if(dl){dl.value='';dl.min=_todayISO();}const dll=document.getElementById('gm-deadlbl');if(dll)dll.textContent=lang==='id'?'TARGET WAKTU (OPSIONAL)':'TARGET DATE (OPTIONAL)';}goalColor='#1A56C4';updateGCP();updateGoalIconPreview();document.getElementById('goalModal').classList.add('on');}
+function openNewGoalModal(){document.getElementById('goalName').value='';document.getElementById('goalDesc').value='';document.getElementById('goalTarget').value='';document.getElementById('goalCurrent').value='';{const dl=document.getElementById('goalDeadline');if(dl){dl.value='';dl.min=_todayISO();}const dll=document.getElementById('gm-deadlbl');if(dll)dll.textContent=lang==='id'?'TARGET WAKTU (OPSIONAL)':'TARGET DATE (OPTIONAL)';}goalColor='#1A56C4';updateGCP();updateGoalIconPreview();_fillGoalWalletSelect('goalWallet',null,null);{const l=document.getElementById('gm-walletlbl'),h=document.getElementById('gm-wallethint');if(l)l.textContent=lang==='id'?'HUBUNGKAN KE KARTU (OPSIONAL)':'CONNECT TO CARD (OPTIONAL)';if(h)h.textContent=lang==='id'?'Dana masuk ke kartu ini akan otomatis menambah tujuan. Satu kartu hanya untuk satu tujuan.':'Funds received by this card are added to the goal automatically. One card per goal.';}document.getElementById('goalModal').classList.add('on');}
 function updateGoalIconPreview(){
   const name=document.getElementById('goalName').value;
   const el=document.getElementById('gmIconPreview');
@@ -5417,13 +5484,13 @@ function saveGoal(){
   const cur=_parseCurrencyInputValue('goalCurrent');
   const rpT=isModeRp()?tgt:Math.round(tgt*exRate);
   const rpC=isModeRp()?cur:Math.round(cur*exRate);
-  goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor,deadline:document.getElementById('goalDeadline').value||null,fundLog:[]});
+  goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor,deadline:document.getElementById('goalDeadline').value||null,fundLog:[],linkedWalletId:_readGoalWalletSelect('goalWallet',null)});
   closeGoalModal();renderGoals();updateSavingsTotal();
   if(appSettings.notifGoal) addNotif('goal','New Goal Created!',`"${name}" has been added to your savings`);
   toast(`🎯 Goal "${name}" created!`);
   fbAutoSave();
 }
-function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;editingGoalColor=g.color||'#1A56C4';document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target).toLocaleString('id-ID'):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';{const dl=document.getElementById('egDeadline');if(dl)dl.value=g.deadline||'';const dll=document.getElementById('egm-deadlbl');if(dll)dll.textContent=lang==='id'?'TARGET WAKTU (OPSIONAL)':'TARGET DATE (OPTIONAL)';}document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';updateEditGoalIconPreview();document.getElementById('editGoalModal').classList.add('on');}
+function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;editingGoalColor=g.color||'#1A56C4';document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target).toLocaleString('id-ID'):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';_fillGoalWalletSelect('egWallet',(_goalLinkedWallet(g)?g.linkedWalletId:null),id);{const l=document.getElementById('egm-walletlbl');if(l)l.textContent=lang==='id'?'HUBUNGKAN KE KARTU (OPSIONAL)':'CONNECT TO CARD (OPTIONAL)';}_onEditGoalWalletChange();{const dl=document.getElementById('egDeadline');if(dl)dl.value=g.deadline||'';const dll=document.getElementById('egm-deadlbl');if(dll)dll.textContent=lang==='id'?'TARGET WAKTU (OPSIONAL)':'TARGET DATE (OPTIONAL)';}document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';updateEditGoalIconPreview();document.getElementById('editGoalModal').classList.add('on');}
 function updateEditGoalIconPreview(){
   const name=document.getElementById('egName').value;
   const el=document.getElementById('egmIconPreview');
@@ -5432,7 +5499,7 @@ function updateEditGoalIconPreview(){
   el.innerHTML=goalIconSvg(name,editingGoalColor);
 }
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const dlEl=document.getElementById('egDeadline');if(dlEl)g.deadline=dlEl.value||null;const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0){const rp=isModeRp()?rawA:Math.round(rawA*exRate);const before=g.current;g.current=Math.min(g.target,g.current+rp);_logGoalFund(g,g.current-before);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const dlEl=document.getElementById('egDeadline');if(dlEl)g.deadline=dlEl.value||null;{const wid=_readGoalWalletSelect('egWallet',g.id);if(wid===undefined)delete g.linkedWalletId;else g.linkedWalletId=wid;}const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0&&!_goalLinkedWallet(g)){const rp=isModeRp()?rawA:Math.round(rawA*exRate);const before=g.current;g.current=Math.min(g.target,g.current+rp);_logGoalFund(g,g.current-before);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`))return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
@@ -5922,7 +5989,7 @@ function renderWallets(){
   ab.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span>Add Card</span>';
   c.appendChild(ab);renderWalletSummary();
 }
-function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);w.balance+=rp;addNotif('wallet',T('notif-topup'),`${fmt(rp)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,rp,true,{type:'income',dest:`${w.bank} ••••${w.num}`,destWalletId:w.id});toast(`✅ ${fmt(rp)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
+function topUpWallet(id){closeAllMenus();const w=wallets.find(x=>x.id===id);if(!w)return;const amt=prompt(`Top up "${w.bank}":\nEnter amount:`,'');if(!amt||isNaN(parseFloat(amt)))return;const rp=isModeRp()?parseFloat(amt):Math.round(parseFloat(amt)*exRate);w.balance+=rp;_syncGoalFromWallet(w.id,rp);addNotif('wallet',T('notif-topup'),`${fmt(rp)} → ${w.bank} ••••${w.num}`);addHistoryItem(`Top Up ${w.bank}`,rp,true,{type:'income',dest:`${w.bank} ••••${w.num}`,destWalletId:w.id});toast(`✅ ${fmt(rp)} ${T('tx-to')||'to'} ${w.bank}`);renderWallets();fbAutoSave();}
 function renderWalletSummary(){
   const e=document.getElementById('walletSummary');if(!e)return;
   const list=Array.isArray(wallets)?wallets:[];
@@ -6052,6 +6119,8 @@ function deleteWallet(){
   const nama=w.bank;
   if(!confirm(lang==='id'?`Hapus kartu "${nama} ••••${w.num}"?`:`Delete card "${nama} ••••${w.num}"?`)) return;
   wallets=wallets.filter(x=>x.id!==id);
+  goals.forEach(g=>{ if(g.linkedWalletId===id) delete g.linkedWalletId; });
+  renderGoals();
   closeEditWalletModal();
   renderWallets();
   buildSourceGrid();
@@ -9481,6 +9550,7 @@ function completeTx(){
     // Debit sumber, kredit Cash
     if (srcWallet) srcWallet.balance -= rp; else balance -= rp;
     cashWallet.balance += rp;
+    _syncGoalFromWallet(cashWallet.id, rp);
 
     recalcTotalBalance();
     updateAllAmounts();
@@ -9551,6 +9621,8 @@ function completeTx(){
     if (srcWallet) { srcWallet.balance -= rp; }
     else           { balance -= rp; }
   }
+  // Dana masuk ke kartu → tambah tujuan yang terhubung (income & transfer masuk)
+  if ((isIncome || isTransfer) && destWallet) _syncGoalFromWallet(destWallet.id, rp);
 
   // ── Recalculate total balance dari semua wallet ──────────
   recalcTotalBalance();

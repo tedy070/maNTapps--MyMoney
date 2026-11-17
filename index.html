@@ -5383,6 +5383,7 @@ function _deleteGoalById(id){
   if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`)) return;
   goals = goals.filter(x=>x.id!==id);
   renderGoals(); updateSavingsTotal();
+  if(appSettings.notifGoal) addNotif('goal','Goal Deleted',`"${g.name}" has been removed from your savings`);
   toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);
   fbAutoSave();
 }
@@ -5516,7 +5517,7 @@ function updateEditGoalIconPreview(){
 }
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
 function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const dlEl=document.getElementById('egDeadline');if(dlEl)g.deadline=dlEl.value||null;{const wid=_readGoalWalletSelect('egWallet',g.id);if(wid===undefined)delete g.linkedWalletId;else g.linkedWalletId=wid;}const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0&&!_goalLinkedWallet(g)){const rp=isModeRp()?rawA:Math.round(rawA*exRate);const before=g.current;g.current=Math.min(g.target,g.current+rp);_logGoalFund(g,g.current-before);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
-function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`))return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
+function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`))return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Deleted',`"${g.name}" has been removed from your savings`);toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──
   const goalTotal  = goals.reduce((s,g) => s + (g.current||0), 0);

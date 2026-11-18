@@ -7611,7 +7611,7 @@ const TR={
 'tg-err-name':'Bill name is required','tg-err-date':'Due date is required',
 'tg-remind-custom':'Remind how many days before? (e.g. 7)',
 'tg-remind-days-label':'days','tg-added-notif':'Bill Added',
-'cat-food':'Food','cat-rent-sub':'BILLS & HOUSING','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE','cat-saving':'Saving','cat-saving-sub':'SAVE & GROW','cat-emergency':'Emergency Fund','cat-emergency-sub':'SAFETY NET','cat-pindah_bank':'Bank Transfer','cat-pindah_bank-sub':'TEMPORARY LOAN',
+'cat-food':'Food','cat-rent-sub':'BILLS & RENTAL','cat-rumah':'Home','cat-rumah-sub':'MORTGAGE & UPKEEP','cat-transport':'Transport','cat-rent':'Rent','cat-fun':'Fun','cat-shopping':'Shopping','cat-charity':'Charity','cat-marriage':'Marriage Savings','cat-investasi':'Investasi','cat-tarik':'Cash Withdrawal','cat-food-sub':'DINING & GROCERY','cat-transport-sub':'COMMUTE','cat-fun-sub':'ENTERTAINMENT','cat-shopping-sub':'PERSONAL CARE','cat-charity-sub':'MIN 5% SALARY','cat-marriage-sub':'BEAUTIFUL FUTURE','cat-investasi-sub':'SAVINGS','cat-tarik-sub':'CASH WITHDRAWAL','cat-gaji':'Salary','cat-gaji-sub':'BONUS & ALLOWANCE','cat-saving':'Saving','cat-saving-sub':'SAVE & GROW','cat-emergency':'Emergency Fund','cat-emergency-sub':'SAFETY NET','cat-pindah_bank':'Bank Transfer','cat-pindah_bank-sub':'TEMPORARY LOAN',
     'tx-income':'Income','tx-expense':'Expense','tx-transfer':'Transfer',
     'tx-topup':'Top Up','tx-recorded':'recorded','tx-from':'from','tx-to':'to',
     'tx-insufficient':'Insufficient balance! Available',
@@ -7656,7 +7656,7 @@ const TR={
 'tg-err-name':'Nama tagihan wajib diisi','tg-err-date':'Tanggal jatuh tempo wajib diisi',
 'tg-remind-custom':'Ingatkan berapa hari sebelumnya? (contoh: 7)',
 'tg-remind-days-label':'hari','tg-added-notif':'Tagihan Ditambahkan',
-'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & PERUMAHAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS','cat-saving':'Saving','cat-saving-sub':'TABUNG & TUMBUH','cat-emergency':'Dana Darurat','cat-emergency-sub':'DANA DARURAT','cat-pindah_bank':'Pindah Bank','cat-pindah_bank-sub':'PINJAMAN TEMPORARY',
+'cat-food':'Makanan','cat-transport':'Transportasi','cat-rent':'Sewa','cat-fun':'Hiburan','cat-shopping':'Belanja','cat-charity':'Amal / Charity','cat-marriage':'Tabungan Nikah','cat-investasi':'Investasi','cat-tarik':'Tarik Tunai','cat-food-sub':'MAKAN & BELANJA','cat-transport-sub':'KOMUTER','cat-rent-sub':'TAGIHAN & SEWA HUNIAN','cat-rumah':'Rumah','cat-rumah-sub':'KPR & PERAWATAN','cat-fun-sub':'HIBURAN','cat-shopping-sub':'PERAWATAN DIRI','cat-charity-sub':'MIN 5% GAJI','cat-marriage-sub':'MASA DEPAN INDAH','cat-investasi-sub':'TABUNGAN','cat-tarik-sub':'PENARIKAN TUNAI','cat-gaji':'Gaji','cat-gaji-sub':'BONUS','cat-saving':'Saving','cat-saving-sub':'TABUNG & TUMBUH','cat-emergency':'Dana Darurat','cat-emergency-sub':'DANA DARURAT','cat-pindah_bank':'Pindah Bank','cat-pindah_bank-sub':'PINJAMAN TEMPORARY',
     'tx-income':'Pemasukan','tx-expense':'Pengeluaran','tx-transfer':'Transfer',
     'tx-topup':'Isi Saldo','tx-recorded':'tercatat','tx-from':'dari','tx-to':'ke',
     'tx-insufficient':'Saldo tidak cukup! Tersedia',
@@ -7980,6 +7980,7 @@ const cats=[
   {id:'food',stroke:'#F59E0B',bg:'#FEF3EB',svg:'<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>'},
   {id:'transport',stroke:'#EF4444',bg:'#FEEBEB',svg:'<rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'},
   {id:'rent',stroke:'#1A56C4',bg:'#EBF3FE',svg:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>'},
+  {id:'rumah',stroke:'#C2410C',bg:'#FFF1E8',svg:'<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5"/><path d="M16 4.5V3h2.5v3.2"/><rect x="10" y="14" width="4" height="7" rx="1"/>'},
   {id:'fun',stroke:'#9333EA',bg:'#F3EBFE',svg:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'},
   {id:'shopping',stroke:'#EC4899',bg:'#FEF0F7',svg:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>'},
   {id:'charity',stroke:'#22C55E',bg:'#EBFEF3',svg:'<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>'},
@@ -10156,6 +10157,7 @@ function buildTopCats() {
     food:'<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>',
     transport:'<rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/>',
     rent:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',
+    rumah:'<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5"/>',
     fun:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/>',
     shopping:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>',
     charity:'<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',
@@ -10246,7 +10248,7 @@ function _renderDailyItems() {
     new Date(h.ts) >= ds && new Date(h.ts) < de
   );
 
-  const ALL_EXPENSE_CATS = ['food','transport','rent','fun','shopping','charity','marriage','investasi'];
+  const ALL_EXPENSE_CATS = ['food','transport','rent','rumah','fun','shopping','charity','marriage','investasi'];
 
   const colorPalette = [
     ['#EBF3FE','#1A56C4'],['#FEF3EB','#F59E0B'],['#F3EBFE','#9333EA'],
@@ -10258,6 +10260,7 @@ function _renderDailyItems() {
     food:'<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>',
     transport:'<rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/>',
     rent:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',
+    rumah:'<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5"/>',
     fun:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/>',
     shopping:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>',
     charity:'<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',

@@ -4935,6 +4935,23 @@ function _onEditGoalWalletChange(){
   const el=document.getElementById('egWallet'), wrap=document.getElementById('egAddWrap');
   if(wrap) wrap.style.display = (el && el.value!=='') ? 'none' : '';
 }
+// Saat tujuan dihubungkan ke kartu: saldo tujuan disamakan dengan saldo kartu
+// (maks. sampai target) dan selisihnya dicatat sebagai riwayat dana baru.
+// Contoh: Mahar 7.000.000 + kartu 9.000.000 → Mahar 9.000.000, riwayat +2.000.000.
+// Kalau saldo kartu lebih kecil dari saldo tujuan, saldo tujuan TIDAK dikurangi.
+// Mengembalikan selisih yang ditambahkan (0 bila tidak ada).
+function _syncGoalToWalletBalance(g){
+  const w=_goalLinkedWallet(g); if(!w || !(g.target>0)) return 0;
+  const bal=Math.max(0, Number(w.balance)||0);
+  const to=Math.min(g.target, bal);
+  const diff=to-(Number(g.current)||0);
+  if(!(diff>0)) return 0;
+  g.current=to;
+  _logGoalFund(g, diff, `${w.bank} ••••${w.num}`);
+  if(appSettings.notifGoal && g.current>=g.target)
+    addNotif('goal', lang==='id'?'Target Tercapai':'Goal Reached', `"${g.name}" ${lang==='id'?'sudah mencapai target':'reached its target'}`);
+  return diff;
+}
 function _syncGoalFromWallet(walletId, rp){
   if(walletId==null || !(rp>0)) return;
   const g=goals.find(x=>x.linkedWalletId===walletId); if(!g) return;
@@ -5502,9 +5519,11 @@ function saveGoal(){
   const rpT=isModeRp()?tgt:Math.round(tgt*exRate);
   const rpC=isModeRp()?cur:Math.round(cur*exRate);
   goals.push({id:goalIdCtr++,name,desc:document.getElementById('goalDesc').value.trim()||'SAVINGS GOAL',current:Math.min(rpC,rpT||100),target:rpT||100,color:goalColor,deadline:document.getElementById('goalDeadline').value||null,fundLog:[],linkedWalletId:_readGoalWalletSelect('goalWallet',null)});
+  const _ng=goals[goals.length-1];
+  const _syncedNew=_syncGoalToWalletBalance(_ng);
   closeGoalModal();renderGoals();updateSavingsTotal();
   if(appSettings.notifGoal) addNotif('goal','New Goal Created!',`"${name}" has been added to your savings`);
-  toast(`🎯 Goal "${name}" created!`);
+  toast(_syncedNew>0?`🎯 Goal "${name}" created! 🔗 +${fmt(_syncedNew)}`:`🎯 Goal "${name}" created!`);
   fbAutoSave();
 }
 function openEditGoal(id){closeAllMenus();const g=goals.find(x=>x.id===id);if(!g)return;editingGoalId=id;editingGoalColor=g.color||'#1A56C4';document.getElementById('editGoalId').value=id;document.getElementById('egName').value=g.name;document.getElementById('egTarget').value=isModeRp()?Math.round(g.target).toLocaleString('id-ID'):(g.target/exRate).toFixed(2);document.getElementById('egAdd').value='';_fillGoalWalletSelect('egWallet',(_goalLinkedWallet(g)?g.linkedWalletId:null),id);{const l=document.getElementById('egm-walletlbl');if(l)l.textContent=lang==='id'?'HUBUNGKAN KE KARTU (OPSIONAL)':'CONNECT TO CARD (OPTIONAL)';}_onEditGoalWalletChange();{const dl=document.getElementById('egDeadline');if(dl)dl.value=g.deadline||'';const dll=document.getElementById('egm-deadlbl');if(dll)dll.textContent=lang==='id'?'TARGET WAKTU (OPSIONAL)':'TARGET DATE (OPTIONAL)';}document.getElementById('egCurr').textContent=isModeRp()?'Rp':'$';document.getElementById('egCurr2').textContent=isModeRp()?'Rp':'$';updateEditGoalIconPreview();document.getElementById('editGoalModal').classList.add('on');}
@@ -5516,7 +5535,7 @@ function updateEditGoalIconPreview(){
   el.innerHTML=goalIconSvg(name,editingGoalColor);
 }
 function closeEditGoalModal(){document.getElementById('editGoalModal').classList.remove('on');editingGoalId=null;}
-function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const dlEl=document.getElementById('egDeadline');if(dlEl)g.deadline=dlEl.value||null;{const wid=_readGoalWalletSelect('egWallet',g.id);if(wid===undefined)delete g.linkedWalletId;else g.linkedWalletId=wid;}const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0&&!_goalLinkedWallet(g)){const rp=isModeRp()?rawA:Math.round(rawA*exRate);const before=g.current;g.current=Math.min(g.target,g.current+rp);_logGoalFund(g,g.current-before);}closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
+function updateGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;g.name=document.getElementById('egName').value.trim()||g.name;const rawT=_parseCurrencyInputValue('egTarget');const newTarget=isModeRp()?rawT:Math.round(rawT*exRate);let targetKept=false;if(newTarget>0){g.target=newTarget;}else{targetKept=true;}const dlEl=document.getElementById('egDeadline');if(dlEl)g.deadline=dlEl.value||null;{const wid=_readGoalWalletSelect('egWallet',g.id);if(wid===undefined)delete g.linkedWalletId;else g.linkedWalletId=wid;}const rawA=_parseCurrencyInputValue('egAdd');if(rawA>0&&!_goalLinkedWallet(g)){const rp=isModeRp()?rawA:Math.round(rawA*exRate);const before=g.current;g.current=Math.min(g.target,g.current+rp);_logGoalFund(g,g.current-before);}const _syncedEdit=_syncGoalToWalletBalance(g);closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Updated',`"${g.name}" updated successfully`);if(_syncedEdit>0)toast(`🔗 "${g.name}" ${lang==='id'?'disamakan dengan kartu':'synced with card'}: +${fmt(_syncedEdit)}`);else toast(targetKept?(lang==='id'?'✅ Disimpan — target 0 diabaikan, target lama dipertahankan':'✅ Saved — target of 0 ignored, kept previous target'):'✅ Goal updated!');fbAutoSave();}
 function deleteGoal(){const id=parseInt(document.getElementById('editGoalId').value);const g=goals.find(x=>x.id===id);if(!g)return;if(!confirm(lang==='id'?`Hapus tujuan "${g.name}"?`:`Delete goal "${g.name}"?`))return;goals=goals.filter(x=>x.id!==id);closeEditGoalModal();renderGoals();updateSavingsTotal();if(appSettings.notifGoal)addNotif('goal','Goal Deleted',`"${g.name}" has been removed from your savings`);toast(`🗑️ "${g.name}" ${lang==='id'?'dihapus':'deleted'}`);fbAutoSave();}
 function updateSavingsTotal(){
   // ── Goals total — realtime ──

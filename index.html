@@ -298,6 +298,10 @@ function _buildFreshStatePayload(){
   const historySlim = (historyItems||[]).map(h=>{const s=Object.assign({},h);delete s.catIco;return s;});
   const rawState = {
     balance, wallets, goals, historyItems: historySlim,
+    homeCards: (typeof homeCards!=='undefined')?homeCards:[],
+    mainBudgetWalletIds: (typeof mainBudgetWalletIds!=='undefined')?mainBudgetWalletIds:[],
+    scheduledTx: (typeof scheduledTx!=='undefined')?scheduledTx:[],
+    scheduledLog: (typeof scheduledLog!=='undefined')?scheduledLog:[],
     tagihan: (typeof tagihan!=='undefined')?tagihan.map(t=>{const s=Object.assign({},t);delete s.catIco;return s;}):[],
     tagihanBudget: (typeof tagihanBudget!=='undefined')?tagihanBudget:8000000,
     tagihanRiwayatBulanan: tagihanRiwayatBulanan.map(r=>{const s=Object.assign({},r);delete s.catIco;return s;}),
@@ -517,6 +521,8 @@ async function restoreFromBackup(dateKey){
     const bkSnap = await fbDB.ref(`users/${uid}/backups/${dateKey}`).once('value');
     const bkState = bkSnap.val();
     if(!bkState){ toast('⚠️ '+(lang==='id'?'Backup tidak ditemukan.':'Backup not found.')); return; }
+    _keepCurrentIfMissing(bkState, curState);
+    clearTimeout(_saveTimer); _saveDirty = false;
     await fbDB.ref(`users/${uid}/state`).set(bkState);
 
     // 3) Terapkan ke UI yang sedang berjalan supaya user langsung lihat hasilnya
@@ -587,7 +593,9 @@ async function restoreFromUploadedFile(evt){
     const curState = curSnap.val();
     if(curState) await fbDB.ref(`users/${uid}/backups/${safetyKey}`).set(curState);
 
+    _keepCurrentIfMissing(stateObj, curState);
     const sanitized = _fbSanitize(stateObj);
+    clearTimeout(_saveTimer); _saveDirty = false;
     await fbDB.ref(`users/${uid}/state`).set(sanitized);
     _applyStateFromDB(sanitized);
     refreshAllUI();
@@ -655,6 +663,9 @@ function fbStartRealtimeSync(){
   _rtdbListener = _rtdbRef.on('value', snap => {
     const data = snap.val();
     if(!data) return;
+    // Ada perubahan lokal yang belum sempat disimpan (debounce)? Jangan ditimpa
+    // snapshot lama — kalau tidak, jadwal/data yang baru dibuat bisa hilang.
+    if(_saveDirty) return;
     // Cek perubahan via updatedAt ATAU via JSON diff (untuk edit langsung di Firebase Console
     // yang tidak mengupdate updatedAt secara otomatis)
     const snapJson = JSON.stringify(data);
@@ -678,6 +689,29 @@ function fbStopRealtimeSync(){
   _rtdbListener = null;
 }
 
+// RTDB tidak menyimpan array kosong dan bisa mengembalikan OBJEK (bukan array)
+// bila indeksnya tidak berurutan — ubah keduanya jadi array yang aman dipakai.
+function _rtdbToArray(v){
+  if(Array.isArray(v)) return v.filter(Boolean);
+  if(v && typeof v === 'object') return Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]).filter(Boolean);
+  return [];
+}
+function _applyScheduledFromState(data){
+  scheduledTx  = _rtdbToArray(data.scheduledTx);
+  scheduledLog = _rtdbToArray(data.scheduledLog);
+  schedIdCtr    = scheduledTx.length  ? Math.max(...scheduledTx.map(x=>x.id||0))+1  : 1;
+  schedLogIdCtr = scheduledLog.length ? Math.max(...scheduledLog.map(x=>x.id||0))+1 : 1;
+}
+// Saat restore: field yang TIDAK ada di backup (backup lama / RTDB membuang array kosong)
+// jangan menghapus data yang sekarang aktif — pertahankan nilai saat ini.
+function _keepCurrentIfMissing(bk, cur){
+  if(!bk || !cur) return bk;
+  ['scheduledTx','scheduledLog','homeCards','mainBudgetWalletIds'].forEach(k=>{
+    if(bk[k] === undefined && cur[k] !== undefined) bk[k] = cur[k];
+  });
+  return bk;
+}
+
 // Terapkan data dari DB ke variabel app
 function _applyStateFromDB(data){
   setTimeout(()=>{ try{ if(isQuickLoginEnabledForCurrentUser()) _peekRefreshSnap(); }catch(e){} }, 0);
@@ -691,10 +725,7 @@ function _applyStateFromDB(data){
     goals = data.goals;
     if(goals.length>0) goalIdCtr = Math.max(...goals.map(g=>g.id||0))+1;
   }
-  scheduledTx  = Array.isArray(data.scheduledTx)  ? data.scheduledTx.filter(Boolean)  : [];
-  scheduledLog = Array.isArray(data.scheduledLog) ? data.scheduledLog.filter(Boolean) : [];
-  schedIdCtr    = scheduledTx.length  ? Math.max(...scheduledTx.map(x=>x.id||0))+1  : 1;
-  schedLogIdCtr = scheduledLog.length ? Math.max(...scheduledLog.map(x=>x.id||0))+1 : 1;
+  _applyScheduledFromState(data);
   if(Array.isArray(data.homeCards)){
     homeCards = data.homeCards;
     if(homeCards.length>0) homeCardIdCtr = Math.max(...homeCards.map(c=>c.id||0))+1;
@@ -11518,6 +11549,10 @@ async function enterApp(initialState){
       homeCards = initialState.homeCards;
       if(homeCards.length > 0) homeCardIdCtr = Math.max(...homeCards.map(c=>c.id||0)) + 1;
     }
+    // ── Transaksi Terjadwal ──
+    // Dulu HANYA dimuat lewat listener realtime. Bila listener terlambat/gagal, jadwal
+    // kosong di memori lalu ikut tersimpan kosong saat ada aksi simpan lain → hilang.
+    _applyScheduledFromState(initialState);
     if(Array.isArray(initialState.historyItems)){
       historyItems = initialState.historyItems;
       _migrateHistoryIds();

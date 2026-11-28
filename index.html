@@ -5445,9 +5445,11 @@ function closeAllMenus(e){
     if(e.target.closest('.ctx-menu')) return;
     if(e.target.closest('.goal-more')) return;
     if(e.target.closest('.wc-more')) return;
+    if(e.target.closest('.tg-more')) return;
   }
-  document.querySelectorAll('.ctx-menu').forEach(m=>{if(m.id!=='walletCtxPortal')m.style.display='none';});
+  document.querySelectorAll('.ctx-menu').forEach(m=>{if(m.id!=='walletCtxPortal' && m.id!=='tgCtxPortal')m.style.display='none';});
   _hideWalletCtx();
+  _hideTgCtx();
   openMenuId=null;
 }
 document.addEventListener('click',closeAllMenus);
@@ -12403,6 +12405,7 @@ function openTambahTagihan() {
   document.getElementById('tg-tanggal').value = today;
   document.getElementById('tg-edit-id').value = '';
   document.getElementById('tg-delete-btn').style.display = 'none';
+  _tgSetupAdjust(false, 0);
   // Reset kategori
   selTagihanCat = ''; selTagihanCatColor = ''; selTagihanCatIco = '';
   document.getElementById('tg-cat-txt').textContent = lang==='id' ? 'Pilih kategori...' : 'Select category...';
@@ -12418,6 +12421,92 @@ function openTambahTagihan() {
   ovr.scrollTop = 0;
 }
 
+// ═══════════════════════════════════════════════
+// MENU ⋮ KARTU TAGIHAN (Edit / Hapus) — portal posisi tetap
+// ═══════════════════════════════════════════════
+let _tgCtxId = null, _tgCtxOpenedAt = 0;
+function _hideTgCtx(){ const p=document.getElementById('tgCtxPortal'); if(p) p.style.display='none'; _tgCtxId=null; }
+function _tgCtxOpen(){ const p=document.getElementById('tgCtxPortal'); return !!(p && p.style.display==='block'); }
+function _ensureTgCtxPortal(){
+  if(document.getElementById('tgCtxPortal')) return;
+  const p=document.createElement('div');
+  p.id='tgCtxPortal'; p.className='ctx-menu';
+  p.style.cssText='display:none;position:fixed;z-index:99999;white-space:nowrap;width:max-content;';
+  p.innerHTML=`
+    <div class="ctx-item" data-action="edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span data-lbl="edit"></span></div>
+    <div class="ctx-item danger" data-action="delete"><svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg><span data-lbl="delete"></span></div>`;
+  p.addEventListener('click', function(e){
+    const item=e.target.closest('[data-action]'); if(!item) return;
+    const id=_tgCtxId; const action=item.dataset.action;
+    _hideTgCtx();
+    if(id==null) return;
+    if(action==='edit') openEditTagihan(id);
+    else if(action==='delete') hapusTagihanById(id);
+  });
+  document.body.appendChild(p);
+  // menu mengikuti tombol ⋮ saat halaman digulir (tidak ditutup)
+  document.addEventListener('scroll', function(){
+    if(!_tgCtxOpen() || _tgCtxId==null) return;
+    const b=document.querySelector(`[data-tg-more="${_tgCtxId}"]`);
+    if(b) _positionWalletCtx(p,b); else _hideTgCtx();
+  }, true);
+}
+function toggleTagihanMenu(e, id){
+  e.stopPropagation();
+  _ensureTgCtxPortal();
+  const p=document.getElementById('tgCtxPortal');
+  if(_tgCtxOpen() && _tgCtxId===id){ _hideTgCtx(); return; }
+  _hideWalletCtx();
+  p.querySelector('[data-lbl="edit"]').textContent   = lang==='id' ? 'Edit' : 'Edit';
+  p.querySelector('[data-lbl="delete"]').textContent = lang==='id' ? 'Hapus' : 'Delete';
+  _tgCtxId=id; _tgCtxOpenedAt=Date.now();
+  p.style.display='block';
+  _positionWalletCtx(p, e.currentTarget);
+}
+// Tap di badan kartu: kalau menu terbuka, cukup tutup menu (jangan langsung buka edit)
+function _tgCardTap(id){
+  if(_tgCtxOpen()){ _hideTgCtx(); return; }
+  if(Date.now()-_tgCtxOpenedAt < 400) return;
+  openEditTagihan(id);
+}
+
+// ═══════════════════════════════════════════════
+// SESUAIKAN NOMINAL (tambah / kurangi) di halaman edit
+// ═══════════════════════════════════════════════
+let _tgAdjBase = 0;
+function _tgFormNominal(){
+  return parseFloat(document.getElementById('tg-nominal').value.replace(/\./g,'').replace(/,/g,'')) || 0;
+}
+function _tgUpdateAdjInfo(){
+  const el=document.getElementById('tg-adj-info'); if(!el) return;
+  const d=_tgFormNominal()-_tgAdjBase;
+  if(!d){ el.style.display='none'; el.textContent=''; return; }
+  const n=v=>'Rp '+Math.abs(v).toLocaleString('id-ID');
+  el.style.display='block';
+  el.style.color = d>0 ? 'var(--green)' : 'var(--red)';
+  el.textContent = (lang==='id'?'Nominal awal ':'Original ')+n(_tgAdjBase)+' → '+n(_tgFormNominal())+' ('+(d>0?'+':'−')+n(d)+')';
+}
+function adjustTagihanNominal(sign){
+  const inp=document.getElementById('tg-adj-amt');
+  const amt=parseFloat((inp.value||'').replace(/\./g,'').replace(/,/g,''))||0;
+  if(amt<=0){ toast('⚠️ '+(lang==='id'?'Masukkan nominal penyesuaian':'Enter an adjustment amount')); return; }
+  const next=_tgFormNominal()+sign*amt;
+  if(next<=0){ toast('⚠️ '+(lang==='id'?'Nominal tagihan harus tetap lebih dari 0':'Bill amount must stay above 0')); return; }
+  document.getElementById('tg-nominal').value=next.toLocaleString('id-ID');
+  inp.value='';
+  _tgUpdateAdjInfo();
+}
+function _tgSetupAdjust(show, base){
+  const w=document.getElementById('tg-adjust-wrap'); if(!w) return;
+  w.style.display = show ? 'block' : 'none';
+  _tgAdjBase = base || 0;
+  document.getElementById('tg-adj-amt').value='';
+  document.getElementById('tg-adj-lbl').textContent = lang==='id' ? 'SESUAIKAN NOMINAL' : 'ADJUST AMOUNT';
+  document.getElementById('tg-adj-minus').textContent = lang==='id' ? '− Kurangi' : '− Subtract';
+  document.getElementById('tg-adj-plus').textContent  = lang==='id' ? '+ Tambah' : '+ Add';
+  _tgUpdateAdjInfo();
+}
+
 function openEditTagihan(id) {
   const t = tagihan.find(x => x.id === id); if (!t) return;
   document.getElementById('tambah-tagihan-title').textContent = lang==='id' ? 'Edit Tagihan' : 'Edit Bill';
@@ -12427,6 +12516,7 @@ function openEditTagihan(id) {
   document.getElementById('tg-tanggal').value = t.tanggal || new Date().toISOString().split('T')[0];
   document.getElementById('tg-edit-id').value = id;
   document.getElementById('tg-delete-btn').style.display = 'block';
+  _tgSetupAdjust(true, t.nominal || 0);
   // Set kategori
   selTagihanCat = t.cat || '';
   selTagihanCatColor = t.catColor || '';
@@ -12506,18 +12596,20 @@ function simpanTagihan() {
   fbAutoSave();
 }
 
+function hapusTagihanById(id) {
+  const t = tagihan.find(x => x.id === id); if (!t) return false;
+  if (!confirm(lang==='id' ? `Hapus tagihan "${t.nama}"?` : `Delete bill "${t.nama}"?`)) return false;
+  cancelTagihanSchedule(id);
+  tagihan = tagihan.filter(x => x.id !== id);
+  renderTagihanList();
+  toast('🗑️ ' + (lang==='id' ? `"${t.nama}" dihapus` : `"${t.nama}" deleted`));
+  fbAutoSave();
+  return true;
+}
 function hapusTagihan() {
   const editId = document.getElementById('tg-edit-id').value;
   if (!editId) return;
-  const id = parseInt(editId);
-  const t  = tagihan.find(x => x.id === id);
-  if (!confirm(lang==='id' ? `Hapus tagihan "${t?.nama}"?` : `Delete bill "${t?.nama}"?`)) return;
-  cancelTagihanSchedule(id);
-  tagihan = tagihan.filter(x => x.id !== id);
-  closeTambahTagihan();
-  renderTagihanList();
-  toast('🗑️ ' + (lang==='id' ? `"${t?.nama}" dihapus` : `"${t?.nama}" deleted`));
-  fbAutoSave();
+  if (hapusTagihanById(parseInt(editId))) closeTambahTagihan();
 }
 
 function setTagihanFreq(freq, btnEl) {
@@ -12728,6 +12820,8 @@ function _nextMonthDate(tanggalStr) {
 function renderTagihanList() {
   const c = document.getElementById('tagihan-list'); if (!c) return;
   const now = new Date();
+  const _tgp = document.getElementById('tgCtxPortal');
+  const _tgKeepId = (_tgp && _tgp.style.display==='block') ? _tgCtxId : null;
 
   // Hanya tampilkan tagihan yang AKTIF (belum lunas) di tab kiri
   const aktif = tagihan
@@ -12740,6 +12834,7 @@ function renderTagihanList() {
       Semua tagihan sudah dibayar 🎉
     </div>`;
     updateTagihanSummary(tagihan);
+    _hideTgCtx();
     return;
   }
 
@@ -12789,7 +12884,7 @@ function renderTagihanList() {
     const catBg  = t.catColor || '#EBF3FE';
     const catIco = t.catIco  || `<svg viewBox="0 0 24 24" fill="none" stroke="#1A56C4" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
 
-    return `<div class="lg-list-card" style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;box-shadow:var(--sh2);${cardBorder}display:flex;align-items:center;gap:13px;cursor:pointer;" onclick="openEditTagihan(${t.id})">
+    return `<div class="lg-list-card" style="background:var(--surface);border-radius:14px;padding:14px 15px;margin-bottom:10px;box-shadow:var(--sh2);${cardBorder}display:flex;align-items:center;gap:13px;cursor:pointer;" onclick="_tgCardTap(${t.id})">
       <div style="width:44px;height:44px;border-radius:12px;background:${catBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
         <div style="width:22px;height:22px;">${catIco}</div>
       </div>
@@ -12804,10 +12899,18 @@ function renderTagihanList() {
         <div style="font-family:var(--f);font-size:14px;font-weight:700;color:var(--navy);margin-bottom:5px;">Rp ${Number(t.nominal||0).toLocaleString('id-ID')}</div>
         ${statusBadge}
       </div>
+      <button type="button" class="tg-more" data-tg-more="${t.id}" aria-label="Menu" onclick="toggleTagihanMenu(event,${t.id})" style="width:30px;height:30px;margin-right:-6px;border-radius:50%;border:none;background:transparent;color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+      </button>
     </div>`;
   }).join('');
 
   updateTagihanSummary(tagihan);
+  // Menu ⋮ yang sedang terbuka dipertahankan saat daftar dirender ulang
+  if(_tgKeepId!=null){
+    const kb=c.querySelector(`[data-tg-more="${_tgKeepId}"]`), kp=document.getElementById('tgCtxPortal');
+    if(kb && kp) _positionWalletCtx(kp, kb); else _hideTgCtx();
+  }
 }
 
 function renderTagihanRiwayat() {
@@ -15235,7 +15338,22 @@ function closeAnggaranRiwayat(){
         <span style="font-family:var(--f);font-size:18px;font-weight:700;color:var(--navy);">Rp</span>
         <input type="text" id="tg-nominal" inputmode="numeric" placeholder="0"
           style="flex:1;font-family:var(--f);font-size:28px;font-weight:800;color:var(--navy);border:none;outline:none;background:transparent;min-width:0;"
-          oninput="formatTagihanNominal(this)">
+          oninput="formatTagihanNominal(this);_tgUpdateAdjInfo()">
+      </div>
+
+      <!-- Sesuaikan nominal (hanya saat edit) -->
+      <div id="tg-adjust-wrap" style="display:none;margin-top:16px;">
+        <div id="tg-adj-lbl" style="font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.8px;margin-bottom:8px;text-transform:uppercase;">SESUAIKAN NOMINAL</div>
+        <div style="display:flex;gap:8px;align-items:stretch;">
+          <div style="flex:1;min-width:0;background:var(--surface2);border-radius:13px;padding:10px 12px;display:flex;align-items:center;gap:6px;">
+            <span style="font-family:var(--f);font-size:13px;font-weight:700;color:var(--t3);">Rp</span>
+            <input type="text" id="tg-adj-amt" inputmode="numeric" placeholder="0" oninput="formatTagihanNominal(this)"
+              style="flex:1;min-width:0;font-family:var(--f);font-size:16px;font-weight:700;color:var(--navy);border:none;outline:none;background:transparent;">
+          </div>
+          <button type="button" id="tg-adj-minus" onclick="adjustTagihanNominal(-1)" style="padding:0 12px;border-radius:12px;border:none;cursor:pointer;background:#FEEBEB;color:#DC2626;font-family:var(--f);font-size:13px;font-weight:700;white-space:nowrap;">− Kurangi</button>
+          <button type="button" id="tg-adj-plus" onclick="adjustTagihanNominal(1)" style="padding:0 12px;border-radius:12px;border:none;cursor:pointer;background:#EAF8EF;color:#16A34A;font-family:var(--f);font-size:13px;font-weight:700;white-space:nowrap;">+ Tambah</button>
+        </div>
+        <div id="tg-adj-info" style="display:none;font-size:12px;font-weight:600;margin-top:8px;"></div>
       </div>
     </div>
 

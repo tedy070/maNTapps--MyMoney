@@ -12490,10 +12490,62 @@ function adjustTagihanNominal(sign){
   const inp=document.getElementById('tg-adj-amt');
   const amt=parseFloat((inp.value||'').replace(/\./g,'').replace(/,/g,''))||0;
   if(amt<=0){ toast('⚠️ '+(lang==='id'?'Masukkan nominal penyesuaian':'Enter an adjustment amount')); return; }
-  const next=_tgFormNominal()+sign*amt;
+  const cur=_tgFormNominal();
+  const next=cur+sign*amt;
   if(next<=0){ toast('⚠️ '+(lang==='id'?'Nominal tagihan harus tetap lebih dari 0':'Bill amount must stay above 0')); return; }
-  document.getElementById('tg-nominal').value=next.toLocaleString('id-ID');
-  inp.value='';
+  _tgOpenAdjConfirm(sign, amt, cur, next);
+}
+// Dialog konfirmasi sebelum nominal benar-benar diubah
+let _tgAdjPending = null;
+function _tgEnsureAdjConfirm(){
+  if(document.getElementById('tgAdjConfirm')) return;
+  const o=document.createElement('div');
+  o.id='tgAdjConfirm';
+  o.style.cssText='display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);align-items:flex-end;justify-content:center;padding:0 14px calc(var(--safe-bottom,0px) + 14px);';
+  o.addEventListener('click', e=>{ if(e.target===o) closeTgAdjConfirm(); });
+  o.innerHTML='<div id="tgAdjBox" style="width:100%;max-width:520px;background:var(--surface);border-radius:20px;padding:18px 16px 14px;box-shadow:0 -8px 40px rgba(13,33,82,.25);"></div>';
+  document.body.appendChild(o);
+}
+function _tgOpenAdjConfirm(sign, amt, cur, next){
+  _tgEnsureAdjConfirm();
+  _tgAdjPending = { next };
+  const id = lang==='id', inc = sign>0;
+  const n = v => 'Rp ' + Math.abs(v).toLocaleString('id-ID');
+  const col = inc ? '#16A34A' : '#DC2626', bg = inc ? '#EAF8EF' : '#FEEBEB';
+  const nama = (document.getElementById('tg-nama').value||'').trim();
+  const pct = Math.round(amt/cur*100);
+  const big = amt/cur >= 0.5;
+  const title = inc ? (id?'Tambah nominal tagihan?':'Add to the bill amount?') : (id?'Kurangi nominal tagihan?':'Subtract from the bill amount?');
+  const row = (a,b,extra) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;${extra||''}"><span style="color:var(--t3);">${a}</span><span>${b}</span></div>`;
+  document.getElementById('tgAdjBox').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:38px;height:38px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:${col};flex-shrink:0;">${inc?'+':'−'}</div>
+      <div style="min-width:0;"><div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--navy);">${title}</div>
+        <div style="font-size:12px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(nama||'—')}</div></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--navy);">
+      ${row(id?'Nominal sekarang':'Current amount', n(cur))}
+      ${row(inc?(id?'Ditambah':'Added'):(id?'Dikurangi':'Subtracted'), `<span style="color:${col};font-weight:700;">${inc?'+':'−'}${n(amt)}</span>`)}
+      <div style="height:1px;background:var(--border);margin:6px 0;"></div>
+      ${row(id?'Nominal baru':'New amount', n(next), 'font-weight:700;')}
+    </div>
+    ${big?`<div style="margin-top:10px;background:#FEF3EB;color:#B45309;border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.5;">${id?`Perubahan cukup besar (${pct}% dari nominal sekarang). Pastikan angkanya sudah benar.`:`This is a large change (${pct}% of the current amount). Please double-check the number.`}</div>`:''}
+    <div style="margin-top:10px;font-size:11px;color:var(--t3);line-height:1.5;">${id?'Perubahan belum tersimpan sampai kamu menekan tombol Simpan.':'The change isn’t saved until you tap Save.'}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button type="button" onclick="closeTgAdjConfirm()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--navy);font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">${id?'Batal':'Cancel'}</button>
+      <button type="button" onclick="confirmTgAdjust()" style="flex:1;padding:13px;border-radius:12px;border:none;background:${col};color:#fff;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;">${inc?(id?'Ya, tambah':'Yes, add'):(id?'Ya, kurangi':'Yes, subtract')}</button>
+    </div>`;
+  document.getElementById('tgAdjConfirm').style.display='flex';
+}
+function closeTgAdjConfirm(){
+  const o=document.getElementById('tgAdjConfirm'); if(o) o.style.display='none';
+  _tgAdjPending=null;
+}
+function confirmTgAdjust(){
+  if(!_tgAdjPending){ closeTgAdjConfirm(); return; }
+  document.getElementById('tg-nominal').value = _tgAdjPending.next.toLocaleString('id-ID');
+  document.getElementById('tg-adj-amt').value = '';
+  closeTgAdjConfirm();
   _tgUpdateAdjInfo();
 }
 function _tgSetupAdjust(show, base){
@@ -12537,6 +12589,7 @@ function openEditTagihan(id) {
 }
 
 function closeTambahTagihan() {
+  closeTgAdjConfirm();
   document.getElementById('tambahTagihanOvr').style.display = 'none';
 }
 
